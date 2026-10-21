@@ -72,8 +72,14 @@
           <span id="cloudStatusText">Offline</span>
         </div>
         <div class="footer-actions">
-          <button id="btnCloudSync" title="Cloud Sync">☁️ Sync</button>
-          <button id="btnBackup" title="Backup & Restore">📦 Backup</button>
+          <button id="btnCloudSync" title="Cloud Sync">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            Cloud
+          </button>
+          <button id="btnBackup" title="Backup &amp; Restore">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+            Backup
+          </button>
         </div>
       </div>
     </aside>
@@ -92,7 +98,8 @@
             <span class="autosync-dot">●</span> <span id="autoSyncLabel">Auto-Sync: ON</span>
           </button>
           <button id="btnManualSync" class="btn-secondary" title="Sync with Cloud">
-            <span class="sync-icon">🔄</span> Sync Now
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sync-icon"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <span>Sync Now</span>
           </button>
           <button id="btnViewToggle" class="btn-icon" title="Toggle Grid/List View">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
@@ -111,7 +118,9 @@
 
       <!-- Empty State -->
       <div id="emptyState" class="empty-state hidden">
-        <div class="empty-icon">📝</div>
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="var(--brand)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
         <h3>No notes here yet</h3>
         <p>Click the <b>"+ New Note"</b> button to capture your first idea.</p>
       </div>
@@ -137,8 +146,12 @@
 
           <div class="editor-right-actions">
             <span id="editorWordCount" class="word-counter">0 words • 0 chars</span>
-            <button id="btnEditorPin" class="btn-icon" title="Pin Note">📌</button>
-            <button id="btnEditorDelete" class="btn-icon btn-danger" title="Delete Note">🗑️</button>
+            <button id="btnEditorPin" class="btn-icon" title="Pin Note">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-2V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v8l-2 2v2z"/></svg>
+            </button>
+            <button id="btnEditorDelete" class="btn-icon btn-danger" title="Delete Note">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
           </div>
         </div>
 
@@ -153,42 +166,54 @@
 
         <!-- Rich Text Formatting Toolbar -->
         <div class="formatting-toolbar">
-          <button type="button" data-cmd="undo" title="Undo">↩️</button>
-          <button type="button" data-cmd="redo" title="Redo">↪️</button>
+          <button type="button" data-cmd="undo" title="Undo">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+          </button>
+          <button type="button" data-cmd="redo" title="Redo">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+          </button>
           <div class="divider"></div>
-          <button type="button" data-cmd="formatBlock" data-val="H1" title="Heading 1"><b>H1</b></button>
-          <button type="button" data-cmd="formatBlock" data-val="H2" title="Heading 2"><b>H2</b></button>
+          <button type="button" data-cmd="formatBlock" data-val="H1" title="Heading 1" class="fmt-btn"><b>H1</b></button>
+          <button type="button" data-cmd="formatBlock" data-val="H2" title="Heading 2" class="fmt-btn"><b>H2</b></button>
           <div class="divider"></div>
-          <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
-          <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
-          <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
-          <button type="button" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+          <button type="button" data-cmd="bold" title="Bold" class="fmt-btn"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="Italic" class="fmt-btn"><i>I</i></button>
+          <button type="button" data-cmd="underline" title="Underline" class="fmt-btn"><u>U</u></button>
+          <button type="button" data-cmd="strikeThrough" title="Strikethrough" class="fmt-btn"><s>S</s></button>
           <div class="divider"></div>
           <!-- Highlighter Dropdown -->
           <div class="dropdown">
-            <button type="button" class="dropbtn" title="Highlight">🖍️ Highlight ▾</button>
+            <button type="button" class="dropbtn" title="Highlight">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h3l6-6"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+              <span>Highlight</span> ▾
+            </button>
             <div class="dropdown-content">
-              <a href="#" data-highlight="#FFF59D">💛 Yellow</a>
-              <a href="#" data-highlight="#C8E6C9">💚 Mint Green</a>
-              <a href="#" data-highlight="#F8BBD0">💖 Soft Pink</a>
-              <a href="#" data-highlight="#B3E5FC">💙 Sky Blue</a>
-              <a href="#" data-highlight="#FFE0B2">🧡 Peach</a>
-              <a href="#" data-highlight="transparent">❌ Clear</a>
+              <a href="#" data-highlight="#FFF59D"><span class="color-dot-sm" style="background:#FFF59D"></span> Yellow</a>
+              <a href="#" data-highlight="#C8E6C9"><span class="color-dot-sm" style="background:#C8E6C9"></span> Mint Green</a>
+              <a href="#" data-highlight="#F8BBD0"><span class="color-dot-sm" style="background:#F8BBD0"></span> Soft Pink</a>
+              <a href="#" data-highlight="#B3E5FC"><span class="color-dot-sm" style="background:#B3E5FC"></span> Sky Blue</a>
+              <a href="#" data-highlight="#FFE0B2"><span class="color-dot-sm" style="background:#FFE0B2"></span> Peach</a>
+              <a href="#" data-highlight="transparent"><span class="color-dot-sm clear"></span> Clear</a>
             </div>
           </div>
           <!-- Text Color Dropdown -->
           <div class="dropdown">
-            <button type="button" class="dropbtn" title="Text Color">A̲ Color ▾</button>
+            <button type="button" class="dropbtn" title="Text Color">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 8-16 8 16"/><line x1="6.5" y1="15" x2="17.5" y2="15"/></svg>
+              <span>Color</span> ▾
+            </button>
             <div class="dropdown-content">
-              <a href="#" data-forecolor="#212121">🖤 Default</a>
-              <a href="#" data-forecolor="#00796B">🟢 Emerald</a>
-              <a href="#" data-forecolor="#1565C0">🔵 Blue</a>
-              <a href="#" data-forecolor="#C62828">🔴 Crimson</a>
-              <a href="#" data-forecolor="#6A1B9A">🟣 Purple</a>
+              <a href="#" data-forecolor="#212121"><span class="color-dot-sm" style="background:#212121"></span> Default</a>
+              <a href="#" data-forecolor="#00796B"><span class="color-dot-sm" style="background:#00796B"></span> Emerald</a>
+              <a href="#" data-forecolor="#1565C0"><span class="color-dot-sm" style="background:#1565C0"></span> Blue</a>
+              <a href="#" data-forecolor="#C62828"><span class="color-dot-sm" style="background:#C62828"></span> Crimson</a>
+              <a href="#" data-forecolor="#6A1B9A"><span class="color-dot-sm" style="background:#6A1B9A"></span> Purple</a>
             </div>
           </div>
           <div class="divider"></div>
-          <button type="button" data-cmd="insertUnorderedList" title="Bullet List">• List</button>
+          <button type="button" data-cmd="insertUnorderedList" title="Bullet List">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
         </div>
 
         <!-- Note Rich Text Content Area -->

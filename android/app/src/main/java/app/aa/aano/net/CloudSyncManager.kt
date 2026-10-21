@@ -196,9 +196,16 @@ class CloudSyncManager(
                 prefs.lastCloudSyncTime = res.optLong("serverTime", System.currentTimeMillis())
                 Result.success(serverNotes.length() + serverTasks.length())
             } else {
-                Result.failure(Exception(res.optString("error", "Sync error")))
+                val err = res.optString("error", "Sync error")
+                if (err == "Unauthorized access token." || err.contains("401")) {
+                    prefs.cloudToken = null
+                }
+                Result.failure(Exception(err))
             }
         } catch (e: Exception) {
+            if (e.message?.contains("401") == true || e.message?.contains("Unauthorized") == true) {
+                prefs.cloudToken = null
+            }
             Result.failure(e)
         }
     }

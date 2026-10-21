@@ -118,7 +118,14 @@ def sync_with_cloud():
             save_notes(notes)
 
         cfg["last_sync_time"] = res.get("serverTime", int(time.time() * 1000))
+        cfg["session_expired"] = False
         save_config(cfg)
         return {"success": True, "count": len(server_notes)}
     else:
-        return {"success": False, "error": res.get("error", "Sync failed")}
+        err_msg = res.get("error", "Sync failed")
+        if err_msg == "Unauthorized access token." or "401" in str(err_msg):
+            cfg["cloud_token"] = None
+            cfg["session_expired"] = True
+            save_config(cfg)
+            return {"success": False, "error": "Session expired. Please sign in again.", "auth_expired": True}
+        return {"success": False, "error": err_msg}

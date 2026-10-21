@@ -269,7 +269,8 @@ function renderFolders(folders) {
     const count = allNotes.filter(n => n.folder === folder).length;
     const item = document.createElement("div");
     item.className = "folder-item" + (currentFilter === "folder:" + folder ? " active" : "");
-    item.innerHTML = `<span>📁 ${folder}</span><span class="badge">${count}</span>`;
+    const folderSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    item.innerHTML = `<span>${folderSvg}${escapeHtml(folder)}</span><span class="badge">${count}</span>`;
     item.addEventListener("click", () => {
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
@@ -321,6 +322,9 @@ function renderNotes() {
   }
   emptyState.classList.add("hidden");
 
+  const pinSvg = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-2l-2-2V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v8l-2 2v2z"/></svg>`;
+  const cardFolderSvg = `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+
   filtered.forEach(note => {
     const card = document.createElement("div");
     card.className = "note-card";
@@ -331,11 +335,11 @@ function renderNotes() {
     const dateStr = formatDate(note.updatedAt || note.createdAt || Date.now());
 
     card.innerHTML = `
-      ${note.pinned ? '<span class="pin-icon" title="Pinned">📌</span>' : ''}
+      ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
       <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
       <div class="note-card-preview">${escapeHtml(plain || "No content")}</div>
       <div class="note-card-footer">
-        <span class="folder-badge">📁 ${escapeHtml(note.folder || "General")}</span>
+        <span class="folder-badge">${cardFolderSvg} ${escapeHtml(note.folder || "General")}</span>
         <span>${dateStr}</span>
       </div>
     `;
@@ -497,6 +501,7 @@ async function checkCloudStatus() {
 
     if (status.is_logged_in) {
       dot.classList.add("connected");
+      dot.style.background = "";
       statusText.innerText = "Synced: " + (status.email || "Online");
       updateAutoSyncButton(status.auto_sync !== false);
       document.getElementById("cloudLoginForm").classList.add("hidden");
@@ -504,7 +509,13 @@ async function checkCloudStatus() {
       document.getElementById("lblConnectedEmail").innerText = status.email || "";
     } else {
       dot.classList.remove("connected");
-      statusText.innerText = "Offline";
+      if (status.session_expired) {
+        dot.style.background = "#F59E0B";
+        statusText.innerText = "Session Expired (Click to Sign In)";
+      } else {
+        dot.style.background = "";
+        statusText.innerText = "Offline (Click to Sign In)";
+      }
       document.getElementById("cloudLoginForm").classList.remove("hidden");
       document.getElementById("cloudActiveSession").classList.add("hidden");
     }
@@ -543,6 +554,7 @@ async function handleCloudLogin() {
       errDiv.classList.add("hidden");
       await checkCloudStatus();
       await refreshData();
+      closeCloudModal();
     } else {
       errDiv.innerText = res.error || "Failed to sign in.";
       errDiv.classList.remove("hidden");
@@ -561,13 +573,23 @@ async function handleCloudLogout() {
 async function triggerManualSync() {
   const btn = document.getElementById("btnManualSync");
   const icon = btn.querySelector(".sync-icon");
-  icon.style.display = "inline-block";
-  icon.style.animation = "spin 1s linear infinite";
+  if (icon) {
+    icon.style.display = "inline-block";
+    icon.style.animation = "spin 1s linear infinite";
+  }
 
   const api = getApi();
   if (api) {
     try {
       const res = await api.sync_now();
+      if (!res.success && (res.auth_expired || res.error?.includes("Unauthorized") || res.error?.includes("Session expired") || res.error?.includes("Not logged in"))) {
+        openCloudModal();
+        const errDiv = document.getElementById("cloudError");
+        if (errDiv) {
+          errDiv.innerText = res.error || "Please sign in with your Gmail password to connect.";
+          errDiv.classList.remove("hidden");
+        }
+      }
       await refreshData();
       await checkCloudStatus();
     } catch (e) {
@@ -575,9 +597,11 @@ async function triggerManualSync() {
     }
   }
 
-  setTimeout(() => {
-    icon.style.animation = "";
-  }, 1000);
+  if (icon) {
+    setTimeout(() => {
+      icon.style.animation = "";
+    }, 1000);
+  }
 }
 
 // --------------------- Backup & Restore ---------------------

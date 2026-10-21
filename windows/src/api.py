@@ -102,7 +102,8 @@ class DesktopApi:
             "is_logged_in": bool(cfg.get("cloud_token")),
             "email": cfg.get("cloud_email"),
             "last_sync_time": cfg.get("last_sync_time", 0),
-            "auto_sync": cfg.get("auto_sync", True)
+            "auto_sync": cfg.get("auto_sync", True),
+            "session_expired": bool(cfg.get("session_expired", False))
         }
 
     def toggle_auto_sync(self):
