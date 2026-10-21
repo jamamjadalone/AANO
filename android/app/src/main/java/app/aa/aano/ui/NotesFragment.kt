@@ -237,11 +237,19 @@ class NotesFragment : Fragment() {
             .setTitle(note.title.ifBlank { "(No title)" })
             .setItems(items) { _, which ->
                 when (which) {
-                    0 -> lifecycleScope.launch { repository.togglePin(note.id); loadNotes() }
+                    0 -> lifecycleScope.launch {
+                        repository.togglePin(note.id)
+                        loadNotes()
+                        if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
+                    }
                     1 -> showMoveFolderDialog(note)
                     2 -> showChangeColorDialog(note)
                     3 -> shareNote(note)
-                    4 -> lifecycleScope.launch { repository.delete(note.id); loadNotes() }
+                    4 -> lifecycleScope.launch {
+                        repository.delete(note.id)
+                        loadNotes()
+                        if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
+                    }
                 }
             }
             .show()
@@ -298,6 +306,9 @@ class NotesFragment : Fragment() {
             )
             loadNotes()
             buildFolderChips()
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                launchSync(silent = true)
+            }
         }
     }
 
@@ -324,6 +335,9 @@ class NotesFragment : Fragment() {
                         tags = note.tags
                     )
                     loadNotes()
+                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                        launchSync(silent = true)
+                    }
                 }
             }
             .show()
@@ -381,6 +395,7 @@ class NotesFragment : Fragment() {
             res.onSuccess { count ->
                 prefs.syncPending = false
                 loadNotes()
+                buildFolderChips()
                 if (!silent) {
                     Toast.makeText(requireContext(), "AANO Cloud Sync complete ($count items)", Toast.LENGTH_SHORT).show()
                 }

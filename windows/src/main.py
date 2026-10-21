@@ -23,9 +23,10 @@ def main():
         title="AANO Notes",
         url=index_path,
         js_api=api,
-        width=1100,
-        height=720,
+        width=1280,
+        height=800,
         min_size=(850, 600),
+        maximized=True,
         background_color="#F8FAFC",
         text_select=True
     )

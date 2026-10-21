@@ -39,7 +39,9 @@ import app.aa.aano.R
 import app.aa.aano.data.Note
 import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
+import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.ActivityEditorBinding
+import app.aa.aano.net.CloudSyncManager
 import app.aa.aano.net.NoteReminderReceiver
 import kotlinx.coroutines.launch
 import java.util.ArrayDeque
@@ -69,6 +71,7 @@ class EditorActivity : AppCompatActivity() {
     private lateinit var binding: ActivityEditorBinding
     private lateinit var repository: NoteRepository
     private lateinit var prefs: Prefs
+    private lateinit var cloudSyncManager: CloudSyncManager
     private var noteId: String? = null
     private var loaded = false
     private var selectedColor = 0
@@ -99,6 +102,11 @@ class EditorActivity : AppCompatActivity() {
 
         repository = NoteRepository(this)
         prefs = Prefs(this)
+        cloudSyncManager = CloudSyncManager(
+            this,
+            repository,
+            TaskRepository(this)
+        )
         noteId = intent.getStringExtra(EXTRA_NOTE_ID)
 
         binding.toolbar.setNavigationOnClickListener { saveAndFinish() }
@@ -647,13 +655,29 @@ class EditorActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             persist()
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        cloudSyncManager.syncNow()
+                    } catch (_: Exception) {}
+                }
+            }
             finish()
         }
     }
 
     private fun saveSilently() {
         if (titleAndContentEmpty() && noteId == null) return
-        lifecycleScope.launch { persist() }
+        lifecycleScope.launch {
+            persist()
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        cloudSyncManager.syncNow()
+                    } catch (_: Exception) {}
+                }
+            }
+        }
     }
 
     private suspend fun persist() {

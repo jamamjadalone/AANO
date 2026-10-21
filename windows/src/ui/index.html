@@ -86,11 +86,14 @@
           <button id="btnClearSearch" class="btn-clear hidden">&times;</button>
         </div>
         <div class="topbar-actions">
-          <button id="btnViewToggle" class="btn-icon" title="Toggle Grid/List View">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+          <button id="btnAutoSyncToggle" class="btn-autosync active" title="Toggle Auto-Sync">
+            <span class="autosync-dot">●</span> <span id="autoSyncLabel">Auto-Sync: ON</span>
           </button>
           <button id="btnManualSync" class="btn-secondary" title="Sync with Cloud">
-            <span class="sync-icon">🔄</span> Sync
+            <span class="sync-icon">🔄</span> Sync Now
+          </button>
+          <button id="btnViewToggle" class="btn-icon" title="Toggle Grid/List View">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
           </button>
         </div>
       </header>

@@ -5,9 +5,19 @@
 import time
 import uuid
 import json
+import threading
 import storage
 
 class DesktopApi:
+    def __init__(self):
+        # Trigger background sync on startup if logged in
+        self._async_auto_sync()
+
+    def _async_auto_sync(self):
+        cfg = storage.load_config()
+        if cfg.get("auto_sync", True) and cfg.get("cloud_token"):
+            threading.Thread(target=storage.sync_with_cloud, daemon=True).start()
+
     def get_notes(self):
         notes = storage.load_notes()
         return [n for n in notes if not n.get("deleted", False)]
@@ -57,6 +67,8 @@ class DesktopApi:
             notes.insert(0, new_note)
 
         storage.save_notes(notes)
+        # Automatic cloud sync on every note creation/edit
+        self._async_auto_sync()
         return {"success": True}
 
     def delete_note(self, note_id):
@@ -69,6 +81,7 @@ class DesktopApi:
                 n["updatedAt"] = now
                 break
         storage.save_notes(notes)
+        self._async_auto_sync()
         return {"success": True}
 
     def toggle_pin(self, note_id):
@@ -80,6 +93,7 @@ class DesktopApi:
                 n["updatedAt"] = now
                 break
         storage.save_notes(notes)
+        self._async_auto_sync()
         return {"success": True}
 
     def get_cloud_status(self):
@@ -87,8 +101,18 @@ class DesktopApi:
         return {
             "is_logged_in": bool(cfg.get("cloud_token")),
             "email": cfg.get("cloud_email"),
-            "last_sync_time": cfg.get("last_sync_time", 0)
+            "last_sync_time": cfg.get("last_sync_time", 0),
+            "auto_sync": cfg.get("auto_sync", True)
         }
+
+    def toggle_auto_sync(self):
+        cfg = storage.load_config()
+        current = cfg.get("auto_sync", True)
+        cfg["auto_sync"] = not current
+        storage.save_config(cfg)
+        if cfg["auto_sync"] and cfg.get("cloud_token"):
+            self._async_auto_sync()
+        return {"success": True, "auto_sync": cfg["auto_sync"]}
 
     def login_cloud(self, email, password):
         res = storage.post_json("/api/login", {"email": email, "password": password})
@@ -98,7 +122,7 @@ class DesktopApi:
             cfg["cloud_email"] = res.get("email")
             cfg["cloud_user_id"] = res.get("userId")
             storage.save_config(cfg)
-            # Trigger immediate sync upon login
+            # Immediate bi-directional sync upon login
             storage.sync_with_cloud()
             return {"success": True, "email": res.get("email")}
         else:
@@ -130,6 +154,7 @@ class DesktopApi:
             for n in incoming:
                 local_map[n["id"]] = n
             storage.save_notes(list(local_map.values()))
+            self._async_auto_sync()
             return {"success": True, "count": len(incoming)}
         except Exception as e:
             return {"success": False, "error": str(e)}

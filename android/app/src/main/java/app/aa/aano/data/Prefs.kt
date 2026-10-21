@@ -11,7 +11,7 @@ class Prefs(context: Context) {
     private val prefs = context.getSharedPreferences("aano_prefs", Context.MODE_PRIVATE)
 
     var autoSync: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_SYNC, false)
+        get() = prefs.getBoolean(KEY_AUTO_SYNC, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_SYNC, value).apply()
 
     var autoSave: Boolean

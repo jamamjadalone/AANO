@@ -43,9 +43,72 @@ async function initApp() {
   renderColorPalette();
   await refreshData();
   await checkCloudStatus();
+
+  // If user is logged in, perform immediate auto-sync on app open
+  const api = getApi();
+  if (api) {
+    try {
+      const status = await api.get_cloud_status();
+      updateAutoSyncButton(status.auto_sync !== false);
+      if (status.is_logged_in && status.auto_sync !== false) {
+        await triggerManualSync();
+      }
+    } catch (_) {}
+  }
+
+  // Periodic background auto-sync polling every 30 seconds
+  setInterval(runAutoSyncInterval, 30000);
+}
+
+function updateAutoSyncButton(isEnabled) {
+  const btn = document.getElementById("btnAutoSyncToggle");
+  if (!btn) return;
+  const label = document.getElementById("autoSyncLabel");
+  const dot = btn.querySelector(".autosync-dot");
+  if (isEnabled) {
+    btn.classList.remove("off");
+    btn.classList.add("active");
+    if (label) label.innerText = "Auto-Sync: ON";
+    if (dot) dot.innerText = "●";
+  } else {
+    btn.classList.add("off");
+    btn.classList.remove("active");
+    if (label) label.innerText = "Auto-Sync: OFF";
+    if (dot) dot.innerText = "○";
+  }
+}
+
+async function runAutoSyncInterval() {
+  const api = getApi();
+  if (!api) return;
+  try {
+    const status = await api.get_cloud_status();
+    if (status.is_logged_in && status.auto_sync !== false) {
+      const res = await api.sync_now();
+      if (res && res.success && res.count > 0) {
+        await refreshData();
+      }
+      await checkCloudStatus();
+    }
+  } catch (err) {
+    console.error("Auto-sync tick error:", err);
+  }
 }
 
 function setupEventListeners() {
+  // Auto-Sync Toggle Button
+  const btnAutoSync = document.getElementById("btnAutoSyncToggle");
+  if (btnAutoSync) {
+    btnAutoSync.addEventListener("click", async () => {
+      const api = getApi();
+      if (!api) return;
+      const res = await api.toggle_auto_sync();
+      updateAutoSyncButton(res.auto_sync);
+      if (res.auto_sync) {
+        await triggerManualSync();
+      }
+    });
+  }
   // New Note
   document.getElementById("btnNewNote").addEventListener("click", () => openEditor());
 
@@ -113,8 +176,10 @@ function setupEventListeners() {
       const api = getApi();
       if (api) {
         await api.delete_note(editingNote.id);
+        try { await api.sync_now(); } catch (_) {}
         closeEditorWithoutSaving();
         await refreshData();
+        await checkCloudStatus();
       }
     }
   });
@@ -367,11 +432,17 @@ async function closeAndSaveEditor() {
         color: editingColor,
         pinned: editingPinned
       });
+      try {
+        await api.sync_now();
+      } catch (err) {
+        console.warn("Immediate sync failed, queued for auto-sync:", err);
+      }
     }
   }
 
   closeEditorWithoutSaving();
   await refreshData();
+  await checkCloudStatus();
 }
 
 function closeEditorWithoutSaving() {
@@ -427,6 +498,7 @@ async function checkCloudStatus() {
     if (status.is_logged_in) {
       dot.classList.add("connected");
       statusText.innerText = "Synced: " + (status.email || "Online");
+      updateAutoSyncButton(status.auto_sync !== false);
       document.getElementById("cloudLoginForm").classList.add("hidden");
       document.getElementById("cloudActiveSession").classList.remove("hidden");
       document.getElementById("lblConnectedEmail").innerText = status.email || "";
