@@ -1,9 +1,16 @@
-# AANO Windows Desktop Client - Main Launcher
-# Copyright (C) 2026 Jam Amjad Rasheed
-# Licensed under GPL-3.0-or-later.
-
 import os
 import sys
+import ctypes
+
+# Enable Windows Per-Monitor DPI Awareness (V2) to prevent blurry window scaling
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
 import webview
 from api import DesktopApi
 
