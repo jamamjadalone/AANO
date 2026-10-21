@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Soft ambient drop shadow of the monogram -->
+    <group android:translateY="2">
+        <!-- Left 'A' Shadow -->
+        <path
+            android:fillColor="#3300251A"
+            android:pathData="M44,30 L31,74 L39,74 L42.5,62 L51.5,62 L52.7,66.5 L60.2,63.5 L55.5,47.5 L47.5,30 Z M45,40.5 L49,55 L44,55 Z" />
+        <!-- Right 'A' Shadow -->
+        <path
+            android:fillColor="#3300251A"
+            android:pathData="M64,30 L55.5,47.5 L60.2,63.5 L65.5,62 L69,74 L77,74 L64,30 Z M63.2,40.5 L67.8,55 L59.5,55 Z" />
+    </group>
+
+    <!-- MAIN MONOGRAM: Dual Ascending Origami A.A -->
+    
+    <!-- Left 'A' (Primary Sharp White Fold) -->
+    <path
+        android:pathData="M44,30 L29,74 L37.5,74 L41.2,61.5 L52.8,61.5 L55.5,70.5 L63.5,66.8 L53,30 Z M44.6,40.5 L49.2,54.5 L43.2,54.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:angle="90"
+                android:startColor="#E0F2F1"
+                android:endColor="#FFFFFF"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+
+    <!-- Right 'A' (Interlocking Emerald-Tinted Fold) -->
+    <path
+        android:pathData="M64,30 L51.8,53.8 L56.5,67.2 L66.8,61.5 L70.5,74 L79,74 L64,30 Z M63.4,40.5 L68.2,54.5 L58.8,54.5 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:angle="270"
+                android:startColor="#FFFFFF"
+                android:endColor="#B2DFDB"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+
+    <!-- Connecting Brand Apex Highlight (The Subtle Bridge) -->
+    <path
+        android:pathData="M44,30 L54,30 L49,46 Z"
+        android:fillColor="#80FFFFFF" />
+    <path
+        android:pathData="M64,30 L54,30 L59,46 Z"
+        android:fillColor="#66B2DFDB" />
+
+    <!-- Center Dynamic Diamond Focal Core -->
+    <path
+        android:pathData="M54,49 L58.5,55 L54,61 L49.5,55 Z"
+        android:fillColor="#004D40" />
+    <path
+        android:pathData="M54,51.5 L56.5,55 L54,58.5 L51.5,55 Z"
+        android:fillColor="#80CBC4" />
+
+</vector>

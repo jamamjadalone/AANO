@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_view_mode"
+        android:title="View Mode"
+        android:icon="@drawable/ic_view_list"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_sort"
+        android:title="@string/sort_by"
+        android:icon="@drawable/ic_sort"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_trash"
+        android:title="@string/trash"
+        app:showAsAction="never"
+        android:icon="@android:drawable/ic_menu_delete" />
+    <item
+        android:id="@+id/action_sync"
+        android:title="@string/sync_now"
+        app:showAsAction="ifRoom"
+        android:icon="@android:drawable/ic_menu_rotate" />
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/settings"
+        app:showAsAction="never" />
+</menu>

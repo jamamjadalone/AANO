@@ -1,0 +1,37 @@
+# AANO Windows Desktop Client - Main Launcher
+# Copyright (C) 2026 Jam Amjad Rasheed
+# Licensed under GPL-3.0-or-later.
+
+import os
+import sys
+import webview
+from api import DesktopApi
+
+def get_base_dir():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+def main():
+    base_dir = get_base_dir()
+    ui_dir = os.path.join(base_dir, "ui")
+    index_path = os.path.join(ui_dir, "index.html")
+
+    api = DesktopApi()
+
+    window = webview.create_window(
+        title="AANO Notes",
+        url=index_path,
+        js_api=api,
+        width=1100,
+        height=720,
+        min_size=(850, 600),
+        background_color="#F8FAFC",
+        text_select=True
+    )
+
+    # Launch PyWebView with native Windows Edge WebView2 runtime
+    webview.start(debug=False)
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,55 @@
+# ==========================================
+# AANO MONOREPO - STRICT GITIGNORE (2026)
+# ==========================================
+
+# 1. SECURITY & KEYS (NEVER COMMIT!)
+*.jks
+*.keystore
+*.pfx
+*.p12
+*.pem
+*.key
+*.secret
+.env
+SECRETS*
+secrets/
+local.properties
+
+# 2. COMPILED BINARIES (Upload to GitHub Releases, not git!)
+*.apk
+*.aab
+*.exe
+*.msi
+*.zip
+*.tar.gz
+
+# 3. ANDROID BUILD ARTIFACTS
+android/**/build/
+android/.gradle/
+android/.idea/
+android/*.iml
+android/**/*.iml
+android/captures/
+android/.cxx/
+
+# 4. WINDOWS CLIENT BUILD ARTIFACTS
+windows/dist/
+windows/build/
+windows/build_installer/
+windows/*.spec
+windows/installer/*.zip
+
+# 5. PYTHON / NODE CACHES
+__pycache__/
+*.py[cod]
+*$py.class
+node_modules/
+.npm
+
+# 6. OPERATING SYSTEM ARTIFACTS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.bak
+*~

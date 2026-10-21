@@ -1,0 +1,120 @@
+╔══════════════════════════════════════════════════════╗
+║ AANO — MVP ROADMAP ║
+╠══════════════════════════════════════════════════════╣
+║ IDENTITY ║
+║ ☐ App name: AANO ║
+║ ☐ Developer: Jam Amjad Rasheed ║
+║ ☐ Package: app.aa.aano ║
+║ ☐ Change package/name everywhere ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 1 — FOUNDATION ║
+║ ☐ Clean project architecture ║
+║ ☐ Bottom navigation ║
+║ ☐ Light/Dark theme ║
+║ ☐ Local database ║
+║ ☐ Notes CRUD ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 2 — NOTES ║
+║ ☐ Create/Edit/Delete notes ║
+║ ☐ Note title + content ║
+║ ☐ Checklist notes ║
+║ ☐ Note colors ║
+║ ☐ Pin / Favorite ║
+║ ☐ Archive / Trash ║
+║ ☐ Folders ║
+║ ☐ Tags ║
+║ ☐ Search ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 3 — TODO ║
+║ ☐ Task creation ║
+║ ☐ Checkbox ║
+║ ☐ Priority ║
+║ ☐ Due date ║
+║ ☐ Reminder ║
+║ ☐ Recurring tasks ║
+║ ☐ Subtasks ║
+║ ☐ Completed tasks ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 4 — ⭐ FOCUS ║
+║ ☐ Focus 1 ║
+║ ☐ Focus 3 ║
+║ ☐ Focus 5 ║
+║ ☐ Show/Hide tasks ║
+║ ☐ Hidden tasks remain saved ║
+║ ☐ Auto-show next task after completion ║
+║ ☐ Simple Focus timer ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 5 — SECURITY ║
+║ ☐ AES-256-GCM encryption ║
+║ ☐ Android Keystore ║
+║ ☐ Secure key management ║
+║ ☐ App PIN ║
+║ ☐ Biometric unlock ║
+║ ☐ Auto-lock ║
+║ ☐ Screenshot protection ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 6 — GOOGLE ACCOUNT ║
+║ ☐ Google Sign-In ║
+║ ☐ Secure authentication ║
+║ ☐ Account/session handling ║
+║ ☐ Sign out ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 7 — GOOGLE DRIVE BACKUP ║
+║ ☐ Google Drive appDataFolder ║
+║ ☐ Encrypt before upload ║
+║ ☐ Automatic backup ║
+║ ☐ Manual backup ║
+║ ☐ Restore backup ║
+║ ☐ Same Google account → restore on new device ║
+║ ☐ Offline backup queue ║
+║ ☐ Sync status ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 8 — POLISH ║
+║ ☐ Note color picker ║
+║ ☐ Sort options ║
+║ ☐ Filters ║
+║ ☐ Notifications ║
+║ ☐ Android home-screen task widget ║
+║ ☐ Settings ║
+║ ☐ Import / Export ║
+╠══════════════════════════════════════════════════════╣
+║ PHASE 9 — TESTING ║
+║ ☐ CRUD testing ║
+║ ☐ Encryption testing ║
+║ ☐ Google login testing ║
+║ ☐ Backup testing ║
+║ ☐ Restore on second device ║
+║ ☐ Offline testing ║
+║ ☐ Crash/error testing ║
+║ ☐ Performance testing ║
+║ ☑ Release APK/AAB (signed, built 2026-09-23) ║
+╚══════════════════════════════════════════════════════╝
+
+IMPORTANT MVP SCOPE:
+
+Keep the first version simple.
+
+DO NOT implement yet:
+- Voice notes
+- Audio recording
+- File attachments
+- PDF attachments
+- Images inside notes
+- AI features
+- Complex collaboration
+- Unnecessary cloud infrastructure
+
+Focus on:
+Notes + Todo + Focus + Search + Colors + Security +
+Google Sign-In + encrypted Google Drive backup/restore.
+
+Build and test at last.
+Do not move to the next phase until the current phase works correctly.
+
+Keep the architecture extensible so attachments, voice notes,
+and AI can be added in future without rewriting the core database
+or encryption architecture.
+
+MVP ka core actually sirf 4 tabs rakho:
+
+📝 Notes | ✅ Tasks | 🎯 Focus | ⚙️ More

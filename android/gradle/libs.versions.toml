@@ -1,0 +1,30 @@
+[versions]
+agp = "8.4.1"
+coreKtx = "1.13.1"
+appcompat = "1.7.1"
+material = "1.12.0"
+lifecycle = "2.8.7"
+coroutines = "1.9.0"
+gmsAuth = "21.2.0"
+googleHttp = "2.2.0"
+googleApiClient = "2.9.1"
+driveApi = "v3-rev20260901-2.0.0"
+gson = "2.11.0"
+biometric = "1.1.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+gms-google-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "gmsAuth" }
+google-api-client = { group = "com.google.api-client", name = "google-api-client-android", version.ref = "googleApiClient" }
+google-http-client-gson = { group = "com.google.http-client", name = "google-http-client-gson", version.ref = "googleHttp" }
+google-api-services-drive = { group = "com.google.apis", name = "google-api-services-drive", version.ref = "driveApi" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version = "1.9.22" }

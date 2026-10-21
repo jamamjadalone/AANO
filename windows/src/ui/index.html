@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AANO Notes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 108 108" width="34" height="34">
+            <rect width="108" height="108" rx="24" fill="url(#bgGrad)"/>
+            <defs>
+              <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#004D40"/>
+                <stop offset="50%" stop-color="#00695C"/>
+                <stop offset="100%" stop-color="#00897B"/>
+              </linearGradient>
+            </defs>
+            <circle cx="54" cy="54" r="34" fill="rgba(255,255,255,0.08)"/>
+            <!-- Monogram Left A -->
+            <polygon points="44,30 29,74 37.5,74 41.2,61.5 52.8,61.5 55.5,70.5 63.5,66.8 53,30" fill="#FFFFFF"/>
+            <polygon points="44.6,40.5 49.2,54.5 43.2,54.5" fill="#005548"/>
+            <!-- Monogram Right A -->
+            <polygon points="64,30 51.8,53.8 56.5,67.2 66.8,61.5 70.5,74 79,74 64,30" fill="#E0F2F1"/>
+            <polygon points="63.4,40.5 68.2,54.5 58.8,54.5" fill="#005F50"/>
+            <polygon points="44,30 54,30 49,46" fill="rgba(255,255,255,0.7)"/>
+            <polygon points="64,30 54,30 59,46" fill="rgba(178,223,219,0.7)"/>
+            <polygon points="54,49 58.5,55 54,61 49.5,55" fill="#004D40"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h2>AANO</h2>
+          <span>Notes &amp; Sync</span>
+        </div>
+      </div>
+
+      <button id="btnNewNote" class="btn-primary">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        New Note
+      </button>
+
+      <nav class="nav-menu">
+        <a href="#" class="nav-item active" data-filter="all">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+          All Notes
+          <span id="allCount" class="badge">0</span>
+        </a>
+        <a href="#" class="nav-item" data-filter="pinned">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 9V4l1 0c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1l1 0v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/></svg>
+          Pinned Notes
+        </a>
+      </nav>
+
+      <div class="folders-section">
+        <div class="section-header">
+          <span>FOLDERS</span>
+          <button id="btnAddFolder" title="Add Folder">+</button>
+        </div>
+        <div id="foldersList" class="folders-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div id="cloudStatusBadge" class="cloud-status">
+          <div class="status-dot"></div>
+          <span id="cloudStatusText">Offline</span>
+        </div>
+        <div class="footer-actions">
+          <button id="btnCloudSync" title="Cloud Sync">☁️ Sync</button>
+          <button id="btnBackup" title="Backup & Restore">📦 Backup</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="main-content">
+      <!-- Top Action Bar -->
+      <header class="topbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          <input type="text" id="searchInput" placeholder="Search notes by title, content or folder...">
+          <button id="btnClearSearch" class="btn-clear hidden">&times;</button>
+        </div>
+        <div class="topbar-actions">
+          <button id="btnViewToggle" class="btn-icon" title="Toggle Grid/List View">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
+          </button>
+          <button id="btnManualSync" class="btn-secondary" title="Sync with Cloud">
+            <span class="sync-icon">🔄</span> Sync
+          </button>
+        </div>
+      </header>
+
+      <!-- Current Folder / Title Indicator -->
+      <div class="content-header">
+        <h1 id="currentViewTitle">All Notes</h1>
+        <span id="notesCount" class="notes-meta">0 notes</span>
+      </div>
+
+      <!-- Notes Grid / List -->
+      <div id="notesContainer" class="notes-grid"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state hidden">
+        <div class="empty-icon">📝</div>
+        <h3>No notes here yet</h3>
+        <p>Click the <b>"+ New Note"</b> button to capture your first idea.</p>
+      </div>
+    </main>
+
+    <!-- Full Note Editor Modal -->
+    <div id="editorModal" class="editor-modal hidden">
+      <div id="editorCard" class="editor-card">
+        <!-- Editor Topbar -->
+        <div class="editor-header">
+          <button id="btnEditorClose" class="btn-icon" title="Save & Close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          </button>
+
+          <div class="editor-meta">
+            <select id="editorFolderSelect" class="folder-select">
+              <option value="General">📁 General</option>
+              <option value="Work">📁 Work</option>
+              <option value="Personal">📁 Personal</option>
+              <option value="__new__">+ New Folder...</option>
+            </select>
+          </div>
+
+          <div class="editor-right-actions">
+            <span id="editorWordCount" class="word-counter">0 words • 0 chars</span>
+            <button id="btnEditorPin" class="btn-icon" title="Pin Note">📌</button>
+            <button id="btnEditorDelete" class="btn-icon btn-danger" title="Delete Note">🗑️</button>
+          </div>
+        </div>
+
+        <!-- Color Palette Strip -->
+        <div class="color-palette-bar">
+          <span class="palette-label">Paper Color:</span>
+          <div id="paletteDots" class="palette-dots"></div>
+        </div>
+
+        <!-- Note Title -->
+        <input type="text" id="editorTitle" class="editor-title-input" placeholder="Title">
+
+        <!-- Rich Text Formatting Toolbar -->
+        <div class="formatting-toolbar">
+          <button type="button" data-cmd="undo" title="Undo">↩️</button>
+          <button type="button" data-cmd="redo" title="Redo">↪️</button>
+          <div class="divider"></div>
+          <button type="button" data-cmd="formatBlock" data-val="H1" title="Heading 1"><b>H1</b></button>
+          <button type="button" data-cmd="formatBlock" data-val="H2" title="Heading 2"><b>H2</b></button>
+          <div class="divider"></div>
+          <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+          <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+          <button type="button" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+          <div class="divider"></div>
+          <!-- Highlighter Dropdown -->
+          <div class="dropdown">
+            <button type="button" class="dropbtn" title="Highlight">🖍️ Highlight ▾</button>
+            <div class="dropdown-content">
+              <a href="#" data-highlight="#FFF59D">💛 Yellow</a>
+              <a href="#" data-highlight="#C8E6C9">💚 Mint Green</a>
+              <a href="#" data-highlight="#F8BBD0">💖 Soft Pink</a>
+              <a href="#" data-highlight="#B3E5FC">💙 Sky Blue</a>
+              <a href="#" data-highlight="#FFE0B2">🧡 Peach</a>
+              <a href="#" data-highlight="transparent">❌ Clear</a>
+            </div>
+          </div>
+          <!-- Text Color Dropdown -->
+          <div class="dropdown">
+            <button type="button" class="dropbtn" title="Text Color">A̲ Color ▾</button>
+            <div class="dropdown-content">
+              <a href="#" data-forecolor="#212121">🖤 Default</a>
+              <a href="#" data-forecolor="#00796B">🟢 Emerald</a>
+              <a href="#" data-forecolor="#1565C0">🔵 Blue</a>
+              <a href="#" data-forecolor="#C62828">🔴 Crimson</a>
+              <a href="#" data-forecolor="#6A1B9A">🟣 Purple</a>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <button type="button" data-cmd="insertUnorderedList" title="Bullet List">• List</button>
+        </div>
+
+        <!-- Note Rich Text Content Area -->
+        <div id="editorContent" class="editor-content-area" contenteditable="true" placeholder="Start writing here..."></div>
+      </div>
+    </div>
+
+    <!-- Cloud Login / Sync Modal -->
+    <div id="cloudModal" class="modal-backdrop hidden">
+      <div class="dialog-box">
+        <h3>AANO Cloud Sync</h3>
+        <p>Sign in with your Gmail to sync notes across your phone and Windows PC.</p>
+        <div id="cloudLoginForm">
+          <input type="email" id="cloudEmailInput" placeholder="your.email@gmail.com" class="dialog-input">
+          <input type="password" id="cloudPassInput" placeholder="Password" class="dialog-input">
+          <div id="cloudError" class="error-msg hidden"></div>
+          <div class="dialog-buttons">
+            <button id="btnCancelCloud" class="btn-secondary">Cancel</button>
+            <button id="btnLoginCloud" class="btn-primary">Sign In &amp; Sync</button>
+          </div>
+        </div>
+        <div id="cloudActiveSession" class="hidden">
+          <p class="connected-text">Connected as: <b id="lblConnectedEmail"></b></p>
+          <div class="dialog-buttons">
+            <button id="btnLogoutCloud" class="btn-danger">Disconnect</button>
+            <button id="btnDoneCloud" class="btn-primary">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup Modal -->
+    <div id="backupModal" class="modal-backdrop hidden">
+      <div class="dialog-box">
+        <h3>Backup &amp; Restore</h3>
+        <p>Export your notes to offline <code>aano-backup.json</code> or import an existing backup from your phone.</p>
+        <div class="dialog-buttons" style="flex-direction: column; gap: 8px;">
+          <button id="btnExportJSON" class="btn-primary" style="width: 100%;">📥 Export aano-backup.json</button>
+          <label class="btn-secondary" style="width: 100%; text-align: center; cursor: pointer;">
+            📤 Import JSON Backup
+            <input type="file" id="backupFileInput" accept=".json" style="display: none;">
+          </label>
+          <button id="btnCloseBackup" class="btn-secondary" style="width: 100%;">Close</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

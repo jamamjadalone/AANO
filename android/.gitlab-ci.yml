@@ -1,0 +1,60 @@
+# AANO Automated CI/CD & Release Pipeline
+# Copyright (C) 2026 Jam Amjad Rasheed
+# Licensed under GPL-3.0-or-later
+
+stages:
+  - build
+  - release
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+# Cache Gradle packages between cloud runner executions
+cache:
+  key: "${CI_PROJECT_ID}"
+  paths:
+    - .gradle/
+    - app/.gradle/
+
+# Build Stage: Compiles on tag trigger in cloud
+build_release:
+  stage: build
+  image: inovex/gitlab-ci-android:latest
+  allow_failure: true
+  rules:
+    - if: $CI_COMMIT_TAG
+  before_script:
+    - export GRADLE_USER_HOME=$(pwd)/.gradle
+    - if [ -f "./gradlew" ]; then chmod +x ./gradlew; fi
+  script:
+    - echo "Compiling AANO release for tag $CI_COMMIT_TAG on GitLab Cloud Runner..."
+    - if [ -f "./gradlew" ]; then ./gradlew assembleRelease --stacktrace; else gradle assembleRelease --stacktrace; fi
+  artifacts:
+    name: "AANO-${CI_COMMIT_TAG}-build"
+    expire_in: 30 days
+    paths:
+      - app/build/outputs/apk/release/*.apk
+      - app/build/outputs/bundle/release/*.aab
+
+# Release Stage: Generates official release entry with release-cli
+publish_release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "Publishing official release $CI_COMMIT_TAG on GitLab..."
+  release:
+    name: "AANO $CI_COMMIT_TAG"
+    tag_name: "$CI_COMMIT_TAG"
+    description: |
+      ## AANO $CI_COMMIT_TAG — Official Release
+
+      A private, offline-first notes, tasks, and productivity workstation for Android.
+
+      ### 🌟 Highlights
+      - **Hardware-Backed AES-256-GCM Encryption**: Secure at-rest storage via Android Keystore.
+      - **Biometric Authentication**: Fingerprint & Face unlock with PBKDF2WithHmacSHA256 salted PIN protection.
+      - **Pomodoro Focus Engine**: 25m & 50m intervals pulling tasks directly from your agenda.
+      - **Google Drive AppData Sync**: Isolated non-tracking cloud backup to private `appdata` scope.
+      - **Zero Telemetry**: 100% offline-ready, no crash trackers, no advertisements.
