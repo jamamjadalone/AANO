@@ -19,7 +19,7 @@ Thank you for your interest in improving AANO! AANO is an open-source, privacy-f
 
 1. **Fork and Clone**:
    ```bash
-   git clone https://gitlab.com/jamamjadalone/AANO.git
+   git clone https://github.com/jamamjadalone/aano-notes.git
    cd AANO
    ```
 

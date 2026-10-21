@@ -22,7 +22,7 @@ AANO is designed from the ground up with a **security-first, privacy-by-design**
 
 If you discover any security vulnerabilities, memory leak risks exposing key material, or cryptographic weaknesses, please report them privately:
 
-- **Email**: Create a private vulnerability disclosure report via [GitLab Security Advisories](https://gitlab.com/jamamjadalone/AANO/security/advisories)
+- **Email**: Create a private vulnerability disclosure report via [GitLab Security Advisories](https://github.com/jamamjadalone/aano-notes/security/advisories)
 - **Direct Contact**: Reach out via GitLab profile issues or private channel.
 
 Please allow up to 48 hours for a response before publicly disclosing any sensitive findings.

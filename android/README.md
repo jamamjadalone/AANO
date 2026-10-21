@@ -102,7 +102,7 @@ AANO Application Architecture
 ### Clone & Build
 ```bash
 # Clone repository
-git clone https://gitlab.com/jamamjadalone/AANO.git
+git clone https://github.com/jamamjadalone/aano-notes.git
 cd AANO
 
 # Build Debug APK
