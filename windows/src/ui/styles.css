@@ -784,3 +784,37 @@ body {
 .hidden {
   display: none !important;
 }
+
+.btn-danger-filled {
+  background: #DC2626;
+  color: #FFFFFF !important;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-danger-filled:hover {
+  background: #B91C1C;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-backdrop:not(.hidden) {
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-backdrop:not(.hidden) .dialog-box {
+  animation: scaleIn 0.15s ease-out;
+}

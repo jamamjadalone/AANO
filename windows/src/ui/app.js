@@ -150,10 +150,14 @@ function setupEventListeners() {
   });
 
   // Add Folder
-  document.getElementById("btnAddFolder").addEventListener("click", () => {
-    const folderName = prompt("Enter new folder name:");
-    if (folderName && folderName.trim()) {
-      openEditor(null, folderName.trim());
+  document.getElementById("btnAddFolder").addEventListener("click", async () => {
+    const folderName = await showNativePrompt({
+      title: "New Folder",
+      message: "Enter folder name to organize your notes:",
+      placeholder: "e.g. Work, Ideas, Personal"
+    });
+    if (folderName) {
+      openEditor(null, folderName);
     }
   });
 
@@ -172,7 +176,14 @@ function setupEventListeners() {
       closeEditorWithoutSaving();
       return;
     }
-    if (confirm("Are you sure you want to delete this note?")) {
+    const confirmed = await showNativeConfirm({
+      title: "Delete Note",
+      message: "Are you sure you want to delete this note? It will be removed across all your synced devices.",
+      confirmText: "Delete Note",
+      cancelText: "Cancel",
+      danger: true
+    });
+    if (confirmed) {
       const api = getApi();
       if (api) {
         await api.delete_note(editingNote.id);
@@ -186,11 +197,15 @@ function setupEventListeners() {
 
   // Folder Select dropdown in Editor
   const folderSelect = document.getElementById("editorFolderSelect");
-  folderSelect.addEventListener("change", () => {
+  folderSelect.addEventListener("change", async () => {
     if (folderSelect.value === "__new__") {
-      const newFolder = prompt("Enter new folder name:");
-      if (newFolder && newFolder.trim()) {
-        const val = newFolder.trim();
+      const newFolder = await showNativePrompt({
+        title: "Create Folder",
+        message: "Enter new folder name:",
+        placeholder: "Folder name"
+      });
+      if (newFolder) {
+        const val = newFolder;
         const opt = document.createElement("option");
         opt.value = val;
         opt.innerText = "📁 " + val;
@@ -630,11 +645,17 @@ async function handleImportBackup(e) {
     if (api) {
       const res = await api.import_backup_json(content);
       if (res.success) {
-        alert(`Successfully imported ${res.count} notes!`);
+        await showNativeAlert({
+          title: "Backup Restored",
+          message: `Successfully imported ${res.count} notes into AANO.`
+        });
         document.getElementById("backupModal").classList.add("hidden");
         await refreshData();
       } else {
-        alert("Failed to import: " + (res.error || "Unknown error"));
+        await showNativeAlert({
+          title: "Import Failed",
+          message: "Failed to import: " + (res.error || "Unknown error")
+        });
       }
     }
   };
@@ -662,4 +683,120 @@ function formatDate(ms) {
   const d = new Date(ms);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+// --------------------- Native Custom Modals (No Browser Popups) ---------------------
+function showNativeConfirm({ title = "Confirm", message = "Are you sure?", confirmText = "Confirm", cancelText = "Cancel", danger = true } = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("nativeConfirmModal");
+    const titleEl = document.getElementById("nativeConfirmTitle");
+    const msgEl = document.getElementById("nativeConfirmMessage");
+    const btnOk = document.getElementById("btnNativeConfirmOk");
+    const btnCancel = document.getElementById("btnNativeConfirmCancel");
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    btnOk.innerText = confirmText;
+    btnCancel.innerText = cancelText;
+
+    if (danger) {
+      btnOk.className = "btn-danger-filled";
+    } else {
+      btnOk.className = "btn-primary";
+    }
+
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      btnOk.removeEventListener("click", onOk);
+      btnCancel.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+
+    const onOk = () => { cleanup(); resolve(true); };
+    const onCancel = () => { cleanup(); resolve(false); };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") { cleanup(); resolve(false); }
+      if (e.key === "Enter") { cleanup(); resolve(true); }
+    };
+
+    btnOk.addEventListener("click", onOk);
+    btnCancel.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onKeyDown);
+
+    modal.classList.remove("hidden");
+    btnOk.focus();
+  });
+}
+
+function showNativePrompt({ title = "Enter Value", message = "", placeholder = "", defaultValue = "", confirmText = "OK", cancelText = "Cancel" } = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("nativePromptModal");
+    const titleEl = document.getElementById("nativePromptTitle");
+    const msgEl = document.getElementById("nativePromptMessage");
+    const inputEl = document.getElementById("nativePromptInput");
+    const btnOk = document.getElementById("btnNativePromptOk");
+    const btnCancel = document.getElementById("btnNativePromptCancel");
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    inputEl.placeholder = placeholder;
+    inputEl.value = defaultValue;
+    btnOk.innerText = confirmText;
+    btnCancel.innerText = cancelText;
+
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      btnOk.removeEventListener("click", onOk);
+      btnCancel.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+
+    const onOk = () => {
+      const val = inputEl.value.trim();
+      cleanup();
+      resolve(val.length > 0 ? val : null);
+    };
+    const onCancel = () => { cleanup(); resolve(null); };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") { cleanup(); resolve(null); }
+      if (e.key === "Enter") { onOk(); }
+    };
+
+    btnOk.addEventListener("click", onOk);
+    btnCancel.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onKeyDown);
+
+    modal.classList.remove("hidden");
+    setTimeout(() => { inputEl.focus(); inputEl.select(); }, 50);
+  });
+}
+
+function showNativeAlert({ title = "Notice", message = "", okText = "OK" } = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("nativeAlertModal");
+    const titleEl = document.getElementById("nativeAlertTitle");
+    const msgEl = document.getElementById("nativeAlertMessage");
+    const btnOk = document.getElementById("btnNativeAlertOk");
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+    btnOk.innerText = okText;
+
+    const cleanup = () => {
+      modal.classList.add("hidden");
+      btnOk.removeEventListener("click", onOk);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+
+    const onOk = () => { cleanup(); resolve(); };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape" || e.key === "Enter") { cleanup(); resolve(); }
+    };
+
+    btnOk.addEventListener("click", onOk);
+    document.addEventListener("keydown", onKeyDown);
+
+    modal.classList.remove("hidden");
+    btnOk.focus();
+  });
 }

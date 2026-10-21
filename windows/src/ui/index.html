@@ -261,6 +261,42 @@
       </div>
     </div>
 
+    <!-- Native Confirm Dialog -->
+    <div id="nativeConfirmModal" class="modal-backdrop hidden">
+      <div class="dialog-box">
+        <h3 id="nativeConfirmTitle">Confirm Action</h3>
+        <p id="nativeConfirmMessage">Are you sure?</p>
+        <div class="dialog-buttons">
+          <button id="btnNativeConfirmCancel" class="btn-secondary">Cancel</button>
+          <button id="btnNativeConfirmOk" class="btn-danger-filled">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Native Prompt Dialog -->
+    <div id="nativePromptModal" class="modal-backdrop hidden">
+      <div class="dialog-box">
+        <h3 id="nativePromptTitle">Enter Value</h3>
+        <p id="nativePromptMessage">Please enter a value below:</p>
+        <input type="text" id="nativePromptInput" class="dialog-input">
+        <div class="dialog-buttons">
+          <button id="btnNativePromptCancel" class="btn-secondary">Cancel</button>
+          <button id="btnNativePromptOk" class="btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Native Alert Dialog -->
+    <div id="nativeAlertModal" class="modal-backdrop hidden">
+      <div class="dialog-box">
+        <h3 id="nativeAlertTitle">Notice</h3>
+        <p id="nativeAlertMessage"></p>
+        <div class="dialog-buttons">
+          <button id="btnNativeAlertOk" class="btn-primary">OK</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="app.js"></script>

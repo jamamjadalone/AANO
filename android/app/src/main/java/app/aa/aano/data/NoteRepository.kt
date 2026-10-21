@@ -98,7 +98,7 @@ class NoteRepository(private val context: Context) {
         for (i in notes.indices) {
             if (notes[i].folder.equals(trimmed, ignoreCase = true)) {
                 if (deleteNotes) {
-                    notes[i] = notes[i].copy(deleted = true, deletedAt = now)
+                    notes[i] = notes[i].copy(deleted = true, deletedAt = now, updatedAt = now)
                 } else {
                     notes[i] = notes[i].copy(folder = "", updatedAt = now)
                 }
@@ -218,9 +218,11 @@ class NoteRepository(private val context: Context) {
             val notes = readNotes().toMutableList()
             val index = notes.indexOfFirst { it.id == id }
             if (index >= 0) {
+                val now = System.currentTimeMillis()
                 notes[index] = notes[index].copy(
                     deleted = true,
-                    deletedAt = System.currentTimeMillis()
+                    deletedAt = now,
+                    updatedAt = now
                 )
                 writeNotes(notes)
             }
@@ -233,7 +235,8 @@ class NoteRepository(private val context: Context) {
             val notes = readNotes().toMutableList()
             val index = notes.indexOfFirst { it.id == id }
             if (index >= 0) {
-                notes[index] = notes[index].copy(deleted = false, deletedAt = 0)
+                val now = System.currentTimeMillis()
+                notes[index] = notes[index].copy(deleted = false, deletedAt = 0, updatedAt = now)
                 writeNotes(notes)
             }
         }
@@ -327,7 +330,21 @@ class NoteRepository(private val context: Context) {
     private fun readNotes(): List<Note> {
         if (!notesFile.exists()) return emptyList()
         return try {
-            deserializeNotes(notesFile.readText())
+            val list = deserializeNotes(notesFile.readText())
+            var needsResave = false
+            val now = System.currentTimeMillis()
+            val fixed = list.map { note ->
+                if (note.deleted && (note.updatedAt <= note.deletedAt || (note.deletedAt > 0 && note.updatedAt < note.deletedAt))) {
+                    needsResave = true
+                    note.copy(updatedAt = now)
+                } else {
+                    note
+                }
+            }
+            if (needsResave) {
+                writeNotes(fixed)
+            }
+            fixed
         } catch (e: Exception) {
             emptyList()
         }
