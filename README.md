@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/jamamjadalone/AANO/releases/tag/v1.0.0-beta"><img src="https://img.shields.io/badge/Release-v1.0.0--beta-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.0.0-beta"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-00796B.svg?style=flat-square" alt="License: GPL-3.0"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Edge%20WebView2)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
@@ -132,3 +133,4 @@ AANO/
 
 AANO is free and open-source software licensed under the **GNU General Public License v3.0** ([GPL-3.0](LICENSE)).  
 Copyright (C) 2026 Jam Amjad Rasheed.
+
