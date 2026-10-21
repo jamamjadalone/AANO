@@ -40,6 +40,9 @@ export default {
       if (path === "/api/verify-and-register" && request.method === "POST") {
         return await handleVerifyAndRegister(request, env, clientIp);
       }
+      if (path === "/api/reset-password" && request.method === "POST") {
+        return await handleResetPassword(request, env, clientIp);
+      }
       if (path === "/api/login" && request.method === "POST") {
         return await handleLogin(request, env, clientIp);
       }
@@ -173,7 +176,7 @@ async function hashPassword(password) {
 }
 
 // -------------------------------------------------------------
-// 1. STEP 1: REQUEST 6-DIGIT OTP VIA GOOGLE APPS SCRIPT
+// 1. STEP 1: REQUEST 6-DIGIT OTP (Supports 'register' & 'reset')
 // -------------------------------------------------------------
 async function handleRequestOtp(request, env, clientIp) {
   // IP Rate Limit: Max 5 OTP requests per 15 minutes per IP
@@ -182,7 +185,10 @@ async function handleRequestOtp(request, env, clientIp) {
     return jsonResponse({ error: `Too many requests from this IP. Please wait ${rateCheck.retryAfterSec} seconds.` }, 429);
   }
 
-  const { email } = await request.json();
+  const body = await request.json();
+  const email = body.email;
+  const purpose = (body.purpose || "register").toLowerCase().trim();
+
   const check = sanitizeGmail(email);
   if (!check.valid) {
     return jsonResponse({ error: check.error }, 400);
@@ -190,8 +196,17 @@ async function handleRequestOtp(request, env, clientIp) {
 
   // Check if account already exists
   const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(check.canonicalEmail).first();
-  if (existing) {
-    return jsonResponse({ error: "An account already exists for this Google mailbox." }, 400);
+
+  if (purpose === "reset") {
+    // For password reset, user MUST already exist
+    if (!existing) {
+      return jsonResponse({ error: "No account found registered with this Gmail address." }, 404);
+    }
+  } else {
+    // For registration, user MUST NOT exist
+    if (existing) {
+      return jsonResponse({ error: "An account already exists for this Google mailbox. Please login or reset password." }, 400);
+    }
   }
 
   // Rate limit: 60s cooldown per specific email
@@ -304,7 +319,64 @@ async function handleVerifyAndRegister(request, env, clientIp) {
 }
 
 // -------------------------------------------------------------
-// 3. USER LOGIN (Brute-Force Shield)
+// 3. STEP 3: RESET PASSWORD VIA OTP
+// -------------------------------------------------------------
+async function handleResetPassword(request, env, clientIp) {
+  const { email, otp, password } = await request.json();
+  const check = sanitizeGmail(email);
+  if (!check.valid) {
+    return jsonResponse({ error: check.error }, 400);
+  }
+
+  if (!password || password.length < 8) {
+    return jsonResponse({ error: "Password must be at least 8 characters." }, 400);
+  }
+
+  const user = await env.DB.prepare("SELECT id, email FROM users WHERE email = ?").bind(check.canonicalEmail).first();
+  if (!user) {
+    return jsonResponse({ error: "No account found registered with this Gmail address." }, 404);
+  }
+
+  const record = await env.DB.prepare("SELECT otp_code, created_at, attempts FROM email_otps WHERE canonical_email = ?")
+    .bind(check.canonicalEmail)
+    .first();
+
+  if (!record) {
+    return jsonResponse({ error: "No pending verification code found. Request a new one." }, 400);
+  }
+
+  // 10 minutes expiry
+  if (Date.now() - record.created_at > 10 * 60 * 1000) {
+    await env.DB.prepare("DELETE FROM email_otps WHERE canonical_email = ?").bind(check.canonicalEmail).run();
+    return jsonResponse({ error: "Verification code has expired. Request a new one." }, 400);
+  }
+
+  if (record.attempts >= 5) {
+    await env.DB.prepare("DELETE FROM email_otps WHERE canonical_email = ?").bind(check.canonicalEmail).run();
+    return jsonResponse({ error: "Too many failed attempts. Code invalidated." }, 429);
+  }
+
+  if (String(record.otp_code).trim() !== String(otp || "").trim()) {
+    await env.DB.prepare("UPDATE email_otps SET attempts = attempts + 1 WHERE canonical_email = ?")
+      .bind(check.canonicalEmail)
+      .run();
+    return jsonResponse({ error: "Invalid verification code." }, 400);
+  }
+
+  // OTP verified! Clean up
+  await env.DB.prepare("DELETE FROM email_otps WHERE canonical_email = ?").bind(check.canonicalEmail).run();
+
+  const passHash = await hashPassword(password);
+  await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+    .bind(passHash, user.id)
+    .run();
+
+  const token = btoa(`${user.id}:${Date.now()}:${passHash.substring(0, 16)}`);
+  return jsonResponse({ success: true, userId: user.id, email: user.email, token });
+}
+
+// -------------------------------------------------------------
+// 4. USER LOGIN (Brute-Force Shield)
 // -------------------------------------------------------------
 async function handleLogin(request, env, clientIp) {
   // IP Rate Limit: Max 10 attempts per 15 minutes per IP
@@ -351,7 +423,7 @@ async function authUser(request, env) {
 }
 
 // -------------------------------------------------------------
-// 4. BI-DIRECTIONAL SYNC (Strict Notes only, with Size Caps)
+// 5. BI-DIRECTIONAL SYNC (Strict Notes only, with Size Caps)
 // -------------------------------------------------------------
 async function handleSync(request, env) {
   const userId = await authUser(request, env);
