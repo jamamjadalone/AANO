@@ -61,6 +61,11 @@ let editingNote = null; // null if creating new, or note object
 let editingColor = 0;
 let editingPinned = false;
 
+// Global debounce for opening external links (single tab guarantee)
+let lastUrlOpenTime = 0;
+let lastUrlOpened = "";
+let isAppInitialized = false;
+
 // Wait for PyWebView bridge
 function getApi() {
   return window.pywebview ? window.pywebview.api : null;
@@ -78,6 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function initApp() {
+  if (isAppInitialized) return;
+  isAppInitialized = true;
   setupEventListeners();
   renderColorPalette();
   await refreshData();
@@ -367,7 +374,7 @@ function setupEventListeners() {
   // Seamless switch to Edit Mode when clicking anywhere on note in View Mode
   contentArea.addEventListener("click", (e) => {
     if (isEditorViewMode) {
-      if (e.target.closest("a")) return; // Let link handler open browser
+      if (e.target.closest(".note-link") || e.target.closest("a")) return; // Let link handler open browser
       setEditorMode(false);
       contentArea.focus();
     }
@@ -385,18 +392,22 @@ function setupEventListeners() {
   if (editorCard) {
     editorCard.addEventListener("click", (e) => {
       if (isEditorViewMode) {
-        if (e.target.closest("a") || e.target.closest("button") || e.target.closest("select")) return;
+        if (e.target.closest(".note-link") || e.target.closest("a") || e.target.closest("button") || e.target.closest("select")) return;
         setEditorMode(false);
         contentArea.focus();
       }
     });
   }
 
-  // Intercept all note link clicks and open via desktop browser (Prevent double tabs)
-  let lastUrlOpenTime = 0;
-  let lastUrlOpened = "";
+  // Intercept note link clicks and open via desktop browser (Guaranteed Single Tab)
   document.addEventListener("click", (e) => {
-    const link = e.target.closest("a.note-link") || e.target.closest("a");
+    // In Edit Mode, any click inside editorContent must NOT open any link!
+    // This allows cursor placement, text selection, and normal typing.
+    if (e.target.closest("#editorContent") && !isEditorViewMode) {
+      return;
+    }
+
+    const link = e.target.closest(".note-link") || e.target.closest("a");
     if (link) {
       const url = link.getAttribute("data-url") || (link.href && !link.href.startsWith("javascript:") && !link.href.endsWith("#") ? link.href : null);
       if (url) {
@@ -404,7 +415,7 @@ function setupEventListeners() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         const now = Date.now();
-        if (now - lastUrlOpenTime < 700 && lastUrlOpened === url) {
+        if (now - lastUrlOpenTime < 1000 && lastUrlOpened === url) {
           return;
         }
         lastUrlOpenTime = now;
@@ -668,7 +679,7 @@ function renderNotes() {
       });
     } else {
       card.addEventListener("click", (e) => {
-        if (e.target.closest("a")) return; // Clicked link directly on card: open browser, do not open editor!
+        if (e.target.closest(".note-link") || e.target.closest("a")) return; // Clicked link directly on card: open browser, do not open editor!
         openEditor(note);
       });
     }
@@ -730,7 +741,7 @@ function formatLinksInHtml(html) {
     if (href.toLowerCase().startsWith("www.")) {
       href = "https://" + href;
     }
-    return `<a href="javascript:void(0)" data-url="${href}" class="note-link">${url}</a>`;
+    return `<span data-url="${href}" class="note-link">${url}</span>`;
   });
 }
 
@@ -740,7 +751,7 @@ function autoLinkify(element) {
   const nodesToReplace = [];
   let node;
   while ((node = walker.nextNode())) {
-    if (node.parentElement && node.parentElement.tagName.toLowerCase() === "a") continue;
+    if (node.parentElement && (node.parentElement.classList.contains("note-link") || node.parentElement.tagName.toLowerCase() === "a")) continue;
     URL_REGEX.lastIndex = 0;
     if (URL_REGEX.test(node.nodeValue)) {
       nodesToReplace.push(node);
@@ -754,16 +765,15 @@ function autoLinkify(element) {
     for (const part of parts) {
       URL_REGEX.lastIndex = 0;
       if (URL_REGEX.test(part)) {
-        const a = document.createElement("a");
+        const span = document.createElement("span");
         let href = part;
         if (href.toLowerCase().startsWith("www.")) {
           href = "https://" + href;
         }
-        a.href = "javascript:void(0)";
-        a.setAttribute("data-url", href);
-        a.textContent = part;
-        a.className = "note-link";
-        fragment.appendChild(a);
+        span.setAttribute("data-url", href);
+        span.textContent = part;
+        span.className = "note-link";
+        fragment.appendChild(span);
       } else if (part) {
         fragment.appendChild(document.createTextNode(part));
       }

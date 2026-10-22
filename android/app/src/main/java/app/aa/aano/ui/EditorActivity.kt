@@ -19,6 +19,7 @@ import android.text.Html
 import android.text.Spannable
 import android.text.Spanned
 import android.text.TextWatcher
+import android.text.method.ArrowKeyMovementMethod
 import android.text.method.LinkMovementMethod
 import android.text.style.URLSpan
 import android.text.util.Linkify
@@ -726,6 +727,10 @@ class EditorActivity : AppCompatActivity() {
 
     inner class SmartTouchMovementMethod(private val onNonLinkTapped: (offset: Int) -> Unit) : LinkMovementMethod() {
         override fun onTouchEvent(widget: TextView, buffer: Spannable, event: MotionEvent): Boolean {
+            if (isEditMode) {
+                // In Edit Mode, suppress link activation entirely! Allow normal typing & cursor placement.
+                return false
+            }
             val action = event.action
             if (action == MotionEvent.ACTION_UP) {
                 val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
@@ -739,7 +744,7 @@ class EditorActivity : AppCompatActivity() {
 
                     if (links.isNotEmpty()) {
                         return super.onTouchEvent(widget, buffer, event)
-                    } else if (!isEditMode) {
+                    } else {
                         onNonLinkTapped(off)
                         return true
                     }
@@ -800,6 +805,7 @@ class EditorActivity : AppCompatActivity() {
             binding.noteContent.isFocusable = true
             binding.noteContent.isFocusableInTouchMode = true
             binding.noteContent.isCursorVisible = true
+            binding.noteContent.movementMethod = ArrowKeyMovementMethod.getInstance()
 
             binding.formattingToolbar.visibility = View.VISIBLE
         } else {
@@ -813,6 +819,9 @@ class EditorActivity : AppCompatActivity() {
             binding.noteContent.isFocusable = false
             binding.noteContent.isFocusableInTouchMode = false
             binding.noteContent.isCursorVisible = false
+            binding.noteContent.movementMethod = SmartTouchMovementMethod { tapOffset ->
+                switchToEditMode(focusTitle = false, tapOffset = tapOffset)
+            }
 
             binding.formattingToolbar.visibility = View.GONE
         }

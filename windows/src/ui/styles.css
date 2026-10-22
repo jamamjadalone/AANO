@@ -1033,3 +1033,9 @@ body {
 .dark-card .note-link:hover, .dark-card .note-card-preview a:hover {
   color: #b3e5fc !important;
 }
+
+#editorContent[contenteditable="true"] .note-link,
+#editorContent[contenteditable="true"] a {
+  cursor: text !important;
+}
+

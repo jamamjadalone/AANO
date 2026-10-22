@@ -30,6 +30,8 @@ def _parse_color(c):
 
 class DesktopApi:
     def __init__(self):
+        self._last_url = ""
+        self._last_open_time = 0.0
         # Trigger background sync on startup if logged in
         self._async_auto_sync()
 
@@ -263,6 +265,11 @@ class DesktopApi:
     def open_external_url(self, url):
         if url and (url.startswith("http://") or url.startswith("https://") or url.startswith("mailto:")):
             try:
+                now = time.time()
+                if url == self._last_url and (now - self._last_open_time) < 1.0:
+                    return True
+                self._last_url = url
+                self._last_open_time = now
                 import webbrowser
                 webbrowser.open(url)
                 return True
