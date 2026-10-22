@@ -70,8 +70,19 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
         } catch (e: Exception) {
-            Toast.makeText(this, getString(R.string.google_sign_in_failed, e.localizedMessage ?: "Sign-in cancelled"), Toast.LENGTH_LONG).show()
+            val msg = if (e is ApiException) {
+                when (e.statusCode) {
+                    7 -> "Network error (Code 7): Check internet or disable Private DNS/VPN on phone."
+                    10 -> "Setup error (Code 10): SHA-1 fingerprint needs to be registered in Google Cloud Console."
+                    12501 -> "Sign-in cancelled."
+                    else -> "Google error (${e.statusCode}): ${e.localizedMessage}"
+                }
+            } else {
+                e.localizedMessage ?: "Sign-in cancelled"
+            }
+            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         }
+
     }
 
     private val importLauncher = registerForActivityResult(

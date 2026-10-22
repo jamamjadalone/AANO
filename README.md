@@ -129,8 +129,18 @@ AANO/
 
 ---
 
+## 📲 Android Sideloading Installation Guide
+
+If you download `aano-v1.0.1-beta.apk` directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases):
+1. **Download APK**: Tap `aano-v1.0.1-beta.apk` on your Android device.
+2. **Allow Installation**: If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
+3. **Play Protect Prompt**: If Google Play Protect shows *"Unrecognized app"*, tap **More details** and then **Install anyway**. AANO is 100% open source, tracker-free, and contains zero malicious permissions.
+
+---
+
 ## 📄 License
 
 AANO is free and open-source software licensed under the **GNU General Public License v3.0** ([GPL-3.0](LICENSE)).  
 Copyright (C) 2026 Jam Amjad Rasheed.
+
 

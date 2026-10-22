@@ -280,7 +280,7 @@ class NotesFragment : Fragment() {
                 runSilentSyncCheck()
             }
             while (isActive) {
-                kotlinx.coroutines.delay(2500) // 2.5 seconds real-time background poll
+                kotlinx.coroutines.delay(90_000L) // Smart battery-friendly heartbeat (90s)
                 if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
                     runSilentSyncCheck()
                 }

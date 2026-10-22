@@ -103,8 +103,8 @@ async function initApp() {
     } catch (_) {}
   }
 
-  // Fast real-time periodic background auto-sync polling every 2.5 seconds
-  setInterval(runAutoSyncInterval, 2500);
+  // Smart background auto-sync heartbeat (90s)
+  setInterval(runAutoSyncInterval, 90000);
 
   // Immediate sync when app window gains focus
   window.addEventListener("focus", () => {
