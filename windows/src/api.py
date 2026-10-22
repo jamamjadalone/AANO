@@ -259,3 +259,14 @@ class DesktopApi:
             return {"success": True, "count": len(incoming)}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def open_external_url(self, url):
+        if url and (url.startswith("http://") or url.startswith("https://") or url.startswith("mailto:")):
+            try:
+                import webbrowser
+                webbrowser.open(url)
+                return True
+            except Exception as e:
+                print(f"[AANO Desktop] Failed to open external URL: {e}")
+                return False
+        return False

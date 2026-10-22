@@ -19,6 +19,9 @@ import android.text.Html
 import android.text.Spannable
 import android.text.Spanned
 import android.text.TextWatcher
+import android.text.method.LinkMovementMethod
+import android.text.util.Linkify
+import android.view.inputmethod.InputMethodManager
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.CharacterStyle
@@ -100,6 +103,7 @@ class EditorActivity : AppCompatActivity() {
     private val redoStack = ArrayDeque<String>()
     private var isUndoRedoActive = false
     private var isDeleted = false
+    private var isEditMode = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -149,18 +153,24 @@ class EditorActivity : AppCompatActivity() {
                     highlightSelectedColor()
                     updateWordCount()
                     pushHistorySnapshot()
+                    isEditMode = false
+                    applyModeUi()
                 } else {
                     noteId = null
                     pushHistorySnapshot()
+                    isEditMode = true
+                    applyModeUi()
                 }
                 loaded = true
             }
         } ?: run {
             selectedFolder = intent.getStringExtra(EXTRA_FOLDER) ?: ""
             loaded = true
+            isEditMode = true
             updateFolderChipDisplay()
             updateWordCount()
             pushHistorySnapshot()
+            applyModeUi()
             binding.noteTitle.post {
                 binding.noteTitle.requestFocus()
                 val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
@@ -241,6 +251,7 @@ class EditorActivity : AppCompatActivity() {
                 updateWordCount()
                 if (!isUndoRedoActive && loaded) {
                     pushHistorySnapshot()
+                    applyLinkFormatting()
                 }
             }
         })
@@ -661,6 +672,8 @@ class EditorActivity : AppCompatActivity() {
         binding.noteTitle.setHintTextColor(hintColor)
         binding.noteContent.setTextColor(textColor)
         binding.noteContent.setHintTextColor(hintColor)
+        val linkColor = if (isDark) 0xFF80D8FF.toInt() else ContextCompat.getColor(this, R.color.brand)
+        binding.noteContent.setLinkTextColor(linkColor)
 
         val density = resources.displayMetrics.density
         for (i in 0 until binding.colorRow.childCount) {
@@ -698,13 +711,85 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    private fun applyLinkFormatting() {
+        try {
+            Linkify.addLinks(binding.noteContent, Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES)
+            val isDark = binding.noteTitle.currentTextColor == 0xFFFFFFFF.toInt()
+            val linkColor = if (isDark) 0xFF80D8FF.toInt() else ContextCompat.getColor(this, R.color.brand)
+            binding.noteContent.setLinkTextColor(linkColor)
+        } catch (_: Exception) {}
+    }
+
+    private fun applyModeUi() {
+        binding.noteContent.movementMethod = LinkMovementMethod.getInstance()
+        applyLinkFormatting()
+
+        if (isEditMode) {
+            binding.noteTitle.isFocusable = true
+            binding.noteTitle.isFocusableInTouchMode = true
+            binding.noteTitle.isCursorVisible = true
+
+            binding.noteContent.isFocusable = true
+            binding.noteContent.isFocusableInTouchMode = true
+            binding.noteContent.isCursorVisible = true
+
+            binding.formattingToolbar.visibility = View.VISIBLE
+        } else {
+            val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
+
+            binding.noteTitle.isFocusable = false
+            binding.noteTitle.isFocusableInTouchMode = false
+            binding.noteTitle.isCursorVisible = false
+
+            binding.noteContent.isFocusable = false
+            binding.noteContent.isFocusableInTouchMode = false
+            binding.noteContent.isCursorVisible = false
+
+            binding.formattingToolbar.visibility = View.GONE
+        }
+        invalidateOptionsMenu()
+    }
+
+    private fun toggleMode() {
+        if (isEditMode) {
+            triggerAutoSave()
+            isEditMode = false
+            Toast.makeText(this, "View Mode (Links are clickable)", Toast.LENGTH_SHORT).show()
+        } else {
+            isEditMode = true
+            Toast.makeText(this, "Edit Mode", Toast.LENGTH_SHORT).show()
+            binding.noteContent.post {
+                binding.noteContent.requestFocus()
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(binding.noteContent, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+        applyModeUi()
+    }
+
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         menuInflater.inflate(R.menu.menu_editor, menu)
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
+        val modeItem = menu.findItem(R.id.action_toggle_mode)
+        if (modeItem != null) {
+            if (isEditMode) {
+                modeItem.setIcon(R.drawable.ic_visibility)
+                modeItem.title = "View Mode"
+            } else {
+                modeItem.setIcon(R.drawable.ic_edit)
+                modeItem.title = "Edit Note"
+            }
+        }
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_toggle_mode -> { toggleMode(); true }
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
             R.id.action_archive -> { archiveNote(); true }

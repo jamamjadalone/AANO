@@ -364,6 +364,29 @@ function setupEventListeners() {
   const contentArea = document.getElementById("editorContent");
   contentArea.addEventListener("input", updateWordCount);
 
+  // Editor View / Edit Mode Toggle
+  const btnEditorMode = document.getElementById("btnEditorMode");
+  if (btnEditorMode) {
+    btnEditorMode.addEventListener("click", () => {
+      setEditorMode(!isEditorViewMode);
+    });
+  }
+
+  // Intercept all <a> link clicks and open via desktop browser
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest("a");
+    if (link && link.href) {
+      e.preventDefault();
+      const url = link.href;
+      const api = getApi();
+      if (api && api.open_external_url) {
+        api.open_external_url(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    }
+  });
+
   // Formatting Toolbar
   setupFormattingToolbar();
 
@@ -661,6 +684,69 @@ function applyEditorColor(colorHex) {
   }
 }
 
+let isEditorViewMode = false;
+
+function autoLinkify(element) {
+  if (!element) return;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+  const nodesToReplace = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.parentElement && node.parentElement.tagName.toLowerCase() === "a") continue;
+    if (/(https?:\/\/[^\s<>"'`]+)/i.test(node.nodeValue)) {
+      nodesToReplace.push(node);
+    }
+  }
+  for (const textNode of nodesToReplace) {
+    const parent = textNode.parentNode;
+    if (!parent) continue;
+    const parts = textNode.nodeValue.split(/(https?:\/\/[^\s<>"'`]+)/gi);
+    const fragment = document.createDocumentFragment();
+    for (const part of parts) {
+      if (/^https?:\/\/[^\s<>"'`]+$/i.test(part)) {
+        const a = document.createElement("a");
+        a.href = part;
+        a.textContent = part;
+        a.target = "_blank";
+        a.style.color = "#6200ee";
+        a.style.textDecoration = "underline";
+        a.style.cursor = "pointer";
+        fragment.appendChild(a);
+      } else if (part) {
+        fragment.appendChild(document.createTextNode(part));
+      }
+    }
+    parent.replaceChild(fragment, textNode);
+  }
+}
+
+function setEditorMode(isViewMode) {
+  isEditorViewMode = isViewMode;
+  const contentArea = document.getElementById("editorContent");
+  const titleInput = document.getElementById("editorTitle");
+  const fmtToolbar = document.querySelector(".formatting-toolbar");
+  const iconEye = document.getElementById("iconModeEye");
+  const iconEdit = document.getElementById("iconModeEdit");
+  const btnMode = document.getElementById("btnEditorMode");
+
+  if (isEditorViewMode) {
+    contentArea.setAttribute("contenteditable", "false");
+    titleInput.readOnly = true;
+    if (fmtToolbar) fmtToolbar.style.display = "none";
+    if (iconEye) iconEye.classList.add("hidden");
+    if (iconEdit) iconEdit.classList.remove("hidden");
+    if (btnMode) btnMode.title = "Switch to Edit Mode";
+    autoLinkify(contentArea);
+  } else {
+    contentArea.setAttribute("contenteditable", "true");
+    titleInput.readOnly = false;
+    if (fmtToolbar) fmtToolbar.style.display = "flex";
+    if (iconEye) iconEye.classList.remove("hidden");
+    if (iconEdit) iconEdit.classList.add("hidden");
+    if (btnMode) btnMode.title = "Switch to View Mode (Clickable links)";
+  }
+}
+
 function openEditor(note = null, defaultFolder = null) {
   editingNote = note;
   const modal = document.getElementById("editorModal");
@@ -684,12 +770,15 @@ function openEditor(note = null, defaultFolder = null) {
     editingColor = note.color !== undefined ? note.color : 0;
     editingPinned = !!note.pinned;
     folderSelect.value = note.folder || "General";
+    autoLinkify(contentArea);
+    setEditorMode(true);
   } else {
     titleInput.value = "";
     contentArea.innerHTML = "";
     editingColor = 0;
     editingPinned = false;
     folderSelect.value = defaultFolder || (currentFilter.startsWith("folder:") ? currentFilter.replace("folder:", "") : "General");
+    setEditorMode(false);
   }
 
   const resolvedBg = resolveNoteColor(editingColor);
@@ -699,7 +788,9 @@ function openEditor(note = null, defaultFolder = null) {
   updateWordCount();
 
   modal.classList.remove("hidden");
-  setTimeout(() => titleInput.focus(), 80);
+  if (!isEditorViewMode) {
+    setTimeout(() => titleInput.focus(), 80);
+  }
 }
 
 function updateEditorPinState() {
