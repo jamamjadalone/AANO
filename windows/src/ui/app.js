@@ -49,7 +49,8 @@ function isDarkColor(hexColor) {
 
 let allNotes = [];
 let archivedNotes = [];
-let currentFilter = "all"; // "all" | "pinned" | "archived" | "folder:<name>"
+let trashNotes = [];
+let currentFilter = "all"; // "all" | "pinned" | "archived" | "trash" | "folder:<name>"
 let currentSearch = "";
 let isListView = false;
 
@@ -268,6 +269,8 @@ function setupEventListeners() {
         document.getElementById("currentViewTitle").innerText = "Pinned Notes";
       } else if (item.dataset.filter === "archived") {
         document.getElementById("currentViewTitle").innerText = "Archive";
+      } else if (item.dataset.filter === "trash") {
+        document.getElementById("currentViewTitle").innerText = "Trash";
       } else {
         document.getElementById("currentViewTitle").innerText = "All Notes";
       }
@@ -275,6 +278,20 @@ function setupEventListeners() {
       renderNotes();
     });
   });
+
+  // Empty Trash button
+  const btnEmptyTrash = document.getElementById("btnEmptyTrash");
+  if (btnEmptyTrash) {
+    btnEmptyTrash.addEventListener("click", () => {
+      showNativeConfirm("Empty Trash", "Are you sure you want to permanently delete all notes in Trash? This cannot be undone.", async () => {
+        const api = getApi();
+        if (api && api.empty_trash) {
+          await api.empty_trash();
+          await refreshData();
+        }
+      });
+    });
+  }
 
   // Add Folder
   document.getElementById("btnAddFolder").addEventListener("click", async () => {
@@ -538,7 +555,6 @@ function updateBatchBar() {
   }
 }
 
-// --------------------- Notes & Folders Rendering ---------------------
 async function refreshData() {
   const api = getApi();
   if (!api) return;
@@ -546,6 +562,7 @@ async function refreshData() {
   try {
     allNotes = await api.get_notes();
     archivedNotes = (await api.get_archived_notes()) || [];
+    trashNotes = (await api.get_trashed_notes()) || [];
     const folders = await api.get_all_folders();
     renderFolders(folders);
     renderNotes();
@@ -603,8 +620,19 @@ function renderNotes() {
   document.getElementById("allCount").innerText = allNotes.length;
   const archivedCountEl = document.getElementById("archivedCount");
   if (archivedCountEl) archivedCountEl.innerText = archivedNotes.length;
+  const trashCountEl = document.getElementById("trashCount");
+  if (trashCountEl) trashCountEl.innerText = trashNotes.length;
 
-  const sourceNotes = (currentFilter === "archived") ? archivedNotes : allNotes;
+  const btnEmptyTrash = document.getElementById("btnEmptyTrash");
+  if (btnEmptyTrash) {
+    if (currentFilter === "trash" && trashNotes.length > 0) {
+      btnEmptyTrash.classList.remove("hidden");
+    } else {
+      btnEmptyTrash.classList.add("hidden");
+    }
+  }
+
+  const sourceNotes = (currentFilter === "archived") ? archivedNotes : (currentFilter === "trash" ? trashNotes : allNotes);
 
   let filtered = sourceNotes.filter(n => {
     // Nav / Folder filter
@@ -655,33 +683,77 @@ function renderNotes() {
     const plain = stripHtml(note.content || "");
     const dateStr = formatDate(note.updatedAt || note.createdAt || Date.now());
 
-    card.innerHTML = `
-      ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
-      ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
-      <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
-      <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
-      <div class="note-card-footer">
-        <span class="folder-badge">${cardFolderSvg} ${escapeHtml(note.folder || "General")}</span>
-        <span>${dateStr}</span>
-      </div>
-    `;
+    if (currentFilter === "trash") {
+      card.innerHTML = `
+        <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
+        <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
+        <div class="note-card-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <span>${dateStr}</span>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-trash-restore" style="background: #10B981; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Restore to Active Notes">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 0 1 5 5v2"/><polyline points="7 6 3 10 7 14"/></svg> Restore
+            </button>
+            <button class="btn-trash-delete" style="background: #EF4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;" title="Delete Permanently">
+              ✕
+            </button>
+          </div>
+        </div>
+      `;
 
-    if (isSelectionMode) {
-      card.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (selectedNoteIds.has(note.id)) {
-          selectedNoteIds.delete(note.id);
-        } else {
-          selectedNoteIds.add(note.id);
-        }
-        updateBatchBar();
-        renderNotes();
-      });
+      const btnRestore = card.querySelector(".btn-trash-restore");
+      if (btnRestore) {
+        btnRestore.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const api = getApi();
+          if (api && api.restore_note) {
+            await api.restore_note(note.id);
+            await refreshData();
+          }
+        });
+      }
+
+      const btnDelete = card.querySelector(".btn-trash-delete");
+      if (btnDelete) {
+        btnDelete.addEventListener("click", (e) => {
+          e.stopPropagation();
+          showNativeConfirm("Delete Forever", "Permanently delete this note? This action cannot be undone.", async () => {
+            const api = getApi();
+            if (api && api.permanent_delete_note) {
+              await api.permanent_delete_note(note.id);
+              await refreshData();
+            }
+          });
+        });
+      }
     } else {
-      card.addEventListener("click", (e) => {
-        if (e.target.closest(".note-link") || e.target.closest("a")) return; // Clicked link directly on card: open browser, do not open editor!
-        openEditor(note);
-      });
+      card.innerHTML = `
+        ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
+        ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
+        <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
+        <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
+        <div class="note-card-footer">
+          <span class="folder-badge">${cardFolderSvg} ${escapeHtml(note.folder || "General")}</span>
+          <span>${dateStr}</span>
+        </div>
+      `;
+
+      if (isSelectionMode) {
+        card.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (selectedNoteIds.has(note.id)) {
+            selectedNoteIds.delete(note.id);
+          } else {
+            selectedNoteIds.add(note.id);
+          }
+          updateBatchBar();
+          renderNotes();
+        });
+      } else {
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".note-link") || e.target.closest("a")) return; // Clicked link directly on card: open browser, do not open editor!
+          openEditor(note);
+        });
+      }
     }
     container.appendChild(card);
   });

@@ -128,13 +128,25 @@ def sync_with_cloud():
                 existing = local_map.get(sn["id"])
                 if not existing:
                     local_map[sn["id"]] = sn
-                elif sn.get("updatedAt", 0) > existing.get("updatedAt", 0):
-                    if "archived" not in sn:
-                        sn["archived"] = existing.get("archived", False)
-                    local_map[sn["id"]] = sn
-                elif sn.get("updatedAt", 0) == existing.get("updatedAt", 0):
-                    sn["archived"] = existing.get("archived", False) or sn.get("archived", False)
-                    local_map[sn["id"]] = sn
+                else:
+                    is_deleted = bool(existing.get("deleted", False) or sn.get("deleted", False))
+                    is_archived = bool(existing.get("archived", False) or sn.get("archived", False))
+                    sn_updated = sn.get("updatedAt", 0)
+                    ex_updated = existing.get("updatedAt", 0)
+
+                    if sn_updated >= ex_updated:
+                        merged_note = dict(sn)
+                        merged_note["deleted"] = is_deleted
+                        merged_note["archived"] = is_archived
+                        if is_deleted:
+                            merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
+                        local_map[sn["id"]] = merged_note
+                    else:
+                        existing["deleted"] = is_deleted
+                        existing["archived"] = is_archived
+                        if is_deleted:
+                            existing["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), ex_updated)
+                        local_map[sn["id"]] = existing
             notes = list(local_map.values())
             save_notes(notes)
 

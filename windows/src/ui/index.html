@@ -61,6 +61,11 @@
           Archive
           <span id="archivedCount" class="badge">0</span>
         </a>
+        <a href="#" class="nav-item" data-filter="trash">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          Trash
+          <span id="trashCount" class="badge">0</span>
+        </a>
       </nav>
 
       <div class="folders-section">
@@ -136,9 +141,17 @@
       </div>
 
       <!-- Current Folder / Title Indicator -->
-      <div class="content-header">
-        <h1 id="currentViewTitle">All Notes</h1>
-        <span id="notesCount" class="notes-meta">0 notes</span>
+      <div class="content-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <h1 id="currentViewTitle">All Notes</h1>
+          <span id="notesCount" class="notes-meta">0 notes</span>
+        </div>
+        <div>
+          <button id="btnEmptyTrash" class="btn-batch btn-batch-danger hidden" style="padding: 6px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span>Empty Trash</span>
+          </button>
+        </div>
       </div>
 
       <!-- Notes Grid / List -->

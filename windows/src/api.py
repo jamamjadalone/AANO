@@ -48,6 +48,36 @@ class DesktopApi:
         notes = storage.load_notes()
         return [n for n in notes if not n.get("deleted", False) and n.get("archived", False)]
 
+    def get_trashed_notes(self):
+        notes = storage.load_notes()
+        return [n for n in notes if n.get("deleted", False)]
+
+    def restore_note(self, note_id):
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        for n in notes:
+            if n["id"] == note_id:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["deleted"] = False
+                n["deletedAt"] = 0
+                n["updatedAt"] = now
+                break
+        storage.save_notes(notes)
+        self._async_auto_sync()
+        return {"success": True}
+
+    def permanent_delete_note(self, note_id):
+        notes = storage.load_notes()
+        notes = [n for n in notes if n["id"] != note_id]
+        storage.save_notes(notes)
+        return {"success": True}
+
+    def empty_trash(self):
+        notes = storage.load_notes()
+        notes = [n for n in notes if not n.get("deleted", False)]
+        storage.save_notes(notes)
+        return {"success": True}
+
     def get_all_folders(self):
         notes = storage.load_notes()
         folders = set()

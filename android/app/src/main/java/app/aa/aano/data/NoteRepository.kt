@@ -402,16 +402,33 @@ class NoteRepository(private val context: Context) {
                 existing == null -> byId[note.id] = note
                 note.updatedAt > existing.updatedAt -> {
                     val preservedArchived = if (!note.archived && existing.archived) existing.archived else note.archived
-                    byId[note.id] = note.copy(archived = preservedArchived)
+                    val isDeleted = note.deleted || existing.deleted
+                    val delAt = if (isDeleted) maxOf(existing.deletedAt, note.deletedAt, if (existing.deleted) existing.updatedAt else note.updatedAt) else 0L
+                    byId[note.id] = note.copy(
+                        archived = preservedArchived,
+                        deleted = isDeleted,
+                        deletedAt = delAt
+                    )
                 }
                 note.updatedAt == existing.updatedAt -> {
+                    val isDeleted = existing.deleted || note.deleted
+                    val delAt = if (isDeleted) maxOf(existing.deletedAt, note.deletedAt) else 0L
                     byId[note.id] = note.copy(
                         archived = existing.archived || note.archived,
-                        pinned = existing.pinned || note.pinned
+                        pinned = existing.pinned || note.pinned,
+                        deleted = isDeleted,
+                        deletedAt = delAt
                     )
                 }
                 else -> {
-                    // Local is strictly newer: preserve local note!
+                    // Local is strictly newer: preserve local note, but honor deletion if remote was deleted!
+                    if (note.deleted && !existing.deleted) {
+                        byId[note.id] = existing.copy(
+                            deleted = true,
+                            deletedAt = note.deletedAt,
+                            updatedAt = note.updatedAt
+                        )
+                    }
                 }
             }
         }

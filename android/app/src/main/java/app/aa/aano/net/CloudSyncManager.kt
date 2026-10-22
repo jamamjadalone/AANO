@@ -171,10 +171,15 @@ class CloudSyncManager(
                         val obj = serverNotes.getJSONObject(i)
                         val parsed = Note.fromJson(obj)
                         val localExisting = localNotesMap[parsed.id]
-                        val finalNote = if (!obj.has("archived") && localExisting != null) {
-                            parsed.copy(archived = localExisting.archived)
-                        } else if (localExisting != null && localExisting.archived && !parsed.archived && parsed.updatedAt <= localExisting.updatedAt) {
-                            parsed.copy(archived = true)
+                        val finalNote = if (localExisting != null) {
+                            val isArchived = if (!obj.has("archived")) localExisting.archived else (parsed.archived || localExisting.archived)
+                            val isDeleted = parsed.deleted || localExisting.deleted
+                            val delAt = if (isDeleted) maxOf(localExisting.deletedAt, parsed.deletedAt) else 0L
+                            parsed.copy(
+                                archived = isArchived,
+                                deleted = isDeleted,
+                                deletedAt = delAt
+                            )
                         } else {
                             parsed
                         }
