@@ -20,8 +20,11 @@ import android.text.Spannable
 import android.text.Spanned
 import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
+import android.text.style.URLSpan
 import android.text.util.Linkify
+import android.view.MotionEvent
 import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.CharacterStyle
@@ -132,6 +135,7 @@ class EditorActivity : AppCompatActivity() {
         setupFormattingToolbar()
         setupWordCounter()
         buildColorRow()
+        setupSeamlessTouch()
 
         attachAutoSave(binding.noteTitle)
         attachAutoSave(binding.noteContent)
@@ -720,8 +724,72 @@ class EditorActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
+    inner class SmartTouchMovementMethod(private val onNonLinkTapped: (offset: Int) -> Unit) : LinkMovementMethod() {
+        override fun onTouchEvent(widget: TextView, buffer: Spannable, event: MotionEvent): Boolean {
+            val action = event.action
+            if (action == MotionEvent.ACTION_UP) {
+                val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
+                val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
+
+                val layout = widget.layout
+                if (layout != null) {
+                    val line = layout.getLineForVertical(y)
+                    val off = layout.getOffsetForHorizontal(line, x.toFloat())
+                    val links = buffer.getSpans(off, off, URLSpan::class.java)
+
+                    if (links.isNotEmpty()) {
+                        return super.onTouchEvent(widget, buffer, event)
+                    } else if (!isEditMode) {
+                        onNonLinkTapped(off)
+                        return true
+                    }
+                }
+            }
+            return super.onTouchEvent(widget, buffer, event)
+        }
+    }
+
+    private fun setupSeamlessTouch() {
+        binding.noteContent.movementMethod = SmartTouchMovementMethod { tapOffset ->
+            switchToEditMode(focusTitle = false, tapOffset = tapOffset)
+        }
+
+        binding.noteTitle.setOnClickListener {
+            if (!isEditMode) {
+                switchToEditMode(focusTitle = true)
+            }
+        }
+
+        binding.root.setOnClickListener {
+            if (!isEditMode) {
+                switchToEditMode(focusTitle = false)
+            }
+        }
+    }
+
+    private fun switchToEditMode(focusTitle: Boolean = false, tapOffset: Int? = null) {
+        if (isEditMode) return
+        isEditMode = true
+        applyModeUi()
+        if (focusTitle) {
+            binding.noteTitle.post {
+                binding.noteTitle.requestFocus()
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(binding.noteTitle, InputMethodManager.SHOW_IMPLICIT)
+            }
+        } else {
+            binding.noteContent.post {
+                binding.noteContent.requestFocus()
+                if (tapOffset != null && tapOffset in 0..(binding.noteContent.text?.length ?: 0)) {
+                    binding.noteContent.setSelection(tapOffset)
+                }
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(binding.noteContent, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+
     private fun applyModeUi() {
-        binding.noteContent.movementMethod = LinkMovementMethod.getInstance()
         applyLinkFormatting()
 
         if (isEditMode) {
@@ -748,24 +816,6 @@ class EditorActivity : AppCompatActivity() {
 
             binding.formattingToolbar.visibility = View.GONE
         }
-        invalidateOptionsMenu()
-    }
-
-    private fun toggleMode() {
-        if (isEditMode) {
-            triggerAutoSave()
-            isEditMode = false
-            Toast.makeText(this, "View Mode (Links are clickable)", Toast.LENGTH_SHORT).show()
-        } else {
-            isEditMode = true
-            Toast.makeText(this, "Edit Mode", Toast.LENGTH_SHORT).show()
-            binding.noteContent.post {
-                binding.noteContent.requestFocus()
-                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-                imm?.showSoftInput(binding.noteContent, InputMethodManager.SHOW_IMPLICIT)
-            }
-        }
-        applyModeUi()
     }
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
@@ -773,23 +823,8 @@ class EditorActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
-        val modeItem = menu.findItem(R.id.action_toggle_mode)
-        if (modeItem != null) {
-            if (isEditMode) {
-                modeItem.setIcon(R.drawable.ic_visibility)
-                modeItem.title = "View Mode"
-            } else {
-                modeItem.setIcon(R.drawable.ic_edit)
-                modeItem.title = "Edit Note"
-            }
-        }
-        return super.onPrepareOptionsMenu(menu)
-    }
-
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_toggle_mode -> { toggleMode(); true }
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
             R.id.action_archive -> { archiveNote(); true }

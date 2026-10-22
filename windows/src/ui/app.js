@@ -364,11 +364,31 @@ function setupEventListeners() {
   const contentArea = document.getElementById("editorContent");
   contentArea.addEventListener("input", updateWordCount);
 
-  // Editor View / Edit Mode Toggle
-  const btnEditorMode = document.getElementById("btnEditorMode");
-  if (btnEditorMode) {
-    btnEditorMode.addEventListener("click", () => {
-      setEditorMode(!isEditorViewMode);
+  // Seamless switch to Edit Mode when clicking anywhere on note in View Mode
+  contentArea.addEventListener("click", (e) => {
+    if (isEditorViewMode) {
+      if (e.target.closest("a")) return; // Let link handler open browser
+      setEditorMode(false);
+      contentArea.focus();
+    }
+  });
+
+  const titleInput = document.getElementById("editorTitle");
+  titleInput.addEventListener("click", () => {
+    if (isEditorViewMode) {
+      setEditorMode(false);
+      titleInput.focus();
+    }
+  });
+
+  const editorCard = document.getElementById("editorCard");
+  if (editorCard) {
+    editorCard.addEventListener("click", (e) => {
+      if (isEditorViewMode) {
+        if (e.target.closest("a") || e.target.closest("button") || e.target.closest("select")) return;
+        setEditorMode(false);
+        contentArea.focus();
+      }
     });
   }
 
@@ -725,25 +745,16 @@ function setEditorMode(isViewMode) {
   const contentArea = document.getElementById("editorContent");
   const titleInput = document.getElementById("editorTitle");
   const fmtToolbar = document.querySelector(".formatting-toolbar");
-  const iconEye = document.getElementById("iconModeEye");
-  const iconEdit = document.getElementById("iconModeEdit");
-  const btnMode = document.getElementById("btnEditorMode");
 
   if (isEditorViewMode) {
     contentArea.setAttribute("contenteditable", "false");
     titleInput.readOnly = true;
     if (fmtToolbar) fmtToolbar.style.display = "none";
-    if (iconEye) iconEye.classList.add("hidden");
-    if (iconEdit) iconEdit.classList.remove("hidden");
-    if (btnMode) btnMode.title = "Switch to Edit Mode";
     autoLinkify(contentArea);
   } else {
     contentArea.setAttribute("contenteditable", "true");
     titleInput.readOnly = false;
     if (fmtToolbar) fmtToolbar.style.display = "flex";
-    if (iconEye) iconEye.classList.remove("hidden");
-    if (iconEdit) iconEdit.classList.add("hidden");
-    if (btnMode) btnMode.title = "Switch to View Mode (Clickable links)";
   }
 }
 
