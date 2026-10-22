@@ -8,6 +8,7 @@ import uuid
 import time
 import urllib.request
 import urllib.error
+from drive_sync import GoogleDriveSync
 
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "AANO")
 os.makedirs(APPDATA_DIR, exist_ok=True)
@@ -106,8 +107,44 @@ def post_json(endpoint, payload, token=None):
     except Exception as e:
         return {"error": str(e)}
 
+drive_sync_instance = GoogleDriveSync(load_config, save_config)
+
+def google_login():
+    return drive_sync_instance.start_login_flow()
+
+def google_logout():
+    return drive_sync_instance.logout()
+
+def get_google_status():
+    cfg = load_config()
+    return {
+        "connected": bool(cfg.get("google_connected")),
+        "email": cfg.get("google_email", ""),
+        "name": cfg.get("google_name", "")
+    }
+
 def sync_with_cloud():
     cfg = load_config()
+    
+    # Priority 1: Google Drive Sync (15GB Lifetime Free, zero 500MB DB ceiling)
+    if cfg.get("google_connected"):
+        notes = load_notes()
+        res = drive_sync_instance.sync_notes(notes)
+        if res.get("success"):
+            merged_notes = res.get("merged_notes", [])
+            save_notes(merged_notes)
+            cfg["last_sync_time"] = int(time.time() * 1000)
+            cfg["session_expired"] = False
+            save_config(cfg)
+            return {"success": True, "count": res.get("count", len(merged_notes)), "mode": "google_drive"}
+        else:
+            if res.get("auth_expired"):
+                cfg["google_connected"] = False
+                cfg["session_expired"] = True
+                save_config(cfg)
+            return res
+
+    # Priority 2: Legacy Cloudflare Worker Sync (Fallback)
     token = cfg.get("cloud_token")
     if not token:
         return {"success": False, "error": "Not logged in"}
@@ -153,7 +190,7 @@ def sync_with_cloud():
         cfg["last_sync_time"] = res.get("serverTime", int(time.time() * 1000))
         cfg["session_expired"] = False
         save_config(cfg)
-        return {"success": True, "count": len(server_notes)}
+        return {"success": True, "count": len(server_notes), "mode": "cloudflare"}
     else:
         err_msg = res.get("error", "Sync failed")
         if err_msg == "Unauthorized access token." or "401" in str(err_msg):
@@ -162,3 +199,4 @@ def sync_with_cloud():
             save_config(cfg)
             return {"success": False, "error": "Session expired. Please sign in again.", "auth_expired": True}
         return {"success": False, "error": err_msg}
+

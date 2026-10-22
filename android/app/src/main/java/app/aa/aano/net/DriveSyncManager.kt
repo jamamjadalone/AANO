@@ -28,15 +28,14 @@ class DriveSyncManager(
 ) {
 
     companion object {
-        const val APP_FOLDER = "appDataFolder"
         const val REMOTE_NOTES_FILE = "aano-notes.json"
         const val REMOTE_TASKS_FILE = "aano-tasks.json"
-        val SCOPE = listOf(DriveScopes.DRIVE_APPDATA)
+        val SCOPE = listOf(DriveScopes.DRIVE_FILE)
     }
 
     fun signInOptions(): GoogleSignInOptions =
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
+            .requestScopes(Scope(DriveScopes.DRIVE_FILE))
             .requestEmail()
             .build()
 
@@ -54,13 +53,16 @@ class DriveSyncManager(
     }
 
     private fun findRemoteFile(service: Drive, name: String): File? =
-        service.files().list()
-            .setSpaces(APP_FOLDER)
-            .setQ("name='$name'")
-            .setFields("files(id, name, modifiedTime)")
-            .execute()
-            .files
-            .firstOrNull()
+        try {
+            service.files().list()
+                .setQ("name = '$name' and trashed = false")
+                .setFields("files(id, name, modifiedTime)")
+                .execute()
+                .files
+                ?.firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
 
     suspend fun pullFromDrive(): Boolean = withContext(Dispatchers.IO) {
         val service = buildDriveService()
@@ -89,16 +91,30 @@ class DriveSyncManager(
         true
     }
 
+    suspend fun sync(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            pullFromDrive()
+            pushToDrive()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun push(service: Drive, name: String, json: String) {
         val content = ByteArrayContent.fromString("application/json", json)
         val remote = findRemoteFile(service, name)
         if (remote != null) {
-            service.files().update(remote.id, File().setName(name), content)
+            service.files().update(remote.id, null, content)
                 .setUploadType("media")
                 .execute()
         } else {
-            service.files().create(File().setName(name), content)
-                .setUploadType("media")
+            val fileMetadata = File().apply {
+                this.name = name
+                this.mimeType = "application/json"
+            }
+            service.files().create(fileMetadata, content)
+                .setUploadType("multipart")
                 .setFields("id,name")
                 .execute()
         }

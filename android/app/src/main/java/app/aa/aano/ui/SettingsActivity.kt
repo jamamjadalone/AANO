@@ -28,6 +28,12 @@ import app.aa.aano.data.Prefs
 import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.ActivitySettingsBinding
 import app.aa.aano.net.CloudSyncManager
+import app.aa.aano.net.DriveSyncManager
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.Scope
+import com.google.api.services.drive.DriveScopes
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
@@ -37,6 +43,8 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var repository: NoteRepository
     private lateinit var tasksRepository: TaskRepository
     private lateinit var cloudSyncManager: CloudSyncManager
+    private lateinit var driveSyncManager: DriveSyncManager
+    private lateinit var googleSignInClient: GoogleSignInClient
 
     private var lastOtpRequestTime = 0L
     private var failedOtpAttempts = 0
@@ -44,6 +52,26 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private const val MAX_FAILED_ATTEMPTS = 5
         private const val OTP_COOLDOWN_MS = 60_000L
+    }
+
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                Toast.makeText(this, "Signed in as ${account.email}", Toast.LENGTH_SHORT).show()
+                updateCloudUi()
+                lifecycleScope.launch {
+                    try {
+                        driveSyncManager.sync()
+                    } catch (_: Exception) {}
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, getString(R.string.google_sign_in_failed, e.localizedMessage ?: "Sign-in cancelled"), Toast.LENGTH_LONG).show()
+        }
     }
 
     private val importLauncher = registerForActivityResult(
@@ -62,16 +90,20 @@ class SettingsActivity : AppCompatActivity() {
         repository = NoteRepository(this)
         tasksRepository = TaskRepository(this)
         cloudSyncManager = CloudSyncManager(this, repository, tasksRepository)
+        driveSyncManager = DriveSyncManager(this, repository, tasksRepository)
+        googleSignInClient = GoogleSignIn.getClient(this, driveSyncManager.signInOptions())
 
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        binding.btnSignUp.setOnClickListener { showRegisterDialog() }
-        binding.btnSignIn.setOnClickListener { showLoginDialog() }
+        binding.btnSignUp.setOnClickListener { googleSignInLauncher.launch(googleSignInClient.signInIntent) }
+        binding.btnSignIn.setOnClickListener { googleSignInLauncher.launch(googleSignInClient.signInIntent) }
         binding.btnSyncNow.setOnClickListener { syncNow() }
         binding.btnDisconnect.setOnClickListener {
-            cloudSyncManager.logout()
-            Toast.makeText(this, R.string.disconnected, Toast.LENGTH_SHORT).show()
-            updateCloudUi()
+            googleSignInClient.signOut().addOnCompleteListener {
+                cloudSyncManager.logout()
+                Toast.makeText(this, R.string.disconnected, Toast.LENGTH_SHORT).show()
+                updateCloudUi()
+            }
         }
 
         binding.switchAutoSync.isChecked = prefs.autoSync
@@ -88,16 +120,29 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun updateCloudUi() {
-        val connected = cloudSyncManager.isLoggedIn
-        binding.googleStatus.text = if (connected) {
-            getString(R.string.connected_as, cloudSyncManager.currentEmail ?: "")
+        val account = GoogleSignIn.getLastSignedInAccount(this)
+        val hasScope = account != null && GoogleSignIn.hasPermissions(account, Scope(DriveScopes.DRIVE_FILE))
+        val connected = account != null && hasScope
+
+        if (connected) {
+            binding.googleStatus.text = getString(R.string.connected_as, account?.email ?: "")
+            binding.btnSignUp.visibility = View.GONE
+            binding.btnSignIn.visibility = View.GONE
+            binding.btnSyncNow.visibility = View.VISIBLE
+            binding.btnDisconnect.visibility = View.VISIBLE
+        } else if (cloudSyncManager.isLoggedIn) {
+            binding.googleStatus.text = getString(R.string.connected_as, cloudSyncManager.currentEmail ?: "")
+            binding.btnSignUp.visibility = View.GONE
+            binding.btnSignIn.visibility = View.GONE
+            binding.btnSyncNow.visibility = View.VISIBLE
+            binding.btnDisconnect.visibility = View.VISIBLE
         } else {
-            getString(R.string.not_connected)
+            binding.googleStatus.text = getString(R.string.not_connected)
+            binding.btnSignUp.visibility = View.VISIBLE
+            binding.btnSignIn.visibility = View.GONE
+            binding.btnSyncNow.visibility = View.GONE
+            binding.btnDisconnect.visibility = View.GONE
         }
-        binding.btnSignUp.visibility = if (connected) View.GONE else View.VISIBLE
-        binding.btnSignIn.visibility = if (connected) View.GONE else View.VISIBLE
-        binding.btnSyncNow.visibility = if (connected) View.VISIBLE else View.GONE
-        binding.btnDisconnect.visibility = if (connected) View.VISIBLE else View.GONE
     }
 
     private fun showRegisterDialog() {
@@ -424,13 +469,26 @@ class SettingsActivity : AppCompatActivity() {
         binding.syncProgress.visibility = View.VISIBLE
         binding.syncResult.visibility = View.GONE
         lifecycleScope.launch {
-            val res = cloudSyncManager.syncNow()
-            binding.syncProgress.visibility = View.GONE
-            binding.syncResult.visibility = View.VISIBLE
-            res.onSuccess { count ->
-                binding.syncResult.text = "Sync complete. Synced $count items."
-            }.onFailure { e ->
-                binding.syncResult.text = getString(R.string.sync_failed, e.message ?: "error")
+            val account = GoogleSignIn.getLastSignedInAccount(this@SettingsActivity)
+            if (account != null) {
+                val ok = driveSyncManager.sync()
+                binding.syncProgress.visibility = View.GONE
+                binding.syncResult.visibility = View.VISIBLE
+                if (ok) {
+                    binding.syncResult.text = "Google Drive sync complete."
+                    Toast.makeText(this@SettingsActivity, R.string.sync_success, Toast.LENGTH_SHORT).show()
+                } else {
+                    binding.syncResult.text = "Google Drive sync finished."
+                }
+            } else {
+                val res = cloudSyncManager.syncNow()
+                binding.syncProgress.visibility = View.GONE
+                binding.syncResult.visibility = View.VISIBLE
+                res.onSuccess { count ->
+                    binding.syncResult.text = "Sync complete. Synced $count items."
+                }.onFailure { e ->
+                    binding.syncResult.text = getString(R.string.sync_failed, e.message ?: "error")
+                }
             }
         }
     }

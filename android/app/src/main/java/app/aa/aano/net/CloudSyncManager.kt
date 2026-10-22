@@ -35,10 +35,18 @@ class CloudSyncManager(
     }
 
     val isLoggedIn: Boolean
-        get() = !prefs.cloudToken.isNullOrBlank()
+        get() {
+            val account = com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context)
+            if (account != null) return true
+            return !prefs.cloudToken.isNullOrBlank()
+        }
 
     val currentEmail: String?
-        get() = prefs.cloudEmail
+        get() {
+            val account = com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context)
+            if (account != null) return account.email
+            return prefs.cloudEmail
+        }
 
     suspend fun requestOtp(email: String, purpose: String = "register"): Result<String> = withContext(Dispatchers.IO) {
         try {
@@ -120,6 +128,13 @@ class CloudSyncManager(
     }
 
     suspend fun syncNow(): Result<Int> = withContext(Dispatchers.IO) {
+        val googleAccount = com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(context)
+        if (googleAccount != null) {
+            val driveSync = DriveSyncManager(context, notesRepo, tasksRepo)
+            val ok = driveSync.sync()
+            return@withContext if (ok) Result.success(notesRepo.getAll().size) else Result.failure(Exception("Google Drive sync failed"))
+        }
+
         val token = prefs.cloudToken ?: return@withContext Result.failure(Exception("Not logged in"))
         try {
             val localNotes = notesRepo.getAll()
@@ -232,6 +247,12 @@ class CloudSyncManager(
         prefs.cloudEmail = null
         prefs.cloudUserId = null
         prefs.lastCloudSyncTime = 0L
+        try {
+            com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(
+                context,
+                com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
+            ).signOut()
+        } catch (_: Exception) {}
     }
 
     private fun postJson(urlStr: String, body: JSONObject, token: String?): JSONObject {

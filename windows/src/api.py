@@ -37,7 +37,7 @@ class DesktopApi:
 
     def _async_auto_sync(self):
         cfg = storage.load_config()
-        if cfg.get("auto_sync", True) and cfg.get("cloud_token"):
+        if cfg.get("auto_sync", True) and (cfg.get("cloud_token") or cfg.get("google_connected")):
             threading.Thread(target=storage.sync_with_cloud, daemon=True).start()
 
     def get_notes(self):
@@ -260,6 +260,38 @@ class DesktopApi:
             return {"success": True, "email": res.get("email")}
         else:
             return {"success": False, "error": res.get("error", "Login failed")}
+
+    def get_cloud_status(self):
+        cfg = storage.load_config()
+        if cfg.get("google_connected"):
+            return {
+                "is_logged_in": True,
+                "email": cfg.get("google_email", ""),
+                "name": cfg.get("google_name", ""),
+                "provider": "google_drive",
+                "auto_sync": cfg.get("auto_sync", True),
+                "session_expired": False
+            }
+        is_logged = bool(cfg.get("cloud_token"))
+        return {
+            "is_logged_in": is_logged,
+            "email": cfg.get("cloud_email"),
+            "provider": "cloudflare",
+            "auto_sync": cfg.get("auto_sync", True),
+            "session_expired": cfg.get("session_expired", False)
+        }
+
+    def google_login(self):
+        res = storage.google_login()
+        if res.get("success"):
+            storage.sync_with_cloud()
+        return res
+
+    def google_logout(self):
+        return storage.google_logout()
+
+    def get_google_status(self):
+        return storage.get_google_status()
 
     def logout_cloud(self):
         cfg = storage.load_config()

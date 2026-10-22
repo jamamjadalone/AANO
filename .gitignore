@@ -11,6 +11,7 @@
 *.key
 *.secret
 .env
+*credentials*.json
 SECRETS*
 secrets/
 local.properties
