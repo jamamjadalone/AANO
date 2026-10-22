@@ -56,8 +56,13 @@ async function initApp() {
     } catch (_) {}
   }
 
-  // Periodic background auto-sync polling every 30 seconds
-  setInterval(runAutoSyncInterval, 30000);
+  // Fast real-time periodic background auto-sync polling every 2.5 seconds
+  setInterval(runAutoSyncInterval, 2500);
+
+  // Immediate sync when app window gains focus
+  window.addEventListener("focus", () => {
+    runAutoSyncInterval();
+  });
 }
 
 function updateAutoSyncButton(isEnabled) {

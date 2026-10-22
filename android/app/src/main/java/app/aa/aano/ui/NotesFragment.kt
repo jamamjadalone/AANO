@@ -28,6 +28,8 @@ import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.FragmentNotesBinding
 import app.aa.aano.net.CloudSyncManager
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class NotesFragment : Fragment() {
@@ -41,6 +43,7 @@ class NotesFragment : Fragment() {
     private lateinit var prefs: Prefs
 
     private var loadJob: Job? = null
+    private var autoSyncJob: Job? = null
     private var query: String = ""
     private var currentFolder: String? = null
 
@@ -190,8 +193,36 @@ class NotesFragment : Fragment() {
         loadNotes()
         buildFolderChips()
         lifecycleScope.launch { repository.purgeExpiredTrash(TRASH_RETENTION_MS) }
-        if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
-            launchSync(silent = true)
+        startForegroundAutoSync()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        autoSyncJob?.cancel()
+        autoSyncJob = null
+    }
+
+    private fun startForegroundAutoSync() {
+        autoSyncJob?.cancel()
+        autoSyncJob = viewLifecycleOwner.lifecycleScope.launch {
+            // Immediate sync on entry
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                runSilentSyncCheck()
+            }
+            while (isActive) {
+                kotlinx.coroutines.delay(2500) // 2.5 seconds real-time background poll
+                if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                    runSilentSyncCheck()
+                }
+            }
+        }
+    }
+
+    private suspend fun runSilentSyncCheck() {
+        val res = cloudSyncManager.syncNow()
+        if (res.isSuccess && (res.getOrNull() ?: 0) > 0) {
+            loadNotes()
+            buildFolderChips()
         }
     }
 
@@ -431,6 +462,8 @@ class NotesFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        autoSyncJob?.cancel()
+        autoSyncJob = null
         _binding = null
     }
 

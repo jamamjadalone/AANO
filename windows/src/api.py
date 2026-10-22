@@ -76,6 +76,7 @@ class DesktopApi:
         now = int(time.time() * 1000)
         for n in notes:
             if n["id"] == note_id:
+                now = max(now, n.get("updatedAt", 0) + 1000)
                 n["deleted"] = True
                 n["deletedAt"] = now
                 n["updatedAt"] = now

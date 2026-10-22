@@ -50,6 +50,7 @@
     <string name="share_note">Share note</string>
     <string name="note_empty_share">Nothing to share yet</string>
     <string name="move_to_trash">Move to trash</string>
+    <string name="delete_note">Delete Note</string>
 
     <string name="trash">Trash</string>
     <string name="trash_empty">Trash is empty</string>

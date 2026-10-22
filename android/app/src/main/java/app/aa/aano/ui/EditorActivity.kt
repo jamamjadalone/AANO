@@ -87,6 +87,7 @@ class EditorActivity : AppCompatActivity() {
     private val undoStack = ArrayDeque<String>()
     private val redoStack = ArrayDeque<String>()
     private var isUndoRedoActive = false
+    private var isDeleted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -574,8 +575,37 @@ class EditorActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
+            R.id.action_delete -> { confirmDeleteNote(); true }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun confirmDeleteNote() {
+        val currentId = noteId
+        if (currentId == null) {
+            isDeleted = true
+            saveHandler.removeCallbacksAndMessages(null)
+            finish()
+            return
+        }
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.delete_note)
+            .setMessage("Are you sure you want to delete this note? It will be removed across all synced devices.")
+            .setPositiveButton(R.string.delete_note) { _, _ ->
+                isDeleted = true
+                saveHandler.removeCallbacksAndMessages(null)
+                lifecycleScope.launch {
+                    repository.delete(currentId)
+                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            try { cloudSyncManager.syncNow() } catch (_: Exception) {}
+                        }
+                    }
+                    finish()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun pickReminder() {
@@ -648,6 +678,10 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun saveAndFinish() {
+        if (isDeleted) {
+            finish()
+            return
+        }
         saveHandler.removeCallbacks(autoSaveRunnable)
         if (titleAndContentEmpty() && noteId == null) {
             finish()
@@ -667,6 +701,7 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun saveSilently() {
+        if (isDeleted) return
         if (titleAndContentEmpty() && noteId == null) return
         lifecycleScope.launch {
             persist()

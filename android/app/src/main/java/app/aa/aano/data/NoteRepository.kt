@@ -94,9 +94,9 @@ class NoteRepository(private val context: Context) {
 
         val notes = readNotes().toMutableList()
         var modified = false
-        val now = System.currentTimeMillis()
         for (i in notes.indices) {
             if (notes[i].folder.equals(trimmed, ignoreCase = true)) {
+                val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
                 if (deleteNotes) {
                     notes[i] = notes[i].copy(deleted = true, deletedAt = now, updatedAt = now)
                 } else {
@@ -218,7 +218,7 @@ class NoteRepository(private val context: Context) {
             val notes = readNotes().toMutableList()
             val index = notes.indexOfFirst { it.id == id }
             if (index >= 0) {
-                val now = System.currentTimeMillis()
+                val now = maxOf(System.currentTimeMillis(), notes[index].updatedAt + 1000L)
                 notes[index] = notes[index].copy(
                     deleted = true,
                     deletedAt = now,
@@ -235,7 +235,7 @@ class NoteRepository(private val context: Context) {
             val notes = readNotes().toMutableList()
             val index = notes.indexOfFirst { it.id == id }
             if (index >= 0) {
-                val now = System.currentTimeMillis()
+                val now = maxOf(System.currentTimeMillis(), notes[index].updatedAt + 1000L)
                 notes[index] = notes[index].copy(deleted = false, deletedAt = 0, updatedAt = now)
                 writeNotes(notes)
             }
@@ -321,7 +321,7 @@ class NoteRepository(private val context: Context) {
             val existing = byId[note.id]
             when {
                 existing == null -> byId[note.id] = note
-                note.updatedAt > existing.updatedAt -> byId[note.id] = note
+                note.updatedAt >= existing.updatedAt -> byId[note.id] = note
             }
         }
         return byId.values.sortedByDescending { it.updatedAt }
@@ -332,11 +332,10 @@ class NoteRepository(private val context: Context) {
         return try {
             val list = deserializeNotes(notesFile.readText())
             var needsResave = false
-            val now = System.currentTimeMillis()
             val fixed = list.map { note ->
-                if (note.deleted && (note.updatedAt <= note.deletedAt || (note.deletedAt > 0 && note.updatedAt < note.deletedAt))) {
+                if (note.deleted && note.deletedAt > 0 && note.updatedAt < note.deletedAt) {
                     needsResave = true
-                    note.copy(updatedAt = now)
+                    note.copy(updatedAt = note.deletedAt)
                 } else {
                     note
                 }
