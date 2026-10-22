@@ -113,7 +113,7 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getFolderCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted && !it.archived }
+        val all = readNotes().filter { !it.deleted && !it.archived && !it.isLocal }
         val counts = mutableMapOf<String, Int>()
         // Initialize custom folders with 0
         prefs.customFolders.forEach { f ->
@@ -133,12 +133,17 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getVisibleInFolder(folder: String?): List<Note> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted && !it.archived }
+        val all = readNotes().filter { !it.deleted && !it.archived && !it.isLocal }
         val filtered = when {
             folder.isNullOrBlank() -> all
             folder.equals("General", ignoreCase = true) -> all.filter { it.folder.isBlank() || it.folder.equals("General", ignoreCase = true) }
             else -> all.filter { it.folder.equals(folder, ignoreCase = true) }
         }
+        sortNotes(filtered)
+    }
+
+    suspend fun getLocalNotes(): List<Note> = withContext(Dispatchers.IO) {
+        val filtered = readNotes().filter { !it.deleted && !it.archived && it.isLocal }
         sortNotes(filtered)
     }
 
@@ -151,7 +156,11 @@ class NoteRepository(private val context: Context) {
         content: String,
         color: Int = Note.COLOR_DEFAULT,
         folder: String = "",
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        isLocal: Boolean = false,
+        images: List<String> = emptyList(),
+        audioUri: String? = null,
+        audioDuration: Long = 0L
     ): Note = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val note = Note(
@@ -162,7 +171,11 @@ class NoteRepository(private val context: Context) {
             updatedAt = now,
             color = color,
             folder = folder,
-            tags = tags
+            tags = tags,
+            isLocal = isLocal,
+            images = images,
+            audioUri = audioUri,
+            audioDuration = audioDuration
         )
         val notes = readNotes().toMutableList()
         notes.add(0, note)
@@ -176,18 +189,41 @@ class NoteRepository(private val context: Context) {
         content: String,
         color: Int = Note.COLOR_DEFAULT,
         folder: String = "",
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        isLocal: Boolean? = null,
+        images: List<String>? = null,
+        audioUri: String? = null,
+        audioDuration: Long? = null
     ) {
         withContext(Dispatchers.IO) {
             val notes = readNotes().toMutableList()
             val index = notes.indexOfFirst { it.id == id }
             if (index >= 0) {
-                notes[index] = notes[index].copy(
+                val current = notes[index]
+                notes[index] = current.copy(
                     title = title,
                     content = content,
                     color = color,
                     folder = folder,
                     tags = tags,
+                    isLocal = isLocal ?: current.isLocal,
+                    images = images ?: current.images,
+                    audioUri = if (audioUri != null) audioUri else current.audioUri,
+                    audioDuration = if (audioDuration != null) audioDuration else current.audioDuration,
+                    updatedAt = System.currentTimeMillis()
+                )
+                writeNotes(notes)
+            }
+        }
+    }
+
+    suspend fun toggleLocal(id: String) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            val index = notes.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                notes[index] = notes[index].copy(
+                    isLocal = !notes[index].isLocal,
                     updatedAt = System.currentTimeMillis()
                 )
                 writeNotes(notes)
@@ -353,7 +389,7 @@ class NoteRepository(private val context: Context) {
 
     suspend fun exportJson(): String = withContext(Dispatchers.IO) {
         JSONArray().apply {
-            readNotes().forEach { put(serializeNoteForCloud(it)) }
+            readNotes().filter { !it.isLocal }.forEach { put(serializeNoteForCloud(it)) }
         }.toString()
     }
 
@@ -398,6 +434,10 @@ class NoteRepository(private val context: Context) {
         val byId = local.associateBy { it.id }.toMutableMap()
         remote.forEach { note ->
             val existing = byId[note.id]
+            if (existing != null && existing.isLocal) {
+                // Local-only note must never be overwritten by remote data
+                return@forEach
+            }
             when {
                 existing == null -> byId[note.id] = note
                 note.updatedAt > existing.updatedAt -> {
@@ -407,7 +447,8 @@ class NoteRepository(private val context: Context) {
                     byId[note.id] = note.copy(
                         archived = preservedArchived,
                         deleted = isDeleted,
-                        deletedAt = delAt
+                        deletedAt = delAt,
+                        isLocal = false
                     )
                 }
                 note.updatedAt == existing.updatedAt -> {
@@ -417,7 +458,8 @@ class NoteRepository(private val context: Context) {
                         archived = existing.archived || note.archived,
                         pinned = existing.pinned || note.pinned,
                         deleted = isDeleted,
-                        deletedAt = delAt
+                        deletedAt = delAt,
+                        isLocal = false
                     )
                 }
                 else -> {

@@ -34,12 +34,20 @@ import android.text.style.StrikethroughSpan
 import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
+import android.net.Uri
+import android.media.MediaRecorder
+import android.media.MediaPlayer
+import android.os.SystemClock
+import android.graphics.BitmapFactory
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -52,6 +60,7 @@ import app.aa.aano.databinding.ActivityEditorBinding
 import app.aa.aano.net.CloudSyncManager
 import app.aa.aano.net.NoteReminderReceiver
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.ArrayDeque
 import java.util.Calendar
 
@@ -60,6 +69,7 @@ class EditorActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_NOTE_ID = "note_id"
         const val EXTRA_FOLDER = "extra_folder"
+        const val EXTRA_IS_LOCAL = "extra_is_local"
         private const val AUTO_SAVE_DELAY_MS = 800L
         private const val REMINDER_PERMISSION_CODE = 42
 
@@ -77,6 +87,8 @@ class EditorActivity : AppCompatActivity() {
             R.color.note_color_slate,
             R.color.note_color_charcoal
         )
+
+        fun presetColors(): List<Int> = NOTE_COLORS
 
         fun resolveNoteColor(context: android.content.Context, colorValue: Int): Int {
             return when {
@@ -97,6 +109,20 @@ class EditorActivity : AppCompatActivity() {
     private var selectedFolder = ""
     private var selectedTags = mutableListOf<String>()
 
+    // Local multimedia state
+    private var isLocalNote: Boolean = false
+    private val attachedImages = mutableListOf<String>()
+    private var attachedAudioUri: String? = null
+    private var attachedAudioDuration: Long = 0L
+
+    private var mediaRecorder: MediaRecorder? = null
+    private var mediaPlayer: MediaPlayer? = null
+    private var isRecording: Boolean = false
+    private var isPlayingVoice: Boolean = false
+    private var recordingStartTime: Long = 0L
+    private val recordingTimerHandler = Handler(Looper.getMainLooper())
+    private var currentRecordingFile: File? = null
+
     private val saveHandler = Handler(Looper.getMainLooper())
     private val autoSaveRunnable = Runnable {
         if (loaded) saveSilently()
@@ -108,6 +134,30 @@ class EditorActivity : AppCompatActivity() {
     private var isUndoRedoActive = false
     private var isDeleted = false
     private var isEditMode = true
+
+    private val pickImagesLauncher = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (!uris.isNullOrEmpty()) {
+            uris.forEach { uri ->
+                copyUriToLocalMedia(uri)?.let { path ->
+                    attachedImages.add(path)
+                }
+            }
+            renderAttachedImages()
+            saveSilently()
+        }
+    }
+
+    private val requestAudioPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startVoiceRecording()
+        } else {
+            Toast.makeText(this, "Microphone permission required for voice memo", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -153,7 +203,15 @@ class EditorActivity : AppCompatActivity() {
                     }
                     selectedFolder = note.folder
                     selectedTags = note.tags.toMutableList()
+                    isLocalNote = note.isLocal
+                    attachedImages.clear()
+                    attachedImages.addAll(note.images)
+                    attachedAudioUri = note.audioUri
+                    attachedAudioDuration = note.audioDuration
                     updateFolderChipDisplay()
+                    updateLocalChipDisplay()
+                    renderAttachedImages()
+                    renderVoiceMemoBar()
                     selectedColor = note.color
                     highlightSelectedColor()
                     updateWordCount()
@@ -170,9 +228,11 @@ class EditorActivity : AppCompatActivity() {
             }
         } ?: run {
             selectedFolder = intent.getStringExtra(EXTRA_FOLDER) ?: ""
+            isLocalNote = intent.getBooleanExtra(EXTRA_IS_LOCAL, false)
             loaded = true
             isEditMode = true
             updateFolderChipDisplay()
+            updateLocalChipDisplay()
             updateWordCount()
             pushHistorySnapshot()
             applyModeUi()
@@ -279,6 +339,23 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun setupFormattingToolbar() {
+        // Multimedia: Photos & Voice Memo
+        binding.btnAddImage.setOnClickListener {
+            pickImagesLauncher.launch("image/*")
+        }
+        binding.btnRecordVoice.setOnClickListener {
+            handleRecordVoiceClick()
+        }
+        binding.btnStopRecording.setOnClickListener {
+            stopVoiceRecording()
+        }
+        binding.btnVoicePlayPause.setOnClickListener {
+            playVoiceMemo()
+        }
+        binding.btnVoiceDelete.setOnClickListener {
+            deleteVoiceMemo()
+        }
+
         // Undo / Redo
         binding.btnUndo.setOnClickListener {
             if (undoStack.size > 1) {
@@ -834,6 +911,17 @@ class EditorActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_toggle_local -> {
+                isLocalNote = !isLocalNote
+                updateLocalChipDisplay()
+                Toast.makeText(
+                    this,
+                    if (isLocalNote) "Marked as Local (100% on-device)" else "Marked as Cloud note",
+                    Toast.LENGTH_SHORT
+                ).show()
+                saveSilently()
+                true
+            }
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
             R.id.action_archive -> { archiveNote(); true }
@@ -953,10 +1041,6 @@ class EditorActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, getString(R.string.share_note)))
     }
 
-    override fun onDestroy() {
-        saveHandler.removeCallbacksAndMessages(null)
-        super.onDestroy()
-    }
 
     private fun saveAndFinish() {
         if (isDeleted) {
@@ -986,7 +1070,7 @@ class EditorActivity : AppCompatActivity() {
         if (titleAndContentEmpty() && noteId == null) return
         lifecycleScope.launch {
             persist()
-            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn && !isLocalNote) {
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
                         cloudSyncManager.syncNow()
@@ -1008,10 +1092,29 @@ class EditorActivity : AppCompatActivity() {
         val tags = selectedTags
 
         if (noteId != null) {
-            repository.update(noteId!!, title, content, color = selectedColor, folder = folder, tags = tags)
+            repository.update(
+                id = noteId!!,
+                title = title,
+                content = content,
+                color = selectedColor,
+                folder = folder,
+                tags = tags,
+                isLocal = isLocalNote,
+                images = attachedImages,
+                audioUri = attachedAudioUri,
+                audioDuration = attachedAudioDuration
+            )
         } else {
             val created = repository.create(
-                title, content, color = selectedColor, folder = folder, tags = tags
+                title = title,
+                content = content,
+                color = selectedColor,
+                folder = folder,
+                tags = tags,
+                isLocal = isLocalNote,
+                images = attachedImages,
+                audioUri = attachedAudioUri,
+                audioDuration = attachedAudioDuration
             )
             noteId = created.id
         }
@@ -1024,5 +1127,269 @@ class EditorActivity : AppCompatActivity() {
 
     private fun titleAndContentEmpty(): Boolean =
         binding.noteTitle.text?.isNullOrEmpty() != false &&
-            binding.noteContent.text?.isNullOrEmpty() != false
+            binding.noteContent.text?.isNullOrEmpty() != false &&
+            attachedImages.isEmpty() &&
+            attachedAudioUri.isNullOrEmpty()
+
+    private fun updateLocalChipDisplay() {
+        binding.chipLocal.visibility = if (isLocalNote) View.VISIBLE else View.GONE
+    }
+
+    private fun copyUriToLocalMedia(uri: Uri): String? {
+        return try {
+            val mediaDir = File(filesDir, "media/images").apply { mkdirs() }
+            val destFile = File(mediaDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.jpg")
+            contentResolver.openInputStream(uri)?.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            destFile.absolutePath
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun renderAttachedImages() {
+        binding.imagesContainer.removeAllViews()
+        if (attachedImages.isEmpty()) {
+            binding.imagesScrollView.visibility = View.GONE
+            return
+        }
+        binding.imagesScrollView.visibility = View.VISIBLE
+        val density = resources.displayMetrics.density
+        val itemSize = (90 * density).toInt()
+        val margin = (4 * density).toInt()
+
+        attachedImages.forEachIndexed { index, path ->
+            val frame = android.widget.FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(itemSize, itemSize).apply {
+                    setMargins(margin, margin, margin, margin)
+                }
+            }
+
+            val card = com.google.android.material.card.MaterialCardView(this).apply {
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                radius = 12 * density
+                cardElevation = 1 * density
+                strokeWidth = (1 * density).toInt()
+                strokeColor = ContextCompat.getColor(this@EditorActivity, R.color.card_stroke)
+            }
+
+            val iv = ImageView(this).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+
+            try {
+                val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(path, opts)
+                var scale = 1
+                while (opts.outWidth / scale / 2 >= 180 && opts.outHeight / scale / 2 >= 180) {
+                    scale *= 2
+                }
+                val decodeOpts = BitmapFactory.Options().apply { inSampleSize = scale }
+                val bmp = BitmapFactory.decodeFile(path, decodeOpts)
+                iv.setImageBitmap(bmp)
+            } catch (_: Exception) {}
+
+            card.addView(iv)
+            frame.addView(card)
+
+            val btnRemove = ImageView(this).apply {
+                val btnSize = (24 * density).toInt()
+                layoutParams = android.widget.FrameLayout.LayoutParams(btnSize, btnSize).apply {
+                    gravity = android.view.Gravity.TOP or android.view.Gravity.END
+                }
+                setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+                setBackgroundResource(R.drawable.circle_bg_translucent)
+                setColorFilter(0xFFFFFFFF.toInt())
+                setPadding((3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt())
+                setOnClickListener {
+                    attachedImages.removeAt(index)
+                    try { File(path).delete() } catch (_: Exception) {}
+                    renderAttachedImages()
+                    saveSilently()
+                }
+            }
+            frame.addView(btnRemove)
+
+            binding.imagesContainer.addView(frame)
+        }
+    }
+
+    private fun renderVoiceMemoBar() {
+        val uri = attachedAudioUri
+        if (uri.isNullOrBlank() || !File(uri).exists()) {
+            binding.voiceMemoBar.visibility = View.GONE
+            return
+        }
+        binding.voiceMemoBar.visibility = View.VISIBLE
+        binding.tvVoiceTimer.text = "Voice Memo (${formatDuration(attachedAudioDuration)})"
+        binding.btnVoicePlayPause.setImageResource(
+            if (isPlayingVoice) R.drawable.ic_pause else R.drawable.ic_play
+        )
+    }
+
+    private fun handleRecordVoiceClick() {
+        if (isRecording) {
+            stopVoiceRecording()
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                startVoiceRecording()
+            } else {
+                requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    private fun startVoiceRecording() {
+        try {
+            val audioDir = File(filesDir, "media/audio").apply { mkdirs() }
+            val file = File(audioDir, "voice_${System.currentTimeMillis()}.m4a")
+            currentRecordingFile = file
+
+            mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(this)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioSamplingRate(44100)
+                setAudioEncodingBitRate(96000)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+
+            isRecording = true
+            recordingStartTime = SystemClock.elapsedRealtime()
+            binding.recordingLiveBar.visibility = View.VISIBLE
+            startRecordingTimer()
+        } catch (e: Exception) {
+            isRecording = false
+            Toast.makeText(this, "Could not start recording: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun stopVoiceRecording() {
+        if (!isRecording) return
+        try {
+            mediaRecorder?.stop()
+            mediaRecorder?.release()
+        } catch (_: Exception) {}
+        mediaRecorder = null
+        isRecording = false
+        stopRecordingTimer()
+        binding.recordingLiveBar.visibility = View.GONE
+
+        val duration = SystemClock.elapsedRealtime() - recordingStartTime
+        currentRecordingFile?.let { file ->
+            if (file.exists() && file.length() > 0) {
+                attachedAudioUri = file.absolutePath
+                attachedAudioDuration = duration
+                renderVoiceMemoBar()
+                saveSilently()
+                Toast.makeText(this, "Voice memo saved", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun startRecordingTimer() {
+        recordingTimerHandler.post(object : Runnable {
+            override fun run() {
+                if (isRecording) {
+                    val elapsed = SystemClock.elapsedRealtime() - recordingStartTime
+                    binding.tvRecordingDuration.text = "Recording Voice... ${formatDuration(elapsed)}"
+                    recordingTimerHandler.postDelayed(this, 500)
+                }
+            }
+        })
+    }
+
+    private fun stopRecordingTimer() {
+        recordingTimerHandler.removeCallbacksAndMessages(null)
+    }
+
+    private fun playVoiceMemo() {
+        val uri = attachedAudioUri ?: return
+        val file = File(uri)
+        if (!file.exists()) return
+
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer?.pause()
+            isPlayingVoice = false
+            binding.btnVoicePlayPause.setImageResource(R.drawable.ic_play)
+            return
+        }
+
+        try {
+            if (mediaPlayer == null) {
+                mediaPlayer = MediaPlayer().apply {
+                    setDataSource(file.absolutePath)
+                    prepare()
+                    setOnCompletionListener {
+                        isPlayingVoice = false
+                        binding.btnVoicePlayPause.setImageResource(R.drawable.ic_play)
+                        binding.tvVoiceTimer.text = "Voice Memo (${formatDuration(attachedAudioDuration)})"
+                    }
+                }
+            }
+            mediaPlayer?.start()
+            isPlayingVoice = true
+            binding.btnVoicePlayPause.setImageResource(R.drawable.ic_pause)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Cannot play audio: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun deleteVoiceMemo() {
+        AlertDialog.Builder(this)
+            .setTitle("Delete Voice Memo")
+            .setMessage("Delete this recorded voice memo?")
+            .setPositiveButton("Delete") { _, _ ->
+                try {
+                    mediaPlayer?.stop()
+                    mediaPlayer?.release()
+                } catch (_: Exception) {}
+                mediaPlayer = null
+                isPlayingVoice = false
+
+                attachedAudioUri?.let { File(it).delete() }
+                attachedAudioUri = null
+                attachedAudioDuration = 0L
+                renderVoiceMemoBar()
+                saveSilently()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun formatDuration(ms: Long): String {
+        val totalSeconds = (ms / 1000).coerceAtLeast(0)
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
+    override fun onDestroy() {
+        try {
+            mediaRecorder?.release()
+        } catch (_: Exception) {}
+        try {
+            mediaPlayer?.release()
+        } catch (_: Exception) {}
+        recordingTimerHandler.removeCallbacksAndMessages(null)
+        saveHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
 }

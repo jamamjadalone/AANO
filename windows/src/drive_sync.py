@@ -290,8 +290,9 @@ class GoogleDriveSync:
         # Merge local and remote notes
         merged_notes = self._merge_notes(local_notes, remote_notes)
 
-        # Upload merged notes back to Google Drive
-        json_data = json.dumps(merged_notes, ensure_ascii=False, indent=2).encode("utf-8")
+        # Upload merged notes back to Google Drive (Exclude local-only notes from cloud)
+        cloud_payload = [n for n in merged_notes if not n.get("isLocal", False)]
+        json_data = json.dumps(cloud_payload, ensure_ascii=False, indent=2).encode("utf-8")
 
         if remote_file:
             # Update existing file
@@ -338,6 +339,8 @@ class GoogleDriveSync:
             if not rid:
                 continue
             existing = local_map.get(rid)
+            if existing and existing.get("isLocal"):
+                continue
             if not existing:
                 local_map[rid] = rn
             else:

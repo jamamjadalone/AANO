@@ -20,7 +20,11 @@ data class Note(
     val folder: String = "",
     val tags: List<String> = emptyList(),
     val reminderAt: Long = 0L,
-    val archived: Boolean = false
+    val archived: Boolean = false,
+    val isLocal: Boolean = false,
+    val images: List<String> = emptyList(),
+    val audioUri: String? = null,
+    val audioDuration: Long = 0L
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -36,6 +40,10 @@ data class Note(
         put("tags", JSONArray(tags))
         put("reminderAt", reminderAt)
         put("archived", archived)
+        put("isLocal", isLocal)
+        put("images", JSONArray(images))
+        if (audioUri != null) put("audioUri", audioUri)
+        put("audioDuration", audioDuration)
     }
 
     companion object {
@@ -56,7 +64,13 @@ data class Note(
                 (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
             reminderAt = obj.optLong("reminderAt", 0),
-            archived = obj.optBoolean("archived", false)
+            archived = obj.optBoolean("archived", false),
+            isLocal = obj.optBoolean("isLocal", false),
+            images = obj.optJSONArray("images")?.let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }
+            } ?: emptyList(),
+            audioUri = if (obj.has("audioUri") && !obj.isNull("audioUri")) obj.optString("audioUri") else null,
+            audioDuration = obj.optLong("audioDuration", 0L)
         )
     }
 }

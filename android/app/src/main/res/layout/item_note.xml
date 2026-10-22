@@ -107,6 +107,61 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="11.5sp"
                 tools:text="22 Sep, 11:30 AM" />
+
+            <!-- Media Indicators -->
+            <LinearLayout
+                android:id="@+id/mediaBadgesLayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/badgeAudio"
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@color/brand"
+                    android:visibility="gone"
+                    android:contentDescription="Voice Recording" />
+
+                <LinearLayout
+                    android:id="@+id/badgeImageLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="15dp"
+                        android:layout_height="15dp"
+                        android:src="@drawable/ic_image"
+                        app:tint="@color/brand"
+                        android:contentDescription="Photos" />
+
+                    <TextView
+                        android:id="@+id/badgeImageCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="2dp"
+                        android:textSize="10.5sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/brand"
+                        tools:text="2" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/badgeLocal"
+                    android:layout_width="15dp"
+                    android:layout_height="15dp"
+                    android:layout_marginStart="6dp"
+                    android:src="@drawable/ic_local"
+                    app:tint="@color/brand"
+                    android:visibility="gone"
+                    android:contentDescription="On-Device Local" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>

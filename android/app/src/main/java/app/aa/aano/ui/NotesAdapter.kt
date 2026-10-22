@@ -97,6 +97,10 @@ class NotesAdapter(
         val pinned: ImageView = itemView.findViewById(R.id.notePinned)
         val checkbox: ImageView = itemView.findViewById(R.id.noteCheckbox)
         val folderBadge: TextView? = itemView.findViewById(R.id.noteFolderBadge)
+        val badgeAudio: ImageView? = itemView.findViewById(R.id.badgeAudio)
+        val badgeImageLayout: View? = itemView.findViewById(R.id.badgeImageLayout)
+        val badgeImageCount: TextView? = itemView.findViewById(R.id.badgeImageCount)
+        val badgeLocal: ImageView? = itemView.findViewById(R.id.badgeLocal)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
@@ -118,6 +122,16 @@ class NotesAdapter(
         }
         holder.date.text = formatFriendlyDate(note.updatedAt)
         holder.pinned.visibility = if (note.pinned) View.VISIBLE else View.GONE
+
+        // Media and Local badges
+        holder.badgeAudio?.visibility = if (!note.audioUri.isNullOrBlank()) View.VISIBLE else View.GONE
+        if (note.images.isNotEmpty()) {
+            holder.badgeImageLayout?.visibility = View.VISIBLE
+            holder.badgeImageCount?.text = note.images.size.toString()
+        } else {
+            holder.badgeImageLayout?.visibility = View.GONE
+        }
+        holder.badgeLocal?.visibility = if (note.isLocal) View.VISIBLE else View.GONE
 
         // Folder pill badge
         if (note.folder.isNotBlank()) {

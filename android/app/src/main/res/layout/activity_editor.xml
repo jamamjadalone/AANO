@@ -39,6 +39,20 @@
             app:chipStrokeWidth="0dp"
             android:textSize="12sp" />
 
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLocal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="📱 Local"
+            app:chipIcon="@drawable/ic_local"
+            app:chipIconTint="@color/brand"
+            app:chipBackgroundColor="@color/brand_light"
+            android:textColor="@color/brand_dark"
+            app:chipStrokeWidth="0dp"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
@@ -92,6 +106,117 @@
         android:textSize="22sp"
         android:textStyle="bold" />
 
+    <!-- Attached Images Horizontal Scroll -->
+    <HorizontalScrollView
+        android:id="@+id/imagesScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingVertical="4dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/imagesContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Voice Memo Player Bar -->
+    <LinearLayout
+        android:id="@+id/voiceMemoBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:background="@color/brand_light"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginVertical="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/btnVoicePlayPause"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="4dp"
+            android:src="@drawable/ic_play"
+            app:tint="@color/brand"
+            android:contentDescription="Play/Pause Voice" />
+
+        <TextView
+            android:id="@+id/tvVoiceTimer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:text="Voice Memo (00:00)"
+            android:textColor="@color/brand_dark"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/btnVoiceDelete"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="4dp"
+            android:src="@drawable/ic_trash"
+            app:tint="@color/brand"
+            android:contentDescription="Delete Voice Memo" />
+    </LinearLayout>
+
+    <!-- Live Recording Bar -->
+    <LinearLayout
+        android:id="@+id/recordingLiveBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="8dp"
+        android:background="#FFEBEE"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginVertical="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_mic"
+            app:tint="#D32F2F"
+            android:contentDescription="Recording Active" />
+
+        <TextView
+            android:id="@+id/tvRecordingDuration"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:text="Recording Voice... 00:00"
+            android:textColor="#D32F2F"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btnStopRecording"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="■ Stop &amp; Save"
+            android:textColor="#D32F2F"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:padding="6dp" />
+    </LinearLayout>
+
     <!-- Note Content Area -->
     <EditText
         android:id="@+id/noteContent"
@@ -131,6 +256,31 @@
             android:gravity="center_vertical"
             android:paddingStart="8dp"
             android:paddingEnd="8dp">
+
+            <ImageButton
+                android:id="@+id/btnAddImage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Add Photo"
+                android:src="@drawable/ic_image"
+                app:tint="@color/brand" />
+
+            <ImageButton
+                android:id="@+id/btnRecordVoice"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Record Voice"
+                android:src="@drawable/ic_mic"
+                app:tint="@color/brand" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:background="@color/divider_color" />
 
             <ImageButton
                 android:id="@+id/btnUndo"
