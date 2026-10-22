@@ -35,8 +35,15 @@ def load_config():
     }
 
 def save_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2)
+    tmp = CONFIG_FILE + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, CONFIG_FILE)
+    except Exception as e:
+        print(f"[AANO Storage] save_config error: {e}")
 
 def load_notes():
     if os.path.exists(NOTES_FILE):
@@ -65,8 +72,15 @@ def load_notes():
     return welcome_notes
 
 def save_notes(notes):
-    with open(NOTES_FILE, "w", encoding="utf-8") as f:
-        json.dump(notes, f, indent=2, ensure_ascii=False)
+    tmp = NOTES_FILE + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(notes, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, NOTES_FILE)
+    except Exception as e:
+        print(f"[AANO Storage] save_notes error: {e}")
 
 def post_json(endpoint, payload, token=None):
     url = f"{BASE_URL}{endpoint}"
