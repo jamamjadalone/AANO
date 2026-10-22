@@ -392,20 +392,32 @@ function setupEventListeners() {
     });
   }
 
-  // Intercept all <a> link clicks and open via desktop browser
+  // Intercept all note link clicks and open via desktop browser (Prevent double tabs)
+  let lastUrlOpenTime = 0;
+  let lastUrlOpened = "";
   document.addEventListener("click", (e) => {
-    const link = e.target.closest("a");
-    if (link && link.href) {
-      e.preventDefault();
-      const url = link.href;
-      const api = getApi();
-      if (api && api.open_external_url) {
-        api.open_external_url(url);
-      } else {
-        window.open(url, "_blank");
+    const link = e.target.closest("a.note-link") || e.target.closest("a");
+    if (link) {
+      const url = link.getAttribute("data-url") || (link.href && !link.href.startsWith("javascript:") && !link.href.endsWith("#") ? link.href : null);
+      if (url) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const now = Date.now();
+        if (now - lastUrlOpenTime < 700 && lastUrlOpened === url) {
+          return;
+        }
+        lastUrlOpenTime = now;
+        lastUrlOpened = url;
+        const api = getApi();
+        if (api && api.open_external_url) {
+          api.open_external_url(url);
+        } else {
+          window.open(url, "_blank");
+        }
       }
     }
-  });
+  }, true);
 
   // Formatting Toolbar
   setupFormattingToolbar();
@@ -718,7 +730,7 @@ function formatLinksInHtml(html) {
     if (href.toLowerCase().startsWith("www.")) {
       href = "https://" + href;
     }
-    return `<a href="${href}" class="note-link" target="_blank">${url}</a>`;
+    return `<a href="javascript:void(0)" data-url="${href}" class="note-link">${url}</a>`;
   });
 }
 
@@ -747,9 +759,9 @@ function autoLinkify(element) {
         if (href.toLowerCase().startsWith("www.")) {
           href = "https://" + href;
         }
-        a.href = href;
+        a.href = "javascript:void(0)";
+        a.setAttribute("data-url", href);
         a.textContent = part;
-        a.target = "_blank";
         a.className = "note-link";
         fragment.appendChild(a);
       } else if (part) {
