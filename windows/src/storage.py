@@ -112,7 +112,14 @@ def sync_with_cloud():
             local_map = {n["id"]: n for n in notes}
             for sn in server_notes:
                 existing = local_map.get(sn["id"])
-                if not existing or sn.get("updatedAt", 0) >= existing.get("updatedAt", 0):
+                if not existing:
+                    local_map[sn["id"]] = sn
+                elif sn.get("updatedAt", 0) > existing.get("updatedAt", 0):
+                    if "archived" not in sn:
+                        sn["archived"] = existing.get("archived", False)
+                    local_map[sn["id"]] = sn
+                elif sn.get("updatedAt", 0) == existing.get("updatedAt", 0):
+                    sn["archived"] = existing.get("archived", False) or sn.get("archived", False)
                     local_map[sn["id"]] = sn
             notes = list(local_map.values())
             save_notes(notes)

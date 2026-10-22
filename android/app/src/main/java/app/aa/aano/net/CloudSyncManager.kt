@@ -166,8 +166,19 @@ class CloudSyncManager(
                 // Merge server notes into local
                 if (serverNotes.length() > 0) {
                     val incomingNotes = mutableListOf<Note>()
+                    val localNotesMap = localNotes.associateBy { it.id }
                     for (i in 0 until serverNotes.length()) {
-                        incomingNotes.add(Note.fromJson(serverNotes.getJSONObject(i)))
+                        val obj = serverNotes.getJSONObject(i)
+                        val parsed = Note.fromJson(obj)
+                        val localExisting = localNotesMap[parsed.id]
+                        val finalNote = if (!obj.has("archived") && localExisting != null) {
+                            parsed.copy(archived = localExisting.archived)
+                        } else if (localExisting != null && localExisting.archived && !parsed.archived && parsed.updatedAt <= localExisting.updatedAt) {
+                            parsed.copy(archived = true)
+                        } else {
+                            parsed
+                        }
+                        incomingNotes.add(finalNote)
                     }
                     notesRepo.replaceAll(incomingNotes)
                 }

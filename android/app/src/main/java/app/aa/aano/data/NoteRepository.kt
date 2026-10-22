@@ -400,7 +400,19 @@ class NoteRepository(private val context: Context) {
             val existing = byId[note.id]
             when {
                 existing == null -> byId[note.id] = note
-                note.updatedAt >= existing.updatedAt -> byId[note.id] = note
+                note.updatedAt > existing.updatedAt -> {
+                    val preservedArchived = if (!note.archived && existing.archived) existing.archived else note.archived
+                    byId[note.id] = note.copy(archived = preservedArchived)
+                }
+                note.updatedAt == existing.updatedAt -> {
+                    byId[note.id] = note.copy(
+                        archived = existing.archived || note.archived,
+                        pinned = existing.pinned || note.pinned
+                    )
+                }
+                else -> {
+                    // Local is strictly newer: preserve local note!
+                }
             }
         }
         return byId.values.sortedByDescending { it.updatedAt }
