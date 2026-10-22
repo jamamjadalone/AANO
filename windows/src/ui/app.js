@@ -636,7 +636,7 @@ function renderNotes() {
       ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
       ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
       <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
-      <div class="note-card-preview">${escapeHtml(plain || "No content")}</div>
+      <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
       <div class="note-card-footer">
         <span class="folder-badge">${cardFolderSvg} ${escapeHtml(note.folder || "General")}</span>
         <span>${dateStr}</span>
@@ -655,7 +655,10 @@ function renderNotes() {
         renderNotes();
       });
     } else {
-      card.addEventListener("click", () => openEditor(note));
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("a")) return; // Clicked link directly on card: open browser, do not open editor!
+        openEditor(note);
+      });
     }
     container.appendChild(card);
   });
@@ -706,6 +709,19 @@ function applyEditorColor(colorHex) {
 
 let isEditorViewMode = false;
 
+const URL_REGEX = /(https?:\/\/[^\s<>"'`]+|www\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]+)/gi;
+
+function formatLinksInHtml(html) {
+  if (!html) return "";
+  return html.replace(URL_REGEX, (url) => {
+    let href = url;
+    if (href.toLowerCase().startsWith("www.")) {
+      href = "https://" + href;
+    }
+    return `<a href="${href}" class="note-link" target="_blank">${url}</a>`;
+  });
+}
+
 function autoLinkify(element) {
   if (!element) return;
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
@@ -713,24 +729,28 @@ function autoLinkify(element) {
   let node;
   while ((node = walker.nextNode())) {
     if (node.parentElement && node.parentElement.tagName.toLowerCase() === "a") continue;
-    if (/(https?:\/\/[^\s<>"'`]+)/i.test(node.nodeValue)) {
+    URL_REGEX.lastIndex = 0;
+    if (URL_REGEX.test(node.nodeValue)) {
       nodesToReplace.push(node);
     }
   }
   for (const textNode of nodesToReplace) {
     const parent = textNode.parentNode;
     if (!parent) continue;
-    const parts = textNode.nodeValue.split(/(https?:\/\/[^\s<>"'`]+)/gi);
+    const parts = textNode.nodeValue.split(URL_REGEX);
     const fragment = document.createDocumentFragment();
     for (const part of parts) {
-      if (/^https?:\/\/[^\s<>"'`]+$/i.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      if (URL_REGEX.test(part)) {
         const a = document.createElement("a");
-        a.href = part;
+        let href = part;
+        if (href.toLowerCase().startsWith("www.")) {
+          href = "https://" + href;
+        }
+        a.href = href;
         a.textContent = part;
         a.target = "_blank";
-        a.style.color = "#6200ee";
-        a.style.textDecoration = "underline";
-        a.style.cursor = "pointer";
+        a.className = "note-link";
         fragment.appendChild(a);
       } else if (part) {
         fragment.appendChild(document.createTextNode(part));

@@ -1010,3 +1010,26 @@ body {
   cursor: pointer;
   z-index: 5;
 }
+
+/* Clickable Links in Notes & Cards */
+.note-link, a.note-link, .note-card-preview a {
+  color: #1a73e8 !important;
+  text-decoration: underline !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.note-link:hover, .note-card-preview a:hover {
+  color: #1557b0 !important;
+  text-decoration: underline !important;
+}
+
+.dark-card .note-link, .dark-card .note-card-preview a {
+  color: #80d8ff !important;
+}
+
+.dark-card .note-link:hover, .dark-card .note-card-preview a:hover {
+  color: #b3e5fc !important;
+}
