@@ -19,7 +19,8 @@ import java.util.Locale
 
 class NotesAdapter(
     private val onClick: (Note) -> Unit,
-    private val onLongClick: (Note) -> Unit
+    private val onLongClick: (Note) -> Unit,
+    var onSelectionChanged: ((Int) -> Unit)? = null
 ) : RecyclerView.Adapter<NotesAdapter.NoteViewHolder>() {
 
     companion object {
@@ -46,6 +47,45 @@ class NotesAdapter(
     }
 
     private var notes: List<Note> = emptyList()
+    private val selectedIds = mutableSetOf<String>()
+    var isSelectionMode: Boolean = false
+        set(value) {
+            field = value
+            if (!value) {
+                selectedIds.clear()
+            }
+            notifyDataSetChanged()
+        }
+
+    fun toggleSelection(id: String) {
+        if (selectedIds.contains(id)) {
+            selectedIds.remove(id)
+        } else {
+            selectedIds.add(id)
+        }
+        if (selectedIds.isEmpty()) {
+            isSelectionMode = false
+        }
+        notifyDataSetChanged()
+        onSelectionChanged?.invoke(selectedIds.size)
+    }
+
+    fun selectAll() {
+        selectedIds.clear()
+        selectedIds.addAll(notes.map { it.id })
+        isSelectionMode = true
+        notifyDataSetChanged()
+        onSelectionChanged?.invoke(selectedIds.size)
+    }
+
+    fun clearSelection() {
+        selectedIds.clear()
+        isSelectionMode = false
+        notifyDataSetChanged()
+        onSelectionChanged?.invoke(0)
+    }
+
+    fun getSelectedIds(): Set<String> = selectedIds.toSet()
 
     class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val card: com.google.android.material.card.MaterialCardView = itemView.findViewById(R.id.noteCard)
@@ -53,6 +93,7 @@ class NotesAdapter(
         val preview: TextView = itemView.findViewById(R.id.notePreview)
         val date: TextView = itemView.findViewById(R.id.noteDate)
         val pinned: ImageView = itemView.findViewById(R.id.notePinned)
+        val checkbox: ImageView = itemView.findViewById(R.id.noteCheckbox)
         val folderBadge: TextView? = itemView.findViewById(R.id.noteFolderBadge)
     }
 
@@ -94,8 +135,40 @@ class NotesAdapter(
         )
         holder.card.setCardBackgroundColor(cardBg)
 
-        holder.itemView.setOnClickListener { onClick(note) }
-        holder.itemView.setOnLongClickListener { onLongClick(note); true }
+        // Selection state
+        val isSelected = selectedIds.contains(note.id)
+        if (isSelectionMode) {
+            holder.checkbox.visibility = View.VISIBLE
+            if (isSelected) {
+                holder.checkbox.alpha = 1.0f
+                holder.card.strokeColor = androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.brand)
+                holder.card.strokeWidth = (2.5f * holder.itemView.resources.displayMetrics.density).toInt()
+            } else {
+                holder.checkbox.alpha = 0.3f
+                holder.card.strokeColor = androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.card_stroke)
+                holder.card.strokeWidth = (1 * holder.itemView.resources.displayMetrics.density).toInt()
+            }
+        } else {
+            holder.checkbox.visibility = View.GONE
+            holder.card.strokeColor = androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.card_stroke)
+            holder.card.strokeWidth = (1 * holder.itemView.resources.displayMetrics.density).toInt()
+        }
+
+        holder.itemView.setOnClickListener {
+            if (isSelectionMode) {
+                toggleSelection(note.id)
+            } else {
+                onClick(note)
+            }
+        }
+        holder.itemView.setOnLongClickListener {
+            if (isSelectionMode) {
+                toggleSelection(note.id)
+            } else {
+                onLongClick(note)
+            }
+            true
+        }
     }
 
     fun submitList(newNotes: List<Note>) {

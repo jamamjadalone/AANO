@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1-beta] - 2026-10-22
+
+### 🚀 Added
+- **Multi-Select Batch Delete & Archive (Android & Windows)**:
+  - **Android**: Long-press any note card to activate contextual selection mode with live selection counter, "Select All", "Archive Selected", and "Delete Selected" (with confirmation dialog).
+  - **Windows Desktop**: Topbar "Select" button toggles batch selection mode with card checkboxes and an emerald batch action bar.
+- **Dedicated Archive System**:
+  - Archive notes to keep active lists clean while preserving folder categorization and tags.
+  - Dedicated "Archive" view on Android (`ArchiveActivity`) and Windows Desktop sidebar with live badge count.
+  - 1-tap "Unarchive" action returning notes directly to active view.
+  - Added "Archive Note" option in note context menu and editor top bar across both platforms.
+- **Cross-Platform Database Migration**:
+  - Cloudflare Worker D1 schema auto-migration adding `archived INTEGER DEFAULT 0` column.
+  - Full end-to-end cloud synchronization for the `archived` attribute across mobile and PC.
+
+### 🎨 Changed & Improved
+- Note cards dynamically reflect selected status with emerald border highlight and checkbox indicators.
+- Added protective modal confirmation dialogs for batch deletion.
+- Bumped Android `versionCode` to 2 and `versionName` to `1.0.1-beta`.
+
+---
+
 ## [1.0.0] - 2026-10-22
 
 ### 🚀 Added
@@ -37,4 +59,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.0.1-beta]: https://github.com/jamamjadalone/AANO/releases/tag/v1.0.1-beta
 [1.0.0]: https://github.com/jamamjadalone/AANO/releases/tag/v1.0.0

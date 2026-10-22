@@ -575,8 +575,28 @@ class EditorActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
+            R.id.action_archive -> { archiveNote(); true }
             R.id.action_delete -> { confirmDeleteNote(); true }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun archiveNote() {
+        lifecycleScope.launch {
+            if (noteId == null) {
+                persist()
+            }
+            val currentId = noteId
+            if (currentId != null) {
+                repository.archive(currentId)
+                Toast.makeText(this@EditorActivity, "Note archived", Toast.LENGTH_SHORT).show()
+                if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        try { cloudSyncManager.syncNow() } catch (_: Exception) {}
+                    }
+                }
+                finish()
+            }
         }
     }
 

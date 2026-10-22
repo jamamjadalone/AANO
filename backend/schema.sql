@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS notes (
     folder TEXT,
     pinned INTEGER,
     updated_at INTEGER,
-    deleted INTEGER
+    deleted INTEGER,
+    archived INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS email_otps (

@@ -30,6 +30,10 @@
             android:name=".ui.TrashActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.ArchiveActivity"
+            android:exported="false" />
+
         <receiver
             android:name=".net.TaskReminderReceiver"
             android:exported="false" />

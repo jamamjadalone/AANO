@@ -80,9 +80,66 @@ class NotesFragment : Fragment() {
 
         adapter = NotesAdapter(
             onClick = { openEditor(it.id) },
-            onLongClick = { showNoteActions(it) }
+            onLongClick = { note ->
+                if (!adapter.isSelectionMode) {
+                    adapter.isSelectionMode = true
+                    adapter.toggleSelection(note.id)
+                } else {
+                    showNoteActions(note)
+                }
+            },
+            onSelectionChanged = { count ->
+                if (count > 0) {
+                    binding.selectionToolbar.visibility = View.VISIBLE
+                    binding.toolbar.visibility = View.GONE
+                    binding.selectionTitle.text = "$count selected"
+                } else {
+                    binding.selectionToolbar.visibility = View.GONE
+                    binding.toolbar.visibility = View.VISIBLE
+                }
+            }
         )
         binding.notesList.adapter = adapter
+
+        binding.btnCancelSelection.setOnClickListener {
+            adapter.clearSelection()
+        }
+        binding.btnSelectAll.setOnClickListener {
+            adapter.selectAll()
+        }
+        binding.btnBatchArchive.setOnClickListener {
+            val ids = adapter.getSelectedIds()
+            if (ids.isNotEmpty()) {
+                lifecycleScope.launch {
+                    repository.archiveMultiple(ids)
+                    adapter.clearSelection()
+                    loadNotes()
+                    buildFolderChips()
+                    Toast.makeText(requireContext(), "${ids.size} notes archived", Toast.LENGTH_SHORT).show()
+                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
+                }
+            }
+        }
+        binding.btnBatchDelete.setOnClickListener {
+            val ids = adapter.getSelectedIds()
+            if (ids.isNotEmpty()) {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Move to Trash")
+                    .setMessage("Move ${ids.size} selected notes to Trash?")
+                    .setPositiveButton("Move to Trash") { _, _ ->
+                        lifecycleScope.launch {
+                            repository.deleteMultiple(ids)
+                            adapter.clearSelection()
+                            loadNotes()
+                            buildFolderChips()
+                            Toast.makeText(requireContext(), "${ids.size} notes moved to Trash", Toast.LENGTH_SHORT).show()
+                            if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
 
         binding.fabAdd.setOnClickListener { openEditor(null, currentFolder) }
         binding.clearFilterBtn.setOnClickListener { filterByFolder(null) }
@@ -176,6 +233,9 @@ class NotesFragment : Fragment() {
             R.id.action_settings -> {
                 startActivity(Intent(requireContext(), SettingsActivity::class.java)); true
             }
+            R.id.action_archive -> {
+                startActivity(Intent(requireContext(), ArchiveActivity::class.java)); true
+            }
             R.id.action_trash -> {
                 startActivity(Intent(requireContext(), TrashActivity::class.java)); true
             }
@@ -259,6 +319,7 @@ class NotesFragment : Fragment() {
     private fun showNoteActions(note: Note) {
         val items = arrayOf(
             if (note.pinned) "📌 Unpin Note" else "📌 Pin to Top",
+            "📦 Archive Note",
             "📁 Move to Folder",
             "🎨 Change Color",
             getString(R.string.share_note),
@@ -273,10 +334,17 @@ class NotesFragment : Fragment() {
                         loadNotes()
                         if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                     }
-                    1 -> showMoveFolderDialog(note)
-                    2 -> showChangeColorDialog(note)
-                    3 -> shareNote(note)
-                    4 -> lifecycleScope.launch {
+                    1 -> lifecycleScope.launch {
+                        repository.archive(note.id)
+                        loadNotes()
+                        buildFolderChips()
+                        Toast.makeText(requireContext(), "Note archived", Toast.LENGTH_SHORT).show()
+                        if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
+                    }
+                    2 -> showMoveFolderDialog(note)
+                    3 -> showChangeColorDialog(note)
+                    4 -> shareNote(note)
+                    5 -> lifecycleScope.launch {
                         repository.delete(note.id)
                         loadNotes()
                         if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)

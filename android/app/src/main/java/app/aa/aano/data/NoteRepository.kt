@@ -28,7 +28,11 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getVisible(): List<Note> = withContext(Dispatchers.IO) {
-        sortNotes(readNotes().filter { !it.deleted })
+        sortNotes(readNotes().filter { !it.deleted && !it.archived })
+    }
+
+    suspend fun getArchived(): List<Note> = withContext(Dispatchers.IO) {
+        sortNotes(readNotes().filter { !it.deleted && it.archived })
     }
 
     suspend fun getById(id: String): Note? = withContext(Dispatchers.IO) {
@@ -37,7 +41,7 @@ class NoteRepository(private val context: Context) {
 
     suspend fun search(query: String): List<Note> = withContext(Dispatchers.IO) {
         val q = query.trim()
-        val all = readNotes().filter { !it.deleted }
+        val all = readNotes().filter { !it.deleted && !it.archived }
         if (q.isEmpty()) sortNotes(all)
         else sortNotes(
             all.filter {
@@ -51,7 +55,7 @@ class NoteRepository(private val context: Context) {
 
     /** Distinct folder names in use + custom folders. */
     suspend fun folders(): List<String> = withContext(Dispatchers.IO) {
-        val fromNotes = readNotes().filter { !it.deleted }.map { it.folder.trim() }.filter { it.isNotBlank() }
+        val fromNotes = readNotes().filter { !it.deleted && !it.archived }.map { it.folder.trim() }.filter { it.isNotBlank() }
         val custom = prefs.customFolders.map { it.trim() }.filter { it.isNotBlank() }
         (fromNotes + custom).distinct().sorted()
     }
@@ -129,7 +133,7 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getVisibleInFolder(folder: String?): List<Note> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted }
+        val all = readNotes().filter { !it.deleted && !it.archived }
         val filtered = when {
             folder.isNullOrBlank() -> all
             folder.equals("General", ignoreCase = true) -> all.filter { it.folder.isBlank() || it.folder.equals("General", ignoreCase = true) }
@@ -242,6 +246,80 @@ class NoteRepository(private val context: Context) {
         }
     }
 
+    suspend fun archive(id: String) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            val index = notes.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val now = maxOf(System.currentTimeMillis(), notes[index].updatedAt + 1000L)
+                notes[index] = notes[index].copy(archived = true, updatedAt = now)
+                writeNotes(notes)
+            }
+        }
+    }
+
+    suspend fun unarchive(id: String) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            val index = notes.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val now = maxOf(System.currentTimeMillis(), notes[index].updatedAt + 1000L)
+                notes[index] = notes[index].copy(archived = false, updatedAt = now)
+                writeNotes(notes)
+            }
+        }
+    }
+
+    suspend fun deleteMultiple(ids: Set<String>) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            var modified = false
+            for (i in notes.indices) {
+                if (ids.contains(notes[i].id)) {
+                    val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
+                    notes[i] = notes[i].copy(
+                        deleted = true,
+                        deletedAt = now,
+                        updatedAt = now
+                    )
+                    NoteReminderReceiver.cancel(context, notes[i].id)
+                    modified = true
+                }
+            }
+            if (modified) writeNotes(notes)
+        }
+    }
+
+    suspend fun archiveMultiple(ids: Set<String>) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            var modified = false
+            for (i in notes.indices) {
+                if (ids.contains(notes[i].id)) {
+                    val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
+                    notes[i] = notes[i].copy(archived = true, updatedAt = now)
+                    modified = true
+                }
+            }
+            if (modified) writeNotes(notes)
+        }
+    }
+
+    suspend fun unarchiveMultiple(ids: Set<String>) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            var modified = false
+            for (i in notes.indices) {
+                if (ids.contains(notes[i].id)) {
+                    val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
+                    notes[i] = notes[i].copy(archived = false, updatedAt = now)
+                    modified = true
+                }
+            }
+            if (modified) writeNotes(notes)
+        }
+    }
+
     suspend fun purge(id: String) {
         withContext(Dispatchers.IO) {
             writeNotes(readNotes().filterNot { it.id == id })
@@ -299,6 +377,7 @@ class NoteRepository(private val context: Context) {
         put("folder", note.folder)
         put("tags", JSONArray(note.tags))
         put("reminderAt", note.reminderAt)
+        put("archived", note.archived)
         put("enc", false)
     }
 
@@ -387,7 +466,8 @@ class NoteRepository(private val context: Context) {
                     if (encrypted) try { cipher.decrypt(raw) } catch (e: Exception) { "" } else raw
                 }
             } ?: emptyList(),
-            reminderAt = obj.optLong("reminderAt", 0)
+            reminderAt = obj.optLong("reminderAt", 0),
+            archived = obj.optBoolean("archived", false)
         )
     }
 
@@ -410,6 +490,7 @@ class NoteRepository(private val context: Context) {
         put("folder", cipher.encrypt(note.folder))
         put("tags", JSONArray(note.tags.map { cipher.encrypt(it) }))
         put("reminderAt", note.reminderAt)
+        put("archived", note.archived)
         put("enc", true)
     }
 }

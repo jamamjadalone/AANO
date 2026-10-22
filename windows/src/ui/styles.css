@@ -818,3 +818,113 @@ body {
 .modal-backdrop:not(.hidden) .dialog-box {
   animation: scaleIn 0.15s ease-out;
 }
+
+/* Batch Selection Bar */
+.batch-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #004D40;
+  color: #FFFFFF;
+  padding: 10px 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 77, 64, 0.2);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.batch-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.batch-count-text {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.btn-batch-text {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #FFFFFF;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-batch-text:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #FFFFFF;
+}
+
+.batch-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-batch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-batch-archive {
+  background: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+}
+
+.btn-batch-archive:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-batch-danger {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.btn-batch-danger:hover {
+  background: #DC2626;
+}
+
+.btn-batch-cancel {
+  background: transparent;
+  color: #E0F2F1;
+  padding: 6px 10px;
+}
+
+.btn-batch-cancel:hover {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
+/* Note Card Selection Checkbox & Selected State */
+.note-card.selectable {
+  cursor: pointer;
+}
+
+.note-card.selected {
+  outline: 2.5px solid var(--brand);
+  box-shadow: 0 0 0 4px rgba(0, 105, 92, 0.15);
+}
+
+.card-select-checkbox {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  z-index: 5;
+}

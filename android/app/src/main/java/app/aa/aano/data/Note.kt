@@ -19,7 +19,8 @@ data class Note(
     val color: Int = COLOR_DEFAULT,
     val folder: String = "",
     val tags: List<String> = emptyList(),
-    val reminderAt: Long = 0L
+    val reminderAt: Long = 0L,
+    val archived: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -34,6 +35,7 @@ data class Note(
         put("folder", folder)
         put("tags", JSONArray(tags))
         put("reminderAt", reminderAt)
+        put("archived", archived)
     }
 
     companion object {
@@ -53,7 +55,8 @@ data class Note(
             tags = obj.optJSONArray("tags")?.let { arr ->
                 (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
-            reminderAt = obj.optLong("reminderAt", 0)
+            reminderAt = obj.optLong("reminderAt", 0),
+            archived = obj.optBoolean("archived", false)
         )
     }
 }

@@ -83,6 +83,10 @@ async function ensureSchema(env) {
       PRIMARY KEY (ip, action)
     );
   `).run();
+
+  try {
+    await env.DB.prepare("ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0;").run();
+  } catch (_) {}
 }
 
 // -------------------------------------------------------------
@@ -443,6 +447,7 @@ async function handleSync(request, env) {
     const color = Number(n.color) || 0;
     const pinned = n.pinned ? 1 : 0;
     const deleted = n.deleted ? 1 : 0;
+    const archived = n.archived ? 1 : 0;
     const updatedAt = Number(n.updatedAt) || Date.now();
     const noteId = String(n.id || "").substring(0, 64);
 
@@ -454,8 +459,8 @@ async function handleSync(request, env) {
 
     if (!existing || updatedAt > existing.updated_at) {
       await env.DB.prepare(`
-        INSERT INTO notes (id, user_id, title, content, color, folder, pinned, updated_at, deleted)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO notes (id, user_id, title, content, color, folder, pinned, updated_at, deleted, archived)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           title = excluded.title,
           content = excluded.content,
@@ -463,14 +468,15 @@ async function handleSync(request, env) {
           folder = excluded.folder,
           pinned = excluded.pinned,
           updated_at = excluded.updated_at,
-          deleted = excluded.deleted
-      `).bind(noteId, userId, title, content, color, folder, pinned, updatedAt, deleted).run();
+          deleted = excluded.deleted,
+          archived = excluded.archived
+      `).bind(noteId, userId, title, content, color, folder, pinned, updatedAt, deleted, archived).run();
     }
   }
 
   // Fetch updated notes from server
   const serverNotes = await env.DB.prepare(
-    "SELECT id, title, content, color, folder, pinned, updated_at, deleted FROM notes WHERE user_id = ? AND updated_at > ?"
+    "SELECT id, title, content, color, folder, pinned, updated_at, deleted, archived FROM notes WHERE user_id = ? AND updated_at > ?"
   ).bind(userId, lastSyncTime).all();
 
   return jsonResponse({
@@ -485,6 +491,7 @@ async function handleSync(request, env) {
       pinned: r.pinned === 1,
       updatedAt: r.updated_at,
       deleted: r.deleted === 1,
+      archived: r.archived === 1,
     })),
   });
 }

@@ -51,6 +51,15 @@
                 android:src="@drawable/ic_pin"
                 android:visibility="gone"
                 app:tint="@color/brand" />
+
+            <ImageView
+                android:id="@+id/noteCheckbox"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="Select"
+                android:src="@drawable/ic_check_circle"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView

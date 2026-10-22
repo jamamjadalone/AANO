@@ -20,7 +20,11 @@ class DesktopApi:
 
     def get_notes(self):
         notes = storage.load_notes()
-        return [n for n in notes if not n.get("deleted", False)]
+        return [n for n in notes if not n.get("deleted", False) and not n.get("archived", False)]
+
+    def get_archived_notes(self):
+        notes = storage.load_notes()
+        return [n for n in notes if not n.get("deleted", False) and n.get("archived", False)]
 
     def get_all_folders(self):
         notes = storage.load_notes()
@@ -83,6 +87,81 @@ class DesktopApi:
                 break
         storage.save_notes(notes)
         self._async_auto_sync()
+        return {"success": True}
+
+    def archive_note(self, note_id):
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        for n in notes:
+            if n["id"] == note_id:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["archived"] = True
+                n["updatedAt"] = now
+                break
+        storage.save_notes(notes)
+        self._async_auto_sync()
+        return {"success": True}
+
+    def unarchive_note(self, note_id):
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        for n in notes:
+            if n["id"] == note_id:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["archived"] = False
+                n["updatedAt"] = now
+                break
+        storage.save_notes(notes)
+        self._async_auto_sync()
+        return {"success": True}
+
+    def batch_delete_notes(self, note_ids):
+        id_set = set(note_ids)
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        modified = False
+        for n in notes:
+            if n["id"] in id_set:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["deleted"] = True
+                n["deletedAt"] = now
+                n["updatedAt"] = now
+                modified = True
+        if modified:
+            storage.save_notes(notes)
+            self._async_auto_sync()
+        return {"success": True}
+
+    def batch_archive_notes(self, note_ids):
+        id_set = set(note_ids)
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        modified = False
+        for n in notes:
+            if n["id"] in id_set:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["archived"] = True
+                n["updatedAt"] = now
+                modified = True
+        if modified:
+            storage.save_notes(notes)
+            self._async_auto_sync()
+        return {"success": True}
+
+    def batch_unarchive_notes(self, note_ids):
+        id_set = set(note_ids)
+        notes = storage.load_notes()
+        now = int(time.time() * 1000)
+        modified = False
+        for n in notes:
+            if n["id"] in id_set:
+                now = max(now, n.get("updatedAt", 0) + 1000)
+                n["archived"] = False
+                n["updatedAt"] = now
+                modified = True
+        if modified:
+            storage.save_notes(notes)
+            self._async_auto_sync()
         return {"success": True}
 
     def toggle_pin(self, note_id):

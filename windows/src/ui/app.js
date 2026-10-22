@@ -14,9 +14,14 @@ const PASTEL_COLORS = [
 ];
 
 let allNotes = [];
-let currentFilter = "all"; // "all" | "pinned" | "folder:<name>"
+let archivedNotes = [];
+let currentFilter = "all"; // "all" | "pinned" | "archived" | "folder:<name>"
 let currentSearch = "";
 let isListView = false;
+
+let isSelectionMode = false;
+let selectedNoteIds = new Set();
+let lastFilteredNotes = [];
 
 let editingNote = null; // null if creating new, or note object
 let editingColor = 0;
@@ -141,6 +146,75 @@ function setupEventListeners() {
     container.classList.toggle("notes-list-view", isListView);
   });
 
+  // Batch Selection Toggle
+  const btnToggleSelect = document.getElementById("btnToggleSelect");
+  if (btnToggleSelect) {
+    btnToggleSelect.addEventListener("click", toggleSelectionMode);
+  }
+
+  // Batch Bar Actions
+  const btnBatchSelectAll = document.getElementById("btnBatchSelectAll");
+  if (btnBatchSelectAll) {
+    btnBatchSelectAll.addEventListener("click", () => {
+      if (selectedNoteIds.size === lastFilteredNotes.length) {
+        selectedNoteIds.clear();
+      } else {
+        selectedNoteIds = new Set(lastFilteredNotes.map(n => n.id));
+      }
+      updateBatchBar();
+      renderNotes();
+    });
+  }
+
+  const btnBatchCancel = document.getElementById("btnBatchCancel");
+  if (btnBatchCancel) {
+    btnBatchCancel.addEventListener("click", exitSelectionMode);
+  }
+
+  const btnBatchArchive = document.getElementById("btnBatchArchive");
+  if (btnBatchArchive) {
+    btnBatchArchive.addEventListener("click", async () => {
+      if (selectedNoteIds.size === 0) return;
+      const api = getApi();
+      if (!api) return;
+      const ids = Array.from(selectedNoteIds);
+      if (currentFilter === "archived") {
+        await api.batch_unarchive_notes(ids);
+      } else {
+        await api.batch_archive_notes(ids);
+      }
+      try { await api.sync_now(); } catch (_) {}
+      exitSelectionMode();
+      await refreshData();
+      await checkCloudStatus();
+    });
+  }
+
+  const btnBatchDelete = document.getElementById("btnBatchDelete");
+  if (btnBatchDelete) {
+    btnBatchDelete.addEventListener("click", async () => {
+      if (selectedNoteIds.size === 0) return;
+      const count = selectedNoteIds.size;
+      const confirmed = await showNativeConfirm({
+        title: "Delete Notes",
+        message: `Are you sure you want to delete ${count} selected note${count > 1 ? 's' : ''}? They will be removed across all your synced devices.`,
+        confirmText: "Delete Notes",
+        cancelText: "Cancel",
+        danger: true
+      });
+      if (confirmed) {
+        const api = getApi();
+        if (api) {
+          await api.batch_delete_notes(Array.from(selectedNoteIds));
+          try { await api.sync_now(); } catch (_) {}
+          exitSelectionMode();
+          await refreshData();
+          await checkCloudStatus();
+        }
+      }
+    });
+  }
+
   // Nav filters
   document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", (e) => {
@@ -149,7 +223,14 @@ function setupEventListeners() {
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
       item.classList.add("active");
       currentFilter = item.dataset.filter;
-      document.getElementById("currentViewTitle").innerText = item.dataset.filter === "pinned" ? "Pinned Notes" : "All Notes";
+      if (item.dataset.filter === "pinned") {
+        document.getElementById("currentViewTitle").innerText = "Pinned Notes";
+      } else if (item.dataset.filter === "archived") {
+        document.getElementById("currentViewTitle").innerText = "Archive";
+      } else {
+        document.getElementById("currentViewTitle").innerText = "All Notes";
+      }
+      exitSelectionMode();
       renderNotes();
     });
   });
@@ -200,6 +281,29 @@ function setupEventListeners() {
     }
   });
 
+  // Editor Archive / Unarchive
+  const btnEditorArchive = document.getElementById("btnEditorArchive");
+  if (btnEditorArchive) {
+    btnEditorArchive.addEventListener("click", async () => {
+      if (!editingNote || !editingNote.id) {
+        closeEditorWithoutSaving();
+        return;
+      }
+      const api = getApi();
+      if (api) {
+        if (editingNote.archived) {
+          await api.unarchive_note(editingNote.id);
+        } else {
+          await api.archive_note(editingNote.id);
+        }
+        try { await api.sync_now(); } catch (_) {}
+        closeEditorWithoutSaving();
+        await refreshData();
+        await checkCloudStatus();
+      }
+    });
+  }
+
   // Folder Select dropdown in Editor
   const folderSelect = document.getElementById("editorFolderSelect");
   folderSelect.addEventListener("change", async () => {
@@ -248,6 +352,46 @@ function setupEventListeners() {
   document.getElementById("backupFileInput").addEventListener("change", handleImportBackup);
 }
 
+// --------------------- Selection Mode Helpers ---------------------
+function toggleSelectionMode() {
+  isSelectionMode = !isSelectionMode;
+  if (!isSelectionMode) {
+    exitSelectionMode();
+  } else {
+    const bar = document.getElementById("batchActionBar");
+    if (bar) bar.classList.remove("hidden");
+    const btn = document.getElementById("btnToggleSelect");
+    if (btn) {
+      btn.classList.add("active");
+      btn.querySelector("span").innerText = "Done";
+    }
+    updateBatchBar();
+    renderNotes();
+  }
+}
+
+function exitSelectionMode() {
+  isSelectionMode = false;
+  selectedNoteIds.clear();
+  const bar = document.getElementById("batchActionBar");
+  if (bar) bar.classList.add("hidden");
+  const btn = document.getElementById("btnToggleSelect");
+  if (btn) {
+    btn.classList.remove("active");
+    btn.querySelector("span").innerText = "Select";
+  }
+  renderNotes();
+}
+
+function updateBatchBar() {
+  const countSpan = document.getElementById("batchCount");
+  if (countSpan) countSpan.innerText = `${selectedNoteIds.size} selected`;
+  const archiveLabel = document.getElementById("batchArchiveLabel");
+  if (archiveLabel) {
+    archiveLabel.innerText = currentFilter === "archived" ? "Unarchive" : "Archive";
+  }
+}
+
 // --------------------- Notes & Folders Rendering ---------------------
 async function refreshData() {
   const api = getApi();
@@ -255,6 +399,7 @@ async function refreshData() {
 
   try {
     allNotes = await api.get_notes();
+    archivedNotes = (await api.get_archived_notes()) || [];
     const folders = await api.get_all_folders();
     renderFolders(folders);
     renderNotes();
@@ -297,6 +442,7 @@ function renderFolders(folders) {
       item.classList.add("active");
       currentFilter = "folder:" + folder;
       document.getElementById("currentViewTitle").innerText = folder;
+      exitSelectionMode();
       renderNotes();
     });
     container.appendChild(item);
@@ -309,8 +455,12 @@ function renderNotes() {
   container.innerHTML = "";
 
   document.getElementById("allCount").innerText = allNotes.length;
+  const archivedCountEl = document.getElementById("archivedCount");
+  if (archivedCountEl) archivedCountEl.innerText = archivedNotes.length;
 
-  let filtered = allNotes.filter(n => {
+  const sourceNotes = (currentFilter === "archived") ? archivedNotes : allNotes;
+
+  let filtered = sourceNotes.filter(n => {
     // Nav / Folder filter
     if (currentFilter === "pinned" && !n.pinned) return false;
     if (currentFilter.startsWith("folder:")) {
@@ -334,6 +484,9 @@ function renderNotes() {
     return (b.updatedAt || 0) - (a.updatedAt || 0);
   });
 
+  lastFilteredNotes = filtered;
+  updateBatchBar();
+
   document.getElementById("notesCount").innerText = `${filtered.length} notes`;
 
   if (filtered.length === 0) {
@@ -347,7 +500,8 @@ function renderNotes() {
 
   filtered.forEach(note => {
     const card = document.createElement("div");
-    card.className = "note-card";
+    const isSelected = selectedNoteIds.has(note.id);
+    card.className = "note-card" + (isSelectionMode ? " selectable" : "") + (isSelected ? " selected" : "");
     const bg = PASTEL_COLORS[note.color || 0] || "#FFFFFF";
     card.style.background = bg;
 
@@ -355,6 +509,7 @@ function renderNotes() {
     const dateStr = formatDate(note.updatedAt || note.createdAt || Date.now());
 
     card.innerHTML = `
+      ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
       ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
       <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
       <div class="note-card-preview">${escapeHtml(plain || "No content")}</div>
@@ -364,7 +519,20 @@ function renderNotes() {
       </div>
     `;
 
-    card.addEventListener("click", () => openEditor(note));
+    if (isSelectionMode) {
+      card.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (selectedNoteIds.has(note.id)) {
+          selectedNoteIds.delete(note.id);
+        } else {
+          selectedNoteIds.add(note.id);
+        }
+        updateBatchBar();
+        renderNotes();
+      });
+    } else {
+      card.addEventListener("click", () => openEditor(note));
+    }
     container.appendChild(card);
   });
 }
@@ -395,6 +563,15 @@ function openEditor(note = null, defaultFolder = null) {
   const titleInput = document.getElementById("editorTitle");
   const contentArea = document.getElementById("editorContent");
   const folderSelect = document.getElementById("editorFolderSelect");
+  const btnArchive = document.getElementById("btnEditorArchive");
+
+  if (btnArchive) {
+    if (note && note.archived) {
+      btnArchive.title = "Unarchive Note";
+    } else {
+      btnArchive.title = "Archive Note";
+    }
+  }
 
   if (note) {
     titleInput.value = note.title || "";
@@ -416,7 +593,6 @@ function openEditor(note = null, defaultFolder = null) {
   updateWordCount();
 
   modal.classList.remove("hidden");
-  titleInput.focus();
 }
 
 function updateEditorPinState() {

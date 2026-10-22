@@ -136,6 +136,7 @@ class CloudSyncManager(
                     put("pinned", n.pinned)
                     put("updatedAt", n.updatedAt)
                     put("deleted", n.deleted)
+                    put("archived", n.archived)
                 })
             }
 
