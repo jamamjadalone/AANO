@@ -26,8 +26,10 @@ class ArchiveAdapter(
     private val dateFormat = SimpleDateFormat("dd MMM yyyy, h:mm a", Locale.getDefault())
 
     class ArchiveViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val card: com.google.android.material.card.MaterialCardView = view.findViewById(R.id.archiveCard)
         val title: TextView = view.findViewById(R.id.archiveTitle)
         val date: TextView = view.findViewById(R.id.archiveDate)
+        val folderBadge: TextView = view.findViewById(R.id.archiveFolderBadge)
         val btnUnarchive: ImageButton = view.findViewById(R.id.btnUnarchive)
         val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
     }
@@ -43,6 +45,22 @@ class ArchiveAdapter(
         val note = items[position]
         holder.title.text = note.title.ifBlank { "(No title)" }
         holder.date.text = "Updated: ${dateFormat.format(Date(note.updatedAt))}"
+
+        val cardBg = EditorActivity.resolveNoteColor(holder.itemView.context, note.color)
+        holder.card.setCardBackgroundColor(cardBg)
+
+        val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(cardBg) < 0.35
+        val textColor = if (isDark) 0xFFFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.on_surface)
+        val dateColor = if (isDark) 0xAAFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(holder.itemView.context, R.color.text_secondary)
+        holder.title.setTextColor(textColor)
+        holder.date.setTextColor(dateColor)
+
+        if (note.folder.isNotBlank()) {
+            holder.folderBadge.visibility = View.VISIBLE
+            holder.folderBadge.text = note.folder
+        } else {
+            holder.folderBadge.visibility = View.GONE
+        }
 
         holder.itemView.setOnClickListener { onClick(note) }
         holder.btnUnarchive.setOnClickListener { onUnarchive(note) }

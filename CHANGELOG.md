@@ -10,22 +10,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1-beta] - 2026-10-22
 
 ### 🚀 Added
+- **Custom Color Picker & 12 Aesthetic Shades ("Apni Marzi")**:
+  - **Custom Color Palette Button (`🎨`)**: Pick any color freely on Android and Windows with live Hex input (`#RRGGBB`) and a 20-color swatch palette grid.
+  - **Curated 12 Aesthetic Shades**: Expanded palette to 12 modern pastel and muted paper tones including Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.
+  - **Dynamic Contrast Adaptation**: Dark paper backgrounds (e.g. Charcoal) automatically invert text and metadata to high-contrast white and soft zinc for effortless readability.
 - **Multi-Select Batch Delete & Archive (Android & Windows)**:
   - **Android**: Long-press any note card to activate contextual selection mode with live selection counter, "Select All", "Archive Selected", and "Delete Selected" (with confirmation dialog).
   - **Windows Desktop**: Topbar "Select" button toggles batch selection mode with card checkboxes and an emerald batch action bar.
 - **Dedicated Archive System**:
   - Archive notes to keep active lists clean while preserving folder categorization and tags.
-  - Dedicated "Archive" view on Android (`ArchiveActivity`) and Windows Desktop sidebar with live badge count.
+  - Dedicated "Archive" view on Android (`ArchiveActivity`) with styled Material cards, and Windows Desktop sidebar with live badge count.
   - 1-tap "Unarchive" action returning notes directly to active view.
   - Added "Archive Note" option in note context menu and editor top bar across both platforms.
+- **Windows Productivity Shortcuts**:
+  - `Ctrl + N`: Instantly open editor for a new note.
+  - `Ctrl + F`: Quick-focus the search bar.
+  - `Escape`: Cancel batch selection or close editor modal cleanly.
 - **Cross-Platform Database Migration**:
   - Cloudflare Worker D1 schema auto-migration adding `archived INTEGER DEFAULT 0` column.
-  - Full end-to-end cloud synchronization for the `archived` attribute across mobile and PC.
+  - Full end-to-end cloud synchronization for custom 32-bit ARGB / Hex color codes and `archived` attribute.
 
 ### 🎨 Changed & Improved
+- **Friendly Relative Timestamps**: Note cards now display conversational dates ("Today, 2:30 PM", "Yesterday, 11:15 AM", "22 Oct, 1:00 PM") across Android and Windows.
+- **Instant Title Auto-Focus**: Opening a new note automatically focuses the title input and triggers the keyboard.
 - Note cards dynamically reflect selected status with emerald border highlight and checkbox indicators.
 - Added protective modal confirmation dialogs for batch deletion.
 - Bumped Android `versionCode` to 2 and `versionName` to `1.0.1-beta`.
+
+### 🐛 Fixed
+- **Android Hardware Back Button in Selection Mode**: Fixed bug where pressing hardware/gesture back in selection mode would close the app; it now cleanly clears selection first.
+- **Folder Count Inflation**: Fixed active folder badges counting archived notes in `NoteRepository.getFolderCounts()` and Windows desktop API.
+- **Polished Archive Cards**: Upgraded Android `item_archive` from bare LinearLayout to rounded `MaterialCardView` with folder badges and dynamic pastel backgrounds.
 
 ---
 

@@ -28,6 +28,7 @@ import android.text.style.StyleSpan
 import android.text.style.UnderlineSpan
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -64,8 +65,19 @@ class EditorActivity : AppCompatActivity() {
             R.color.note_color_purple,
             R.color.note_color_pink,
             R.color.note_color_orange,
-            R.color.note_color_red
+            R.color.note_color_red,
+            R.color.note_color_sand,
+            R.color.note_color_slate,
+            R.color.note_color_charcoal
         )
+
+        fun resolveNoteColor(context: android.content.Context, colorValue: Int): Int {
+            return when {
+                colorValue in 1 until NOTE_COLORS.size -> ContextCompat.getColor(context, NOTE_COLORS[colorValue])
+                colorValue == 0 -> ContextCompat.getColor(context, R.color.card_surface)
+                else -> colorValue // Direct 32-bit ARGB color
+            }
+        }
     }
 
     private lateinit var binding: ActivityEditorBinding
@@ -149,6 +161,11 @@ class EditorActivity : AppCompatActivity() {
             updateFolderChipDisplay()
             updateWordCount()
             pushHistorySnapshot()
+            binding.noteTitle.post {
+                binding.noteTitle.requestFocus()
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                imm?.showSoftInput(binding.noteTitle, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }
         }
     }
 
@@ -501,7 +518,7 @@ class EditorActivity : AppCompatActivity() {
             val dot = View(this).apply {
                 val size = (34 * density).toInt()
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                    setMargins((6 * density).toInt(), 0, (6 * density).toInt(), 0)
+                    setMargins((5 * density).toInt(), 0, (5 * density).toInt(), 0)
                 }
                 val dotColor = if (index == 0) {
                     ContextCompat.getColor(this@EditorActivity, R.color.surface)
@@ -523,22 +540,137 @@ class EditorActivity : AppCompatActivity() {
             }
             binding.colorRow.addView(dot)
         }
+
+        // Dedicated Custom Color Button (Apni Marzi)
+        val customBtn = ImageView(this).apply {
+            val size = (34 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                setMargins((5 * density).toInt(), 0, (8 * density).toInt(), 0)
+            }
+            setImageResource(R.drawable.ic_palette)
+            setPadding((6 * density).toInt(), (6 * density).toInt(), (6 * density).toInt(), (6 * density).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0xFFF1F5F9.toInt())
+                setStroke((1.5f * density).toInt(), ContextCompat.getColor(this@EditorActivity, R.color.brand))
+            }
+            isClickable = true
+            tag = -999
+            contentDescription = "Custom Color"
+            setOnClickListener {
+                showCustomColorPickerDialog()
+            }
+        }
+        binding.colorRow.addView(customBtn)
+
         highlightSelectedColor()
     }
 
-    private fun highlightSelectedColor() {
-        val colorRes = if (selectedColor in 1 until NOTE_COLORS.size) {
-            NOTE_COLORS[selectedColor]
-        } else {
-            R.color.surface
+    private fun showCustomColorPickerDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
+        val swatchesGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.swatchesGrid)
+        val livePreview = dialogView.findViewById<View>(R.id.liveColorPreview)
+        val hexInput = dialogView.findViewById<EditText>(R.id.hexInput)
+
+        val swatches = listOf(
+            "#FFFFFF", "#FFF9C4", "#FFF59D", "#FFE082", "#FFCC80",
+            "#FFAB91", "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9",
+            "#C5CAE9", "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB",
+            "#C8E6C9", "#DCEDC8", "#EFEBE9", "#CFD8DC", "#37474F"
+        )
+
+        var currentColor = resolveNoteColor(this, selectedColor)
+        val density = resources.displayMetrics.density
+
+        fun updatePreview(color: Int) {
+            currentColor = color
+            livePreview.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(color)
+                setStroke((1 * density).toInt(), 0x33000000.toInt())
+            }
         }
-        val bgColor = ContextCompat.getColor(this, colorRes)
+
+        updatePreview(currentColor)
+        val hexStr = String.format("#%06X", 0xFFFFFF and currentColor)
+        hexInput.setText(hexStr)
+
+        swatches.forEach { hex ->
+            val swatchColor = android.graphics.Color.parseColor(hex)
+            val dot = View(this).apply {
+                val size = (34 * density).toInt()
+                val params = android.widget.GridLayout.LayoutParams().apply {
+                    width = size
+                    height = size
+                    setMargins((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
+                }
+                layoutParams = params
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(swatchColor)
+                    setStroke((1 * density).toInt(), 0x33000000.toInt())
+                }
+                isClickable = true
+                setOnClickListener {
+                    updatePreview(swatchColor)
+                    hexInput.setText(hex)
+                }
+            }
+            swatchesGrid.addView(dot)
+        }
+
+        hexInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
+                val text = s?.toString()?.trim() ?: ""
+                if (text.startsWith("#") && (text.length == 7 || text.length == 9)) {
+                    try {
+                        val parsed = android.graphics.Color.parseColor(text)
+                        updatePreview(parsed)
+                    } catch (_: Exception) {}
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Custom Note Color")
+            .setView(dialogView)
+            .setPositiveButton("Apply") { _, _ ->
+                val inputHex = hexInput.text.toString().trim()
+                val finalColor = runCatching {
+                    android.graphics.Color.parseColor(if (inputHex.startsWith("#")) inputHex else "#$inputHex")
+                }.getOrDefault(currentColor)
+                selectedColor = finalColor
+                highlightSelectedColor()
+                triggerAutoSave()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun highlightSelectedColor() {
+        val bgColor = resolveNoteColor(this, selectedColor)
         binding.root.setBackgroundColor(bgColor)
+
+        // Contrast adaptation for dark colors (charcoal / dark paper)
+        val isDark = androidx.core.graphics.ColorUtils.calculateLuminance(bgColor) < 0.35
+        val textColor = if (isDark) 0xFFFFFFFF.toInt() else ContextCompat.getColor(this, R.color.on_surface)
+        val hintColor = if (isDark) 0xAAFFFFFF.toInt() else ContextCompat.getColor(this, R.color.text_secondary)
+        binding.noteTitle.setTextColor(textColor)
+        binding.noteTitle.setHintTextColor(hintColor)
+        binding.noteContent.setTextColor(textColor)
+        binding.noteContent.setHintTextColor(hintColor)
 
         val density = resources.displayMetrics.density
         for (i in 0 until binding.colorRow.childCount) {
             val dot = binding.colorRow.getChildAt(i)
-            val selected = (dot.tag as Int) == selectedColor
+            val tagVal = dot.tag as? Int ?: continue
+            val selected = if (tagVal == -999) {
+                selectedColor !in 0 until NOTE_COLORS.size
+            } else {
+                tagVal == selectedColor
+            }
             dot.alpha = if (selected) 1f else 0.45f
             val gd = dot.background as? android.graphics.drawable.GradientDrawable
             if (selected) {

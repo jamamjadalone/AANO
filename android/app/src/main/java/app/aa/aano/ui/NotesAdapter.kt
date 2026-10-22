@@ -9,6 +9,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.RecyclerView
 import app.aa.aano.R
 import app.aa.aano.data.Note
@@ -125,15 +127,17 @@ class NotesAdapter(
             holder.folderBadge?.visibility = View.GONE
         }
 
-        // Note pastel card background color (0 = default/surface).
-        val colorRes = if (note.color in 1 until EditorActivity.NOTE_COLORS.size) {
-            EditorActivity.NOTE_COLORS[note.color]
-        } else R.color.card_surface
-
-        val cardBg = androidx.core.content.ContextCompat.getColor(
-            holder.itemView.context, colorRes
-        )
+        // Note card background color with resolveNoteColor & contrast adaptation
+        val cardBg = EditorActivity.resolveNoteColor(holder.itemView.context, note.color)
         holder.card.setCardBackgroundColor(cardBg)
+
+        val isDark = ColorUtils.calculateLuminance(cardBg) < 0.35
+        val titleColor = if (isDark) 0xFFFFFFFF.toInt() else ContextCompat.getColor(holder.itemView.context, R.color.on_surface)
+        val previewColor = if (isDark) 0xCCFFFFFF.toInt() else ContextCompat.getColor(holder.itemView.context, R.color.text_secondary)
+        val dateColor = if (isDark) 0x99FFFFFF.toInt() else ContextCompat.getColor(holder.itemView.context, R.color.text_secondary)
+        holder.title.setTextColor(titleColor)
+        holder.preview.setTextColor(previewColor)
+        holder.date.setTextColor(dateColor)
 
         // Selection state
         val isSelected = selectedIds.contains(note.id)

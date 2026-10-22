@@ -2,16 +2,50 @@
 // Copyright (C) 2026 Jam Amjad Rasheed
 
 const PASTEL_COLORS = [
-  "#FFFFFF", // 0: White
-  "#E0F2F1", // 1: Emerald Mint
-  "#FFFDE7", // 2: Butter Yellow
-  "#E8F5E9", // 3: Leaf Green
-  "#E3F2FD", // 4: Sky Blue
-  "#F3E5F5", // 5: Lavender
-  "#FCE4EC", // 6: Rose Pink
-  "#FFF3E0", // 7: Peach Orange
-  "#FFEBEE"  // 8: Coral Red
+  "#FFFFFF", // 0: White Default
+  "#FEF9C3", // 1: Pastel Lemon
+  "#DCFCE7", // 2: Pastel Mint
+  "#CCFBF1", // 3: Pastel Teal
+  "#E0F2FE", // 4: Pastel Sky
+  "#E0E7FF", // 5: Pastel Indigo
+  "#F3E8FF", // 6: Pastel Lavender
+  "#FCE7F3", // 7: Pastel Rose
+  "#FFEDD5", // 8: Pastel Peach
+  "#FEE2E2", // 9: Pastel Coral
+  "#F5F5F4", // 10: Muted Sand
+  "#E2E8F0", // 11: Muted Slate
+  "#1E293B"  // 12: Charcoal Dark
 ];
+
+function resolveNoteColor(colorVal) {
+  if (colorVal === undefined || colorVal === null) return "#FFFFFF";
+  if (typeof colorVal === "string" && colorVal.startsWith("#")) return colorVal;
+  if (typeof colorVal === "number") {
+    if (colorVal >= 0 && colorVal < PASTEL_COLORS.length) {
+      return PASTEL_COLORS[colorVal];
+    }
+    const unsigned = (colorVal >>> 0).toString(16).padStart(8, "0");
+    return "#" + unsigned.slice(2);
+  }
+  return "#FFFFFF";
+}
+
+function hexToColorInt(hex) {
+  if (!hex.startsWith("#")) hex = "#" + hex;
+  const num = parseInt(hex.slice(1), 16);
+  return ((0xFF000000 | num) >> 0);
+}
+
+function isDarkColor(hexColor) {
+  if (!hexColor || !hexColor.startsWith("#")) return false;
+  let hex = hexColor.slice(1);
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  const r = parseInt(hex.substr(0, 2), 16) || 0;
+  const g = parseInt(hex.substr(2, 2), 16) || 0;
+  const b = parseInt(hex.substr(4, 2), 16) || 0;
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq < 128;
+}
 
 let allNotes = [];
 let archivedNotes = [];
@@ -350,6 +384,52 @@ function setupEventListeners() {
   });
   document.getElementById("btnExportJSON").addEventListener("click", handleExportBackup);
   document.getElementById("backupFileInput").addEventListener("change", handleImportBackup);
+
+  // Global Keyboard Shortcuts (Ctrl+N, Ctrl+F, Escape)
+  document.addEventListener("keydown", (e) => {
+    const confirmModal = document.getElementById("nativeConfirmModal");
+    const promptModal = document.getElementById("nativePromptModal");
+    const alertModal = document.getElementById("nativeAlertModal");
+    if ((confirmModal && !confirmModal.classList.contains("hidden")) ||
+        (promptModal && !promptModal.classList.contains("hidden")) ||
+        (alertModal && !alertModal.classList.contains("hidden"))) {
+      return;
+    }
+
+    const editorModal = document.getElementById("editorModal");
+    const isEditorOpen = editorModal && !editorModal.classList.contains("hidden");
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === "n" || e.key === "N")) {
+      e.preventDefault();
+      if (!isEditorOpen) {
+        openEditor();
+      }
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
+      e.preventDefault();
+      if (!isEditorOpen) {
+        const searchInput = document.getElementById("searchInput");
+        if (searchInput) {
+          searchInput.focus();
+          searchInput.select();
+        }
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      if (isEditorOpen) {
+        e.preventDefault();
+        closeAndSaveEditor();
+      } else if (isSelectionMode) {
+        e.preventDefault();
+        exitSelectionMode();
+      }
+      return;
+    }
+  });
 }
 
 // --------------------- Selection Mode Helpers ---------------------
@@ -501,8 +581,9 @@ function renderNotes() {
   filtered.forEach(note => {
     const card = document.createElement("div");
     const isSelected = selectedNoteIds.has(note.id);
-    card.className = "note-card" + (isSelectionMode ? " selectable" : "") + (isSelected ? " selected" : "");
-    const bg = PASTEL_COLORS[note.color || 0] || "#FFFFFF";
+    const bg = resolveNoteColor(note.color);
+    const isDark = isDarkColor(bg);
+    card.className = "note-card" + (isSelectionMode ? " selectable" : "") + (isSelected ? " selected" : "") + (isDark ? " dark-card" : "");
     card.style.background = bg;
 
     const plain = stripHtml(note.content || "");
@@ -543,17 +624,41 @@ function renderColorPalette() {
   container.innerHTML = "";
   PASTEL_COLORS.forEach((color, idx) => {
     const dot = document.createElement("div");
-    dot.className = "color-dot" + (idx === editingColor ? " active" : "");
+    const isMatched = (typeof editingColor === "number" && editingColor === idx);
+    dot.className = "color-dot" + (isMatched ? " active" : "");
     dot.style.background = color;
     dot.title = `Color shade ${idx + 1}`;
     dot.addEventListener("click", () => {
       editingColor = idx;
+      applyEditorColor(color);
       document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
       dot.classList.add("active");
-      document.getElementById("editorCard").style.background = color;
     });
     container.appendChild(dot);
   });
+
+  const customBtn = document.getElementById("btnCustomColor");
+  const customPicker = document.getElementById("customColorPicker");
+  if (customBtn && customPicker) {
+    customBtn.onclick = () => customPicker.click();
+    customPicker.onchange = () => {
+      const hex = customPicker.value;
+      editingColor = hexToColorInt(hex);
+      applyEditorColor(hex);
+      document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
+    };
+  }
+}
+
+function applyEditorColor(colorHex) {
+  const card = document.getElementById("editorCard");
+  if (!card) return;
+  card.style.background = colorHex;
+  if (isDarkColor(colorHex)) {
+    card.classList.add("dark-card");
+  } else {
+    card.classList.remove("dark-card");
+  }
 }
 
 function openEditor(note = null, defaultFolder = null) {
@@ -576,7 +681,7 @@ function openEditor(note = null, defaultFolder = null) {
   if (note) {
     titleInput.value = note.title || "";
     contentArea.innerHTML = note.content || "";
-    editingColor = note.color || 0;
+    editingColor = note.color !== undefined ? note.color : 0;
     editingPinned = !!note.pinned;
     folderSelect.value = note.folder || "General";
   } else {
@@ -587,12 +692,14 @@ function openEditor(note = null, defaultFolder = null) {
     folderSelect.value = defaultFolder || (currentFilter.startsWith("folder:") ? currentFilter.replace("folder:", "") : "General");
   }
 
-  card.style.background = PASTEL_COLORS[editingColor] || "#FFFFFF";
+  const resolvedBg = resolveNoteColor(editingColor);
+  applyEditorColor(resolvedBg);
   renderColorPalette();
   updateEditorPinState();
   updateWordCount();
 
   modal.classList.remove("hidden");
+  setTimeout(() => titleInput.focus(), 80);
 }
 
 function updateEditorPinState() {
@@ -862,7 +969,23 @@ function escapeHtml(text) {
 function formatDate(ms) {
   if (!ms) return "";
   const d = new Date(ms);
+  const now = new Date();
+  const timeStr = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const isToday = d.getFullYear() === now.getFullYear() &&
+                  d.getMonth() === now.getMonth() &&
+                  d.getDate() === now.getDate();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.getFullYear() === yesterday.getFullYear() &&
+                      d.getMonth() === yesterday.getMonth() &&
+                      d.getDate() === yesterday.getDate();
+
+  if (isToday) return `Today, ${timeStr}`;
+  if (isYesterday) return `Yesterday, ${timeStr}`;
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  if (d.getFullYear() === now.getFullYear()) {
+    return `${months[d.getMonth()]} ${d.getDate()}, ${timeStr}`;
+  }
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 

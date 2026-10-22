@@ -8,6 +8,26 @@ import json
 import threading
 import storage
 
+def _parse_color(c):
+    if isinstance(c, int):
+        return c
+    if isinstance(c, str):
+        if c.startswith("#"):
+            try:
+                val = int(c[1:], 16)
+                if val <= 0xFFFFFF:
+                    val = 0xFF000000 | val
+                if val > 0x7FFFFFFF:
+                    val -= 0x100000000
+                return val
+            except Exception:
+                return 0
+        try:
+            return int(c)
+        except Exception:
+            return 0
+    return 0
+
 class DesktopApi:
     def __init__(self):
         # Trigger background sync on startup if logged in
@@ -30,7 +50,7 @@ class DesktopApi:
         notes = storage.load_notes()
         folders = set()
         for n in notes:
-            if not n.get("deleted", False):
+            if not n.get("deleted", False) and not n.get("archived", False):
                 f = n.get("folder", "").strip()
                 if f:
                     folders.add(f)
@@ -48,7 +68,7 @@ class DesktopApi:
                         "title": note_data.get("title", ""),
                         "content": note_data.get("content", ""),
                         "folder": note_data.get("folder", "General"),
-                        "color": int(note_data.get("color", 0)),
+                        "color": _parse_color(note_data.get("color", 0)),
                         "tags": note_data.get("tags", []),
                         "pinned": bool(note_data.get("pinned", False)),
                         "updatedAt": now
@@ -60,7 +80,7 @@ class DesktopApi:
                 "title": note_data.get("title", ""),
                 "content": note_data.get("content", ""),
                 "folder": note_data.get("folder", "General"),
-                "color": int(note_data.get("color", 0)),
+                "color": _parse_color(note_data.get("color", 0)),
                 "tags": note_data.get("tags", []),
                 "pinned": bool(note_data.get("pinned", False)),
                 "createdAt": now,

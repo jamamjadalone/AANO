@@ -608,6 +608,88 @@ body {
   transform: scale(1.1);
 }
 
+.btn-custom-color {
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.btn-custom-color:hover {
+  transform: scale(1.15);
+  border-color: var(--brand);
+}
+
+/* Dark note cards & contrast adaptation */
+.note-card.dark-card {
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .note-card-title {
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .note-card-preview {
+  color: #E2E8F0;
+}
+
+.note-card.dark-card .note-card-footer {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  color: #94A3B8;
+}
+
+.note-card.dark-card .folder-badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .folder-badge svg {
+  stroke: #FFFFFF;
+}
+
+.editor-card.dark-card {
+  color: #FFFFFF;
+}
+
+.editor-card.dark-card .editor-title-input {
+  color: #FFFFFF;
+}
+
+.editor-card.dark-card .editor-title-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-card.dark-card .editor-content-area {
+  color: #F8FAFC;
+}
+
+.editor-card.dark-card .editor-content-area:empty::before {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-card.dark-card .formatting-toolbar {
+  background: rgba(255, 255, 255, 0.05);
+  border-top-color: rgba(255, 255, 255, 0.1);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.editor-card.dark-card .color-palette-bar {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.editor-card.dark-card .palette-label,
+.editor-card.dark-card .word-counter {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .editor-title-input {
   border: none;
   outline: none;

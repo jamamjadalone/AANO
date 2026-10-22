@@ -78,6 +78,15 @@ class NotesFragment : Fragment() {
 
         applyLayoutManager()
 
+        val backCallback = object : androidx.activity.OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                if (adapter.isSelectionMode) {
+                    adapter.clearSelection()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
         adapter = NotesAdapter(
             onClick = { openEditor(it.id) },
             onLongClick = { note ->
@@ -89,6 +98,7 @@ class NotesFragment : Fragment() {
                 }
             },
             onSelectionChanged = { count ->
+                backCallback.isEnabled = count > 0
                 if (count > 0) {
                     binding.selectionToolbar.visibility = View.VISIBLE
                     binding.toolbar.visibility = View.GONE
@@ -413,23 +423,127 @@ class NotesFragment : Fragment() {
 
     private fun showChangeColorDialog(note: Note) {
         val colorNames = arrayOf(
-            "Default Clean",
-            "Soft Red",
-            "Soft Orange",
-            "Soft Yellow",
-            "Mint Green",
-            "Sky Blue",
-            "Soft Purple"
+            "Default Card",
+            "Pastel Lemon",
+            "Pastel Mint",
+            "Pastel Teal",
+            "Pastel Sky",
+            "Pastel Indigo",
+            "Pastel Lavender",
+            "Pastel Rose",
+            "Pastel Peach",
+            "Pastel Coral",
+            "Muted Sand",
+            "Muted Slate",
+            "Charcoal Dark",
+            "🎨 Custom Color..."
         )
         AlertDialog.Builder(requireContext())
             .setTitle("Note Color")
             .setItems(colorNames) { _, which ->
+                if (which == colorNames.lastIndex) {
+                    showCustomColorPickerForNote(note)
+                } else {
+                    lifecycleScope.launch {
+                        repository.update(
+                            id = note.id,
+                            title = note.title,
+                            content = note.content,
+                            color = which,
+                            folder = note.folder,
+                            tags = note.tags
+                        )
+                        loadNotes()
+                        if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+                            launchSync(silent = true)
+                        }
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun showCustomColorPickerForNote(note: Note) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
+        val swatchesGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.swatchesGrid)
+        val livePreview = dialogView.findViewById<View>(R.id.liveColorPreview)
+        val hexInput = dialogView.findViewById<android.widget.EditText>(R.id.hexInput)
+
+        val swatches = listOf(
+            "#FFFFFF", "#FFF9C4", "#FFF59D", "#FFE082", "#FFCC80",
+            "#FFAB91", "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9",
+            "#C5CAE9", "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB",
+            "#C8E6C9", "#DCEDC8", "#EFEBE9", "#CFD8DC", "#37474F"
+        )
+
+        var currentColor = EditorActivity.resolveNoteColor(requireContext(), note.color)
+        val density = resources.displayMetrics.density
+
+        fun updatePreview(color: Int) {
+            currentColor = color
+            livePreview.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(color)
+                setStroke((1 * density).toInt(), 0x33000000.toInt())
+            }
+        }
+
+        updatePreview(currentColor)
+        val hexStr = String.format("#%06X", 0xFFFFFF and currentColor)
+        hexInput.setText(hexStr)
+
+        swatches.forEach { hex ->
+            val swatchColor = android.graphics.Color.parseColor(hex)
+            val dot = View(requireContext()).apply {
+                val size = (34 * density).toInt()
+                val params = android.widget.GridLayout.LayoutParams().apply {
+                    width = size
+                    height = size
+                    setMargins((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
+                }
+                layoutParams = params
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(swatchColor)
+                    setStroke((1 * density).toInt(), 0x33000000.toInt())
+                }
+                isClickable = true
+                setOnClickListener {
+                    updatePreview(swatchColor)
+                    hexInput.setText(hex)
+                }
+            }
+            swatchesGrid.addView(dot)
+        }
+
+        hexInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
+                val text = s?.toString()?.trim() ?: ""
+                if (text.startsWith("#") && (text.length == 7 || text.length == 9)) {
+                    try {
+                        val parsed = android.graphics.Color.parseColor(text)
+                        updatePreview(parsed)
+                    } catch (_: Exception) {}
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Custom Note Color")
+            .setView(dialogView)
+            .setPositiveButton("Apply") { _, _ ->
+                val inputHex = hexInput.text.toString().trim()
+                val finalColor = runCatching {
+                    android.graphics.Color.parseColor(if (inputHex.startsWith("#")) inputHex else "#$inputHex")
+                }.getOrDefault(currentColor)
                 lifecycleScope.launch {
                     repository.update(
                         id = note.id,
                         title = note.title,
                         content = note.content,
-                        color = which,
+                        color = finalColor,
                         folder = note.folder,
                         tags = note.tags
                     )
@@ -439,6 +553,7 @@ class NotesFragment : Fragment() {
                     }
                 }
             }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 

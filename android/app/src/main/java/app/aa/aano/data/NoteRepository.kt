@@ -113,7 +113,7 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getFolderCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted }
+        val all = readNotes().filter { !it.deleted && !it.archived }
         val counts = mutableMapOf<String, Int>()
         // Initialize custom folders with 0
         prefs.customFolders.forEach { f ->
