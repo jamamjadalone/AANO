@@ -276,6 +276,20 @@ class NoteRepository(private val context: Context) {
         }
     }
 
+    suspend fun deleteLocalPermanently(id: String) {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            val index = notes.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val note = notes[index]
+                cleanupMediaFiles(note)
+                NoteReminderReceiver.cancel(context, id)
+                notes.removeAt(index)
+                writeNotes(notes)
+            }
+        }
+    }
+
     suspend fun restore(id: String) {
         withContext(Dispatchers.IO) {
             val notes = readNotes().toMutableList()

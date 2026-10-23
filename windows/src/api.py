@@ -187,15 +187,23 @@ class DesktopApi:
     def delete_note(self, note_id):
         notes = storage.load_notes()
         now = int(time.time() * 1000)
+        target = None
         for n in notes:
             if n["id"] == note_id:
-                now = max(now, n.get("updatedAt", 0) + 1000)
-                n["deleted"] = True
-                n["deletedAt"] = now
-                n["updatedAt"] = now
+                target = n
                 break
-        storage.save_notes(notes)
-        self._async_auto_sync()
+        if target:
+            if target.get("isLocal", False):
+                # Local notes bypass trash completely and are permanently removed from disk
+                notes = [n for n in notes if n["id"] != note_id]
+                storage.save_notes(notes)
+                return {"success": True}
+            now = max(now, target.get("updatedAt", 0) + 1000)
+            target["deleted"] = True
+            target["deletedAt"] = now
+            target["updatedAt"] = now
+            storage.save_notes(notes)
+            self._async_auto_sync()
         return {"success": True}
 
     def archive_note(self, note_id):
@@ -229,16 +237,25 @@ class DesktopApi:
         notes = storage.load_notes()
         now = int(time.time() * 1000)
         modified = False
+        remaining = []
+        has_sync_deletes = False
         for n in notes:
             if n["id"] in id_set:
+                modified = True
+                if n.get("isLocal", False):
+                    continue  # Local-only: drop immediately, bypass trash
                 now = max(now, n.get("updatedAt", 0) + 1000)
                 n["deleted"] = True
                 n["deletedAt"] = now
                 n["updatedAt"] = now
-                modified = True
+                has_sync_deletes = True
+                remaining.append(n)
+            else:
+                remaining.append(n)
         if modified:
-            storage.save_notes(notes)
-            self._async_auto_sync()
+            storage.save_notes(remaining)
+            if has_sync_deletes:
+                self._async_auto_sync()
         return {"success": True}
 
     def batch_archive_notes(self, note_ids):

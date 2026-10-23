@@ -99,7 +99,7 @@ class LocalFragment : Fragment() {
             "☁️ Move to Cloud Notes",
             "🎨 Change Color",
             getString(R.string.share_note),
-            getString(R.string.move_to_trash)
+            "🗑️ Delete Note (Permanently)"
         )
         AlertDialog.Builder(requireContext())
             .setTitle(note.title.ifBlank { "(No title)" })
@@ -116,10 +116,19 @@ class LocalFragment : Fragment() {
                     }
                     2 -> showChangeColorDialog(note)
                     3 -> shareNote(note)
-                    4 -> lifecycleScope.launch {
-                        repository.delete(note.id)
-                        loadLocalNotes()
-                        Toast.makeText(requireContext(), "Moved to Trash", Toast.LENGTH_SHORT).show()
+                    4 -> {
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Delete Local Note")
+                            .setMessage("Permanently delete this local note and attached photos/voice memos from this device? This action cannot be undone.")
+                            .setPositiveButton("Delete Permanently") { _, _ ->
+                                lifecycleScope.launch {
+                                    repository.deleteLocalPermanently(note.id)
+                                    loadLocalNotes()
+                                    Toast.makeText(requireContext(), "Local note permanently deleted", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .setNegativeButton(android.R.string.cancel, null)
+                            .show()
                     }
                 }
             }

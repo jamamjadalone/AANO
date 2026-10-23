@@ -247,10 +247,24 @@ function setupEventListeners() {
     btnBatchDelete.addEventListener("click", async () => {
       if (selectedNoteIds.size === 0) return;
       const count = selectedNoteIds.size;
+      const selectedNotes = allNotes.filter(n => selectedNoteIds.has(n.id));
+      const hasLocal = selectedNotes.some(n => n.isLocal);
+      const allLocal = selectedNotes.length > 0 && selectedNotes.every(n => n.isLocal);
+      let title = "Delete Notes";
+      let message = `Are you sure you want to delete ${count} selected note${count > 1 ? 's' : ''}? They will be removed across all your synced devices.`;
+      let confirmText = "Delete Notes";
+      if (allLocal) {
+        title = "Delete Local Notes";
+        message = `Are you sure you want to permanently delete ${count} selected local note${count > 1 ? 's' : ''}? They will be permanently removed from this device.`;
+        confirmText = "Delete Permanently";
+      } else if (hasLocal) {
+        message = `Are you sure you want to delete ${count} selected notes? Local notes will be permanently removed from this device, and cloud notes will be removed across all synced devices.`;
+      }
+
       const confirmed = await showNativeConfirm({
-        title: "Delete Notes",
-        message: `Are you sure you want to delete ${count} selected note${count > 1 ? 's' : ''}? They will be removed across all your synced devices.`,
-        confirmText: "Delete Notes",
+        title,
+        message,
+        confirmText,
         cancelText: "Cancel",
         danger: true
       });
@@ -258,10 +272,14 @@ function setupEventListeners() {
         const api = getApi();
         if (api) {
           await api.batch_delete_notes(Array.from(selectedNoteIds));
-          try { await api.sync_now(); } catch (_) {}
+          if (!allLocal) {
+            try { await api.sync_now(); } catch (_) {}
+          }
           exitSelectionMode();
           await refreshData();
-          await checkCloudStatus();
+          if (!allLocal) {
+            await checkCloudStatus();
+          }
         }
       }
     });
@@ -337,10 +355,13 @@ function setupEventListeners() {
       closeEditorWithoutSaving();
       return;
     }
+    const isLocal = editingNote.isLocal === true;
     const confirmed = await showNativeConfirm({
-      title: "Delete Note",
-      message: "Are you sure you want to delete this note? It will be removed across all your synced devices.",
-      confirmText: "Delete Note",
+      title: isLocal ? "Delete Local Note" : "Delete Note",
+      message: isLocal
+        ? "Are you sure you want to permanently delete this local note? It will be permanently removed from this device."
+        : "Are you sure you want to delete this note? It will be removed across all your synced devices.",
+      confirmText: isLocal ? "Delete Permanently" : "Delete Note",
       cancelText: "Cancel",
       danger: true
     });
@@ -348,10 +369,14 @@ function setupEventListeners() {
       const api = getApi();
       if (api) {
         await api.delete_note(editingNote.id);
-        try { await api.sync_now(); } catch (_) {}
+        if (!isLocal) {
+          try { await api.sync_now(); } catch (_) {}
+        }
         closeEditorWithoutSaving();
         await refreshData();
-        await checkCloudStatus();
+        if (!isLocal) {
+          await checkCloudStatus();
+        }
       }
     }
   });

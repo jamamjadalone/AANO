@@ -957,6 +957,23 @@ class EditorActivity : AppCompatActivity() {
             finish()
             return
         }
+        if (isLocalNote) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Delete Local Note")
+                .setMessage("Permanently delete this local note and attached photos/voice memos from this device? This action cannot be undone.")
+                .setPositiveButton("Delete Permanently") { _, _ ->
+                    isDeleted = true
+                    saveHandler.removeCallbacksAndMessages(null)
+                    lifecycleScope.launch {
+                        repository.deleteLocalPermanently(currentId)
+                        finish()
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+
         com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
             .setTitle(R.string.delete_note)
             .setMessage("Are you sure you want to delete this note? It will be removed across all synced devices.")
@@ -1160,8 +1177,8 @@ class EditorActivity : AppCompatActivity() {
         }
         binding.imagesScrollView.visibility = View.VISIBLE
         val density = resources.displayMetrics.density
-        val itemSize = (90 * density).toInt()
-        val margin = (4 * density).toInt()
+        val itemSize = (110 * density).toInt()
+        val margin = (5 * density).toInt()
 
         attachedImages.forEachIndexed { index, path ->
             val frame = android.widget.FrameLayout(this).apply {
@@ -1176,9 +1193,14 @@ class EditorActivity : AppCompatActivity() {
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT
                 )
                 radius = 12 * density
-                cardElevation = 1 * density
+                cardElevation = 2 * density
                 strokeWidth = (1 * density).toInt()
                 strokeColor = ContextCompat.getColor(this@EditorActivity, R.color.card_stroke)
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    showImagePreview(path)
+                }
             }
 
             val iv = ImageView(this).apply {
@@ -1193,7 +1215,7 @@ class EditorActivity : AppCompatActivity() {
                 val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeFile(path, opts)
                 var scale = 1
-                while (opts.outWidth / scale / 2 >= 180 && opts.outHeight / scale / 2 >= 180) {
+                while (opts.outWidth / scale / 2 >= 220 && opts.outHeight / scale / 2 >= 220) {
                     scale *= 2
                 }
                 val decodeOpts = BitmapFactory.Options().apply { inSampleSize = scale }
@@ -1205,14 +1227,15 @@ class EditorActivity : AppCompatActivity() {
             frame.addView(card)
 
             val btnRemove = ImageView(this).apply {
-                val btnSize = (24 * density).toInt()
+                val btnSize = (26 * density).toInt()
                 layoutParams = android.widget.FrameLayout.LayoutParams(btnSize, btnSize).apply {
                     gravity = android.view.Gravity.TOP or android.view.Gravity.END
+                    setMargins(0, (2 * density).toInt(), (2 * density).toInt(), 0)
                 }
                 setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
                 setBackgroundResource(R.drawable.circle_bg_translucent)
                 setColorFilter(0xFFFFFFFF.toInt())
-                setPadding((3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt(), (3 * density).toInt())
+                setPadding((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
                 setOnClickListener {
                     attachedImages.removeAt(index)
                     try { File(path).delete() } catch (_: Exception) {}
@@ -1224,6 +1247,53 @@ class EditorActivity : AppCompatActivity() {
 
             binding.imagesContainer.addView(frame)
         }
+    }
+
+    private fun showImagePreview(path: String) {
+        val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xF20B1120.toInt())) // 95% Deep slate background
+        val root = android.widget.FrameLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setOnClickListener { dialog.dismiss() }
+        }
+
+        val imageView = ImageView(this).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = android.view.Gravity.CENTER
+                setMargins(20, 80, 20, 80)
+            }
+            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.FIT_CENTER
+        }
+
+        try {
+            val bmp = BitmapFactory.decodeFile(path)
+            imageView.setImageBitmap(bmp)
+        } catch (_: Exception) {}
+
+        root.addView(imageView)
+
+        // Close button at top right
+        val btnClose = ImageView(this).apply {
+            val size = (44 * resources.displayMetrics.density).toInt()
+            layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                gravity = android.view.Gravity.TOP or android.view.Gravity.END
+                setMargins(0, 48, 24, 0)
+            }
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setColorFilter(0xFFFFFFFF.toInt())
+            setBackgroundResource(R.drawable.circle_bg_translucent)
+            val pad = (10 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+            setOnClickListener { dialog.dismiss() }
+        }
+        root.addView(btnClose)
+
+        dialog.setContentView(root)
+        dialog.show()
     }
 
     private fun renderVoiceMemoBar() {
