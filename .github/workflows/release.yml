@@ -33,11 +33,18 @@ jobs:
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
         working-directory: android
 
+      - name: Rename APK with Tag Version
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          if [ -z "$VERSION" ]; then VERSION="latest"; fi
+          mkdir -p android/release-apk
+          cp android/app/build/outputs/apk/release/*.apk "android/release-apk/AANO-${VERSION}.apk"
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          path: android/release-apk/*.apk
 
   # 2. WINDOWS SETUP INSTALLER BUILD (Windows Runner)
   build-windows:
