@@ -58,6 +58,17 @@ let isSelectionMode = false;
 let selectedNoteIds = new Set();
 let lastFilteredNotes = [];
 
+let currentAttachedImages = []; // Array of { filename, dataUrl }
+let isHdAttachmentQuality = false;
+let currentPreviewIndex = -1;
+let cropImageObj = null;
+let cropRotation = 0;
+let cropAspectRatio = "free";
+let cropBox = null;
+let isDraggingCrop = false;
+let cropDragStart = { x: 0, y: 0 };
+let cropDragMode = "move";
+
 let editingNote = null; // null if creating new, or note object
 let editingColor = 0;
 let editingPinned = false;
@@ -516,6 +527,97 @@ function setupEventListeners() {
   }
   document.getElementById("btnLogoutCloud").addEventListener("click", handleCloudLogout);
 
+  // Image Attachment & Quality Toggle
+  const btnToggleQuality = document.getElementById("btnToggleQualityDesktop");
+  if (btnToggleQuality) {
+    btnToggleQuality.addEventListener("click", () => {
+      isHdAttachmentQuality = !isHdAttachmentQuality;
+      if (isHdAttachmentQuality) {
+        btnToggleQuality.classList.add("hd-mode");
+        btnToggleQuality.innerText = "HD";
+      } else {
+        btnToggleQuality.classList.remove("hd-mode");
+        btnToggleQuality.innerText = "STD";
+      }
+    });
+  }
+
+  const btnAttachImage = document.getElementById("btnAttachImage");
+  if (btnAttachImage) {
+    btnAttachImage.addEventListener("click", handleAttachImage);
+  }
+
+  // Image Preview Modal Listeners
+  const btnPreviewClose = document.getElementById("btnPreviewClose");
+  if (btnPreviewClose) btnPreviewClose.addEventListener("click", closeImagePreview);
+
+  const btnPreviewSave = document.getElementById("btnPreviewSave");
+  if (btnPreviewSave) {
+    btnPreviewSave.addEventListener("click", async () => {
+      if (currentPreviewIndex >= 0 && currentPreviewIndex < currentAttachedImages.length) {
+        const item = currentAttachedImages[currentPreviewIndex];
+        const api = getApi();
+        if (api && api.save_image_to_disk) {
+          const res = await api.save_image_to_disk(item.filename);
+          if (res && res.success && res.path) {
+            showNativeAlert({ title: "Saved", message: `Image exported to: ${res.path}` });
+          }
+        }
+      }
+    });
+  }
+
+  const btnPreviewDelete = document.getElementById("btnPreviewDelete");
+  if (btnPreviewDelete) {
+    btnPreviewDelete.addEventListener("click", async () => {
+      if (currentPreviewIndex >= 0 && currentPreviewIndex < currentAttachedImages.length) {
+        const item = currentAttachedImages[currentPreviewIndex];
+        currentAttachedImages.splice(currentPreviewIndex, 1);
+        renderAttachedImages();
+        closeImagePreview();
+        const api = getApi();
+        if (api && api.delete_image_file) {
+          api.delete_image_file(item.filename).catch(() => {});
+        }
+      }
+    });
+  }
+
+  const btnPreviewCrop = document.getElementById("btnPreviewCrop");
+  if (btnPreviewCrop) {
+    btnPreviewCrop.addEventListener("click", openCropModal);
+  }
+
+  // Image Crop Modal Listeners
+  const btnCropClose = document.getElementById("btnCropClose");
+  if (btnCropClose) btnCropClose.addEventListener("click", closeCropModal);
+  const btnCropCancel = document.getElementById("btnCropCancel");
+  if (btnCropCancel) btnCropCancel.addEventListener("click", () => {
+    closeCropModal();
+    if (currentPreviewIndex >= 0) openImagePreview(currentPreviewIndex);
+  });
+  const btnCropRotate = document.getElementById("btnCropRotate");
+  if (btnCropRotate) {
+    btnCropRotate.addEventListener("click", () => {
+      cropRotation = (cropRotation + 90) % 360;
+      initCropCanvas();
+    });
+  }
+  const btnCropApply = document.getElementById("btnCropApply");
+  if (btnCropApply) btnCropApply.addEventListener("click", handleApplyCrop);
+
+  document.querySelectorAll(".btn-ratio").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".btn-ratio").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      cropAspectRatio = btn.dataset.ratio || "free";
+      applyAspectRatioToCropBox();
+      drawCropCanvas();
+    });
+  });
+
+  setupCropCanvasEvents();
+
   // Backup & Restore
   document.getElementById("btnBackup").addEventListener("click", () => {
     document.getElementById("backupModal").classList.remove("hidden");
@@ -962,6 +1064,12 @@ function openEditor(note = null, defaultFolder = null) {
     folderSelect.value = note.folder || "General";
     autoLinkify(contentArea);
     setEditorMode(true);
+    if (note.images && Array.isArray(note.images) && note.images.length > 0) {
+      loadAttachedImages(note.images);
+    } else {
+      currentAttachedImages = [];
+      renderAttachedImages();
+    }
   } else {
     titleInput.value = "";
     contentArea.replaceChildren();
@@ -969,6 +1077,8 @@ function openEditor(note = null, defaultFolder = null) {
     editingPinned = false;
     folderSelect.value = defaultFolder || (currentFilter.startsWith("folder:") ? currentFilter.replace("folder:", "") : "General");
     setEditorMode(false);
+    currentAttachedImages = [];
+    renderAttachedImages();
   }
 
   const resolvedBg = resolveNoteColor(editingColor);
@@ -1011,10 +1121,11 @@ async function closeAndSaveEditor() {
     content: content,
     folder: folder,
     color: editingColor,
-    pinned: editingPinned
+    pinned: editingPinned,
+    images: currentAttachedImages.map(img => img.filename)
   };
 
-  const isCompletelyEmpty = !title && (!content || content === "<br>");
+  const isCompletelyEmpty = !title && (!content || content === "<br>") && currentAttachedImages.length === 0;
 
   // 1. Close modal IMMEDIATELY (0ms latency, instant response)
   closeEditorWithoutSaving();

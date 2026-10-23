@@ -266,6 +266,20 @@
                 android:src="@drawable/ic_image"
                 app:tint="@color/brand" />
 
+            <TextView
+                android:id="@+id/btnToggleQuality"
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:paddingHorizontal="6dp"
+                android:gravity="center"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:background="@drawable/circle_bg_translucent"
+                android:textColor="@color/brand"
+                android:text="STD"
+                android:tooltipText="Quality: Standard WebP vs HD Raw"
+                android:layout_marginEnd="4dp" />
+
             <ImageButton
                 android:id="@+id/btnRecordVoice"
                 android:layout_width="40dp"

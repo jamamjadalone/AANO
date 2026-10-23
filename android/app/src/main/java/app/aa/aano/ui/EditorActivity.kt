@@ -135,6 +135,7 @@ class EditorActivity : AppCompatActivity() {
     private var isUndoRedoActive = false
     private var isDeleted = false
     private var isEditMode = true
+    private var isHdQuality = false
 
     private val pickImagesLauncher = registerForActivityResult(
         ActivityResultContracts.GetMultipleContents()
@@ -381,6 +382,13 @@ class EditorActivity : AppCompatActivity() {
         // Multimedia: Photos & Voice Memo
         binding.btnAddImage.setOnClickListener {
             pickImagesLauncher.launch("image/*")
+        }
+        binding.btnToggleQuality.setOnClickListener {
+            isHdQuality = !isHdQuality
+            binding.btnToggleQuality.text = if (isHdQuality) "HD" else "STD"
+            binding.btnToggleQuality.setTextColor(if (isHdQuality) 0xFFD97706.toInt() else ContextCompat.getColor(this, R.color.brand))
+            val modeMsg = if (isHdQuality) "Attachment Quality: HD Original (Preserves Raw File)" else "Attachment Quality: Standard WebP (~120KB, Fast & Optimized)"
+            Toast.makeText(this, modeMsg, Toast.LENGTH_SHORT).show()
         }
         binding.btnRecordVoice.setOnClickListener {
             handleRecordVoiceClick()
@@ -1198,14 +1206,48 @@ class EditorActivity : AppCompatActivity() {
     private fun copyUriToLocalMedia(uri: Uri): String? {
         return try {
             val mediaDir = File(filesDir, "media/images").apply { mkdirs() }
-            val destFile = File(mediaDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.jpg")
-            contentResolver.openInputStream(uri)?.use { input ->
-                destFile.outputStream().use { output ->
-                    input.copyTo(output)
+            if (isHdQuality) {
+                val destFile = File(mediaDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.jpg")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                destFile.absolutePath
+            } else {
+                val destFile = File(mediaDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.webp")
+                contentResolver.openInputStream(uri)?.use { input ->
+                    val original = BitmapFactory.decodeStream(input)
+                    if (original != null) {
+                        val maxDim = 1280
+                        val width = original.width
+                        val height = original.height
+                        val scaled = if (width > maxDim || height > maxDim) {
+                            val ratio = width.toFloat() / height.toFloat()
+                            if (width > height) {
+                                Bitmap.createScaledBitmap(original, maxDim, (maxDim / ratio).toInt(), true)
+                            } else {
+                                Bitmap.createScaledBitmap(original, (maxDim * ratio).toInt(), maxDim, true)
+                            }
+                        } else {
+                            original
+                        }
+                        destFile.outputStream().use { out ->
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                scaled.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, out)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                scaled.compress(Bitmap.CompressFormat.WEBP, 80, out)
+                            }
+                        }
+                        destFile.absolutePath
+                    } else {
+                        null
+                    }
                 }
             }
-            destFile.absolutePath
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("AANO", "copyUriToLocalMedia error: ${e.message}", e)
             null
         }
     }
@@ -1388,7 +1430,22 @@ class EditorActivity : AppCompatActivity() {
         }
         bottomBar.addView(btnReplace)
 
-        // 3. Remove Button
+        // 3. Save to Gallery Button
+        val btnGallery = com.google.android.material.button.MaterialButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt()).apply {
+                marginEnd = (8 * density).toInt()
+            }
+            text = "💾 Gallery"
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0x33FFFFFF.toInt())
+            cornerRadius = (20 * density).toInt()
+            setOnClickListener {
+                saveImageToGallery(path)
+            }
+        }
+        bottomBar.addView(btnGallery)
+
+        // 4. Remove Button
         val btnDelete = com.google.android.material.button.MaterialButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt())
             text = "🗑️ Remove"
@@ -1418,6 +1475,47 @@ class EditorActivity : AppCompatActivity() {
 
         dialog.setContentView(root)
         dialog.show()
+    }
+
+    private fun saveImageToGallery(path: String) {
+        try {
+            val file = File(path)
+            if (!file.exists()) {
+                Toast.makeText(this, "Image file not found", Toast.LENGTH_SHORT).show()
+                return
+            }
+            val mimeType = when {
+                path.endsWith(".png", true) -> "image/png"
+                path.endsWith(".webp", true) -> "image/webp"
+                else -> "image/jpeg"
+            }
+            val name = "AANO_${System.currentTimeMillis()}_${file.name}"
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name)
+                put(android.provider.MediaStore.Images.Media.MIME_TYPE, mimeType)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AANO")
+                    put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+                }
+            }
+            val uri = contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            if (uri != null) {
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { input -> input.copyTo(out) }
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    values.clear()
+                    values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+                    contentResolver.update(uri, values, null, null)
+                }
+                Toast.makeText(this, "Saved to Gallery (Pictures/AANO)", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Failed to create gallery entry", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Log.w("AANO", "Save to gallery failed: ${e.message}", e)
+            Toast.makeText(this, "Save to gallery error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showImageContextMenu(path: String, index: Int) {

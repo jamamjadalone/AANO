@@ -2,9 +2,12 @@
 # Copyright (C) 2026 Jam Amjad Rasheed
 # Licensed under GPL-3.0-or-later.
 
+import os
 import time
 import uuid
 import json
+import base64
+import shutil
 import threading
 import logging
 import storage
@@ -162,6 +165,7 @@ class DesktopApi:
                         "folder": note_data.get("folder", "General"),
                         "color": _parse_color(note_data.get("color", 0)),
                         "tags": note_data.get("tags", []),
+                        "images": note_data.get("images", []),
                         "pinned": bool(note_data.get("pinned", False)),
                         "updatedAt": now
                     })
@@ -174,6 +178,7 @@ class DesktopApi:
                 "folder": note_data.get("folder", "General"),
                 "color": _parse_color(note_data.get("color", 0)),
                 "tags": note_data.get("tags", []),
+                "images": note_data.get("images", []),
                 "pinned": bool(note_data.get("pinned", False)),
                 "createdAt": now,
                 "updatedAt": now,
@@ -474,3 +479,136 @@ class DesktopApi:
                 logger.warning("Failed to open external URL %s: %s", url, e)
                 return False
         return False
+
+    def _choose_files_dialog(self, save=False, save_filename="", file_types=None):
+        try:
+            import webview
+            if webview.windows:
+                w = webview.windows[0]
+                if save:
+                    ft = file_types or ('Image Files (*.webp;*.jpg;*.png)', 'All files (*.*)')
+                    res = w.create_file_dialog(webview.SAVE_DIALOG, save_filename=save_filename, file_types=ft)
+                else:
+                    ft = file_types or ('Image Files (*.png;*.jpg;*.jpeg;*.webp)', 'All files (*.*)')
+                    res = w.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True, file_types=ft)
+                if res:
+                    return res if isinstance(res, (list, tuple)) else [res]
+        except Exception as e:
+            logger.debug("webview file dialog fallback: %s", e)
+
+        try:
+            import tkinter as tk
+            from tkinter import filedialog
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            if save:
+                path = filedialog.asksaveasfilename(initialfile=save_filename)
+                root.destroy()
+                return [path] if path else []
+            else:
+                paths = filedialog.askopenfilenames()
+                root.destroy()
+                return list(paths) if paths else []
+        except Exception as e:
+            logger.warning("Tkinter fallback dialog failed: %s", e)
+            return []
+
+    def _file_to_data_url(self, filepath):
+        if not os.path.exists(filepath):
+            return ""
+        ext = os.path.splitext(filepath)[1].lower()
+        mime = "image/jpeg"
+        if ext == ".png":
+            mime = "image/png"
+        elif ext == ".webp":
+            mime = "image/webp"
+        try:
+            with open(filepath, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("ascii")
+                return f"data:{mime};base64,{b64}"
+        except Exception:
+            return ""
+
+    def attach_images(self, quality_hd=False):
+        try:
+            selected_files = self._choose_files_dialog(save=False)
+            if not selected_files:
+                return {"success": False, "cancelled": True}
+
+            results = []
+            for src in selected_files:
+                if not os.path.isfile(src):
+                    continue
+                res = storage.process_and_save_image(src, quality_hd=quality_hd)
+                if res.get("success"):
+                    data_url = self._file_to_data_url(res["path"])
+                    results.append({
+                        "filename": res["filename"],
+                        "path": res["path"],
+                        "dataUrl": data_url,
+                        "size": res.get("size", 0)
+                    })
+            return {"success": True, "images": results}
+        except Exception as e:
+            logger.warning("attach_images error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def get_image_data_url(self, filename):
+        try:
+            fn = os.path.basename(filename)
+            filepath = os.path.join(storage.IMAGES_DIR, fn)
+            if not os.path.exists(filepath):
+                return {"success": False, "error": "Image not found"}
+            data_url = self._file_to_data_url(filepath)
+            return {"success": True, "filename": fn, "dataUrl": data_url}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def crop_image(self, filename, crop_box=None, rotation_deg=0, quality_hd=False):
+        try:
+            fn = os.path.basename(filename)
+            res = storage.crop_and_rotate_image(fn, crop_box=crop_box, rotation_deg=rotation_deg, quality_hd=quality_hd)
+            if res.get("success"):
+                data_url = self._file_to_data_url(res["path"])
+                return {
+                    "success": True,
+                    "filename": res["filename"],
+                    "path": res["path"],
+                    "dataUrl": data_url,
+                    "size": res.get("size", 0)
+                }
+            return res
+        except Exception as e:
+            logger.warning("crop_image error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def save_image_to_disk(self, filename):
+        try:
+            fn = os.path.basename(filename)
+            src_path = os.path.join(storage.IMAGES_DIR, fn)
+            if not os.path.exists(src_path):
+                return {"success": False, "error": "Image not found"}
+
+            save_paths = self._choose_files_dialog(save=True, save_filename=fn)
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest_path = save_paths[0]
+            shutil.copy2(src_path, dest_path)
+            return {"success": True, "path": dest_path}
+        except Exception as e:
+            logger.warning("save_image_to_disk error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def delete_image_file(self, filename):
+        try:
+            fn = os.path.basename(filename)
+            src_path = os.path.join(storage.IMAGES_DIR, fn)
+            if os.path.exists(src_path):
+                os.remove(src_path)
+            return {"success": True}
+        except Exception as e:
+            logger.warning("delete_image_file error: %s", e)
+            return {"success": False, "error": str(e)}
+
