@@ -9,14 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0-beta.1] - 2026-10-23
 
-### Added
-- 
+### 🚀 Added
+- **Interactive Image Crop & Transform Toolkit**:
+  - **Precision Touch-Crop Overlay**: Crop attached images directly inside the app with interactive touch handles and corner controls.
+  - **Aspect Ratio Presets**: 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
+  - **90° Lossless Rotation**: Quick rotation button to fix sideways or upside-down document and receipt captures.
+  - **Ultra-Efficient WebP Compression**: Automatic optimization (max 1280px resolution, 80% WebP quality), slashing 4–8 MB smartphone photos down to **~100–150 KB** with zero visible quality loss.
+  - **Replace & Remove Actions**: Swap an existing note photo with a newly cropped one, or permanently delete unwanted photos with instant on-disk file purges.
+- **Local Media Vault .zip Backup & Restore**:
+  - **All-in-One Portable Archive**: Bundles all local on-device notes (`notes.json`) along with attached media files (`media/images/`, `media/audio/`) into a single `.zip` file in `Downloads/AANO/`.
+  - **Cross-Platform Device Migration**: Easily transfer your local notes and private attachments to a new phone or PC without using cloud services.
+  - **1-Click Vault Restore**: Seamlessly imports and unpacks the zip archive, automatically remapping local file paths into the app storage.
+  - **Quick-Access UI**: Direct *Backup (.zip)* and *Restore (.zip)* actions integrated into the `LocalFragment` header banner and `Settings`.
+- **Automated Cloud CI/CD Pipeline**:
+  - **Multi-Platform Release Automation**: Official GitHub Actions workflow for building Android Release APK (Ubuntu runner with JDK 17) and Windows Desktop Installer (Windows runner with Inno Setup LZMA compression).
+  - **Automated Tagged Artifacts**: Push-to-release workflow with versioned asset publishing (`AANO-v1.1.0-beta.1.apk` and `AANO-Setup-v1.1.0-beta.1.exe`).
 
-### Changed
-- 
+### 🎨 Changed & Improved
+- Standardized release artifact naming with automated tag interpolation.
+- Upgraded local storage engine to immediately wipe unreferenced disk media on replace and removal.
 
-### Fixed
-- 
+### 🐛 Fixed
+- Resolved Android camera/gallery rotation orientation handling when attaching images.
+
 
 ## [1.0.1-beta] - 2026-10-22
 

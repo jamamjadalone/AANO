@@ -97,6 +97,21 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Release Notes from CHANGELOG.md
+        run: |
+          python3 -c "
+          import re
+          with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
+              text = f.read()
+          match = re.search(r'(## \[[^\]]+\].*?)(?=\n## \[|\Z)', text, re.DOTALL)
+          notes = match.group(1).strip() if match else 'Release ${{ github.ref_name }}'
+          with open('RELEASE_NOTES.md', 'w', encoding='utf-8') as f:
+              f.write(notes)
+          "
+
       - name: Download Android Artifact
         uses: actions/download-artifact@v4
         with:
@@ -114,7 +129,7 @@ jobs:
         with:
           prerelease: true
           name: "AANO ${{ github.ref_name }} (Beta)"
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
           files: release-assets/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
