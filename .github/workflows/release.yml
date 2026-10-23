@@ -1,16 +1,16 @@
-name: Build & Publish Beta Release
+name: Build & Publish Release
 
 on:
   push:
     tags:
-      - 'v*beta*'     # Matches e.g. v1.1.0-beta.1, v1.0.2-beta
-      - 'v*alpha*'
+      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  # 1. ANDROID APK BUILD (Ubuntu Runner)
+  # 1. ANDROID APK BUILD (Ubuntu Runner with Pre-installed Android SDK)
   build-android:
     name: Build Android Release APK
     runs-on: ubuntu-latest
@@ -23,16 +23,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+          cache: 'gradle'
 
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
         working-directory: android
 
       - name: Build Android Release APK
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
         working-directory: android
 
       - name: Upload APK Artifact
@@ -53,43 +51,44 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install Inno Setup
-        run: choco install innosetup -y
+        run: choco install innosetup -y --no-progress
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller pillow pystray
 
-      - name: Restore Google Credentials (If Secret Configured)
+      - name: Build Windows Installer
         shell: pwsh
+        working-directory: windows
         env:
           GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: |
           if ($env:GOOGLE_CREDS) {
-            $env:GOOGLE_CREDS | Out-File -FilePath "windows\src\google_credentials.json" -Encoding utf8
+            $env:GOOGLE_CREDS | Out-File -FilePath "src\google_credentials.json" -Encoding utf8
+          } elseif (-not (Test-Path "src\google_credentials.json")) {
+            '{}' | Out-File -FilePath "src\google_credentials.json" -Encoding utf8
           }
-
-      - name: Compile PyInstaller & Inno Setup Installer
-        shell: pwsh
-        run: |
           pyinstaller --clean -y AANO.spec
-          python windows\installer\build_installer.py
+          python installer\build_installer.py
 
       - name: Upload Windows Setup Artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-setup
           path: |
-            releases\**\*.exe
-            dist\**\*.exe
+            windows/dist/Installer/*.exe
+            releases/**/*.exe
 
-  # 3. CREATE GITHUB BETA PRE-RELEASE
+  # 3. PUBLISH GITHUB RELEASE
   create-release:
-    name: Create GitHub Beta Pre-Release
+    name: Publish Release to GitHub
     needs: [build-android, build-windows]
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download Android Artifact
         uses: actions/download-artifact@v4
@@ -103,7 +102,7 @@ jobs:
           name: windows-setup
           path: release-assets/
 
-      - name: Publish Beta Release to GitHub
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true

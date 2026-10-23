@@ -37,7 +37,7 @@ android/.cxx/
 windows/dist/
 windows/build/
 windows/build_installer/
-windows/*.spec
+!windows/AANO.spec
 windows/installer/*.zip
 
 # 5. PYTHON / NODE CACHES
