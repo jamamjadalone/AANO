@@ -640,15 +640,15 @@ class DesktopApi:
 
     def send_drop_to_device(self, target_ip, target_port=8766, note_ids=None, pin=None):
         try:
+            if not note_ids:
+                return {"success": False, "error": "No notes selected to drop. Please select specific note(s)."}
+
             all_notes = storage.load_notes()
-            if note_ids:
-                id_set = set(note_ids)
-                selected_notes = [n for n in all_notes if n.get("id") in id_set]
-            else:
-                selected_notes = [n for n in all_notes if not n.get("deleted", False)]
+            id_set = set(note_ids)
+            selected_notes = [n for n in all_notes if n.get("id") in id_set and not n.get("deleted", False)]
 
             if not selected_notes:
-                return {"success": False, "error": "No notes found to drop"}
+                return {"success": False, "error": "Selected notes not found or deleted"}
 
             return aano_drop_client.send_drop_to_device(
                 target_ip=target_ip,

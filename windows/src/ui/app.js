@@ -5,6 +5,45 @@ async function openDropModal() {
   if (!modal) return;
   modal.classList.remove("hidden");
 
+  // Populate selective notes picker
+  const pickerContainer = document.getElementById("dropNotesPickerContainer");
+  const countEl = document.getElementById("dropSelectionCount");
+  if (pickerContainer) {
+    pickerContainer.innerHTML = "";
+    const activeNotes = (allNotes || []).filter(n => !n.deleted && !n.archived);
+
+    if (activeNotes.length === 0) {
+      pickerContainer.innerHTML = '<div style="color: #64748b; font-size: 11px; padding: 4px;">No notes available</div>';
+    } else {
+      activeNotes.forEach(n => {
+        const item = document.createElement("label");
+        item.style.cssText = "display: flex; align-items: center; gap: 8px; font-size: 12px; color: #cbd5e1; padding: 3px 0; cursor: pointer;";
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.value = n.id;
+        chk.className = "drop-note-chk";
+
+        // Pre-check if this is current editing note OR in selectedNoteIds
+        if (editingNote && editingNote.id === n.id) {
+          chk.checked = true;
+        } else if (selectedNoteIds && selectedNoteIds.has(n.id)) {
+          chk.checked = true;
+        }
+
+        chk.addEventListener("change", updateDropSelectionCount);
+
+        const titleSpan = document.createElement("span");
+        titleSpan.innerText = n.title ? (n.title.length > 28 ? n.title.slice(0, 28) + "..." : n.title) : "Untitled Note";
+        titleSpan.style.cssText = "overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+
+        item.appendChild(chk);
+        item.appendChild(titleSpan);
+        pickerContainer.appendChild(item);
+      });
+    }
+    updateDropSelectionCount();
+  }
+
   const api = getApi();
   if (api && api.get_drop_info) {
     try {
@@ -24,6 +63,15 @@ async function openDropModal() {
     } catch (e) {
       console.warn("Could not load drop info:", e);
     }
+  }
+}
+
+function updateDropSelectionCount() {
+  const countEl = document.getElementById("dropSelectionCount");
+  const checked = document.querySelectorAll(".drop-note-chk:checked");
+  if (countEl) {
+    countEl.innerText = `${checked.length} selected`;
+    countEl.style.color = checked.length > 0 ? "var(--brand)" : "#ef4444";
   }
 }
 
@@ -665,16 +713,29 @@ function setupEventListeners() {
   if (btnSendDropToPhone) {
     btnSendDropToPhone.addEventListener("click", async () => {
       const ipInput = document.getElementById("targetPhoneIp");
+      const pinInput = document.getElementById("targetPhonePin");
       const targetIp = ipInput ? ipInput.value.trim() : "";
+      const targetPin = pinInput ? pinInput.value.trim() : null;
+
       if (!targetIp) {
-        showNativeAlert({ title: "Target IP Required", message: "Please enter your phone IP shown on AANO Android." });
+        showNativeAlert({ title: "Target IP Required", message: "Please enter target IP shown on AANO Android or PC." });
         return;
       }
+
+      // Collect checked note IDs
+      const checkedBoxes = document.querySelectorAll(".drop-note-chk:checked");
+      const noteIdsToSend = Array.from(checkedBoxes).map(cb => cb.value);
+
+      if (noteIdsToSend.length === 0) {
+        showNativeAlert({ title: "No Notes Selected", message: "Please select at least one note to drop from the list." });
+        return;
+      }
+
       const api = getApi();
       if (!api || !api.send_drop_to_device) return;
-      btnSendDropToPhone.innerText = "Sending...";
+      btnSendDropToPhone.innerText = `Sending ${noteIdsToSend.length} Note(s)...`;
       try {
-        const res = await api.send_drop_to_device(targetIp, 8766, null, null);
+        const res = await api.send_drop_to_device(targetIp, 8766, noteIdsToSend, targetPin);
         if (res && res.success) {
           showNativeAlert({ title: "Drop Complete", message: `Successfully transferred ${res.count || 0} notes to phone!` });
           closeDropModal();

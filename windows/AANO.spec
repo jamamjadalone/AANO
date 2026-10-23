@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 a = Analysis(
     ['src/main.py'],
     pathex=[],
@@ -10,9 +9,29 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'tkinter',
+        '_tkinter',
+        'tcl',
+        'tk',
+        'numpy',
+        'scipy',
+        'matplotlib',
+        'pandas',
+        'IPython',
+        'jupyter',
+        'PIL.ImageTk',
+        'PIL.SpiderImagePlugin',
+        'unittest',
+        'email.test',
+        'test',
+        'xmlrpc',
+        'pydoc',
+        'distutils',
+        'sqlite3',
+    ],
     noarchive=False,
-    optimize=0,
+    optimize=2,
 )
 pyz = PYZ(a.pure)
 
