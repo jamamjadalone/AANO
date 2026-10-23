@@ -51,7 +51,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
@@ -82,6 +81,7 @@ jobs:
           path: |
             windows/dist/Installer/*.exe
             releases/**/*.exe
+          if-no-files-found: warn
 
   # 3. PUBLISH GITHUB RELEASE
   create-release:
