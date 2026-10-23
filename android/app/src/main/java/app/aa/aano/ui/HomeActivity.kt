@@ -39,6 +39,13 @@ class HomeActivity : AppCompatActivity() {
             switchTo(item.itemId)
             true
         }
+
+        // Start AANO Drop background Wi-Fi receiver server
+        val dropMgr = app.aa.aano.drop.AanoDropManager.getInstance(this)
+        dropMgr.startServer()
+        dropMgr.onNotesReceivedListener = { count, images ->
+            android.widget.Toast.makeText(this, "⚡ AANO Drop: Received $count notes ($images images)!", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun startLockActivity(mode: String) {

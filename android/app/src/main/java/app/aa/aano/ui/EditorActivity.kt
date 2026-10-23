@@ -1732,24 +1732,34 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun showDropDialog() {
+        val dropMgr = AanoDropManager.getInstance(this)
+        val myIp = dropMgr.getLocalWifiIp()
+        val myPin = dropMgr.pin
+
         val inputLayout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             setPadding(50, 20, 50, 10)
         }
+        val tvDeviceInfo = android.widget.TextView(this).apply {
+            text = "📡 This Phone: $myIp:8766\n🔑 Receiving PIN: $myPin"
+            textSize = 13f
+            setPadding(0, 0, 0, 20)
+        }
         val etIp = android.widget.EditText(this).apply {
-            hint = "Target PC IP (e.g. 192.168.1.100)"
+            hint = "Target IP (PC :8765 or Phone :8766)"
             setText(prefs.lastDropIp)
         }
         val etPin = android.widget.EditText(this).apply {
-            hint = "6-Digit PC PIN"
+            hint = "Target 6-Digit PIN"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
+        inputLayout.addView(tvDeviceInfo)
         inputLayout.addView(etIp)
         inputLayout.addView(etPin)
 
         MaterialAlertDialogBuilder(this)
-            .setTitle("⚡ AANO Drop to PC")
-            .setMessage("Send this note and attached media directly to your PC over Wi-Fi (Zero Internet quota).")
+            .setTitle("⚡ AANO Drop (Wi-Fi P2P)")
+            .setMessage("Send note and media directly to PC or another Phone over Wi-Fi (Zero internet quota).")
             .setView(inputLayout)
             .setPositiveButton("Send Drop") { _, _ ->
                 val ip = etIp.text.toString().trim()
@@ -1784,7 +1794,7 @@ class EditorActivity : AppCompatActivity() {
             updatedAt = now
         )
 
-        Toast.makeText(this, "Sending drop to $targetIp:8765...", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Connecting to $targetIp...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             val res = AanoDropManager.getInstance(this@EditorActivity).sendDropToDevice(
                 targetIp = targetIp,
@@ -1793,7 +1803,7 @@ class EditorActivity : AppCompatActivity() {
                 targetPin = pin
             )
             res.onSuccess {
-                Toast.makeText(this@EditorActivity, "⚡ Dropped to PC successfully!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@EditorActivity, "⚡ Dropped successfully!", Toast.LENGTH_LONG).show()
             }.onFailure { e ->
                 Toast.makeText(this@EditorActivity, "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
             }

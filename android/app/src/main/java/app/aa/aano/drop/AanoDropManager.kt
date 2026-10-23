@@ -304,69 +304,89 @@ class AanoDropManager(private val context: Context) {
         notes: List<Note>,
         targetPin: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val targetUrl = "http://$targetIp:$targetPort/aano/drop"
-            val url = URL(targetUrl)
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 12000
-                readTimeout = 20000
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
-                if (!targetPin.isNullOrBlank()) {
-                    setRequestProperty("X-AANO-TOKEN", targetPin)
-                }
-            }
-
-            // Pack notes
-            val notesArr = JSONArray()
-            val requiredImages = mutableSetOf<String>()
-            for (note in notes) {
-                notesArr.put(repository.serialize(note))
-                for (img in note.images) {
-                    val fn = File(img).name
-                    if (fn.isNotEmpty()) requiredImages.add(fn)
-                }
-            }
-
-            // Pack images
-            val imagesArr = JSONArray()
-            val mediaDir = File(context.filesDir, "media/images")
-            for (fn in requiredImages) {
-                val f = File(mediaDir, fn)
-                if (f.exists()) {
-                    val b64 = Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
-                    imagesArr.put(JSONObject().apply {
-                        put("name", fn)
-                        put("data_base64", b64)
-                    })
-                }
-            }
-
-            val payload = JSONObject().apply {
-                put("protocol", PROTOCOL_VERSION)
-                put("pin", targetPin ?: "")
-                put("token", targetPin ?: "")
-                put("notes", notesArr)
-                put("images", imagesArr)
-            }
-
-            conn.outputStream.use { os ->
-                os.write(payload.toString().toByteArray(Charsets.UTF_8))
-                os.flush()
-            }
-
-            val code = conn.responseCode
-            if (code in 200..299) {
-                val resp = conn.inputStream.bufferedReader().use { it.readText() }
-                Result.success(resp)
-            } else {
-                val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $code"
-                Result.failure(Exception(err))
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "sendDropToDevice failed: ${e.message}", e)
-            Result.failure(e)
+        val (host, explicitPort) = if (targetIp.contains(":")) {
+            val parts = targetIp.split(":")
+            Pair(parts[0].trim(), parts[1].trim().toIntOrNull() ?: targetPort)
+        } else {
+            Pair(targetIp.trim(), null)
         }
+
+        // Auto port fallback: if port not specified, try 8765 (PC) then 8766 (Android phone)
+        val portsToTry = if (explicitPort != null) {
+            listOf(explicitPort)
+        } else {
+            listOf(targetPort, if (targetPort == 8765) 8766 else 8765)
+        }
+
+        // Pack notes
+        val notesArr = JSONArray()
+        val requiredImages = mutableSetOf<String>()
+        for (note in notes) {
+            notesArr.put(repository.serialize(note))
+            for (img in note.images) {
+                val fn = File(img).name
+                if (fn.isNotEmpty()) requiredImages.add(fn)
+            }
+        }
+
+        // Pack images
+        val imagesArr = JSONArray()
+        val mediaDir = File(context.filesDir, "media/images")
+        for (fn in requiredImages) {
+            val f = File(mediaDir, fn)
+            if (f.exists()) {
+                val b64 = Base64.encodeToString(f.readBytes(), Base64.NO_WRAP)
+                imagesArr.put(JSONObject().apply {
+                    put("name", fn)
+                    put("data_base64", b64)
+                })
+            }
+        }
+
+        val payload = JSONObject().apply {
+            put("protocol", PROTOCOL_VERSION)
+            put("pin", targetPin ?: "")
+            put("token", targetPin ?: "")
+            put("notes", notesArr)
+            put("images", imagesArr)
+        }
+        val payloadBytes = payload.toString().toByteArray(Charsets.UTF_8)
+
+        var lastException: Exception? = null
+        for (port in portsToTry) {
+            try {
+                val targetUrl = "http://$host:$port/aano/drop"
+                val url = URL(targetUrl)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "POST"
+                    connectTimeout = 6000
+                    readTimeout = 20000
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    if (!targetPin.isNullOrBlank()) {
+                        setRequestProperty("X-AANO-TOKEN", targetPin)
+                    }
+                }
+
+                conn.outputStream.use { os ->
+                    os.write(payloadBytes)
+                    os.flush()
+                }
+
+                val code = conn.responseCode
+                if (code in 200..299) {
+                    val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                    return@withContext Result.success(resp)
+                } else {
+                    val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $code"
+                    return@withContext Result.failure(Exception(err))
+                }
+            } catch (e: Exception) {
+                lastException = e
+                Log.w(TAG, "AANO Drop attempt to $host:$port failed: ${e.message}, trying next...")
+            }
+        }
+        Log.e(TAG, "sendDropToDevice all attempts failed: ${lastException?.message}")
+        Result.failure(lastException ?: Exception("Could not connect to $host on ports $portsToTry"))
     }
 }

@@ -20,8 +20,18 @@ def send_drop_to_device(target_ip, target_port=8766, notes=None, pin=None, token
     if not notes:
         return {"success": False, "error": "No notes selected to drop"}
 
-    target_url = f"http://{target_ip}:{target_port}/aano/drop"
-    logger.info("Dropping %d notes to %s", len(notes), target_url)
+    explicit_port = None
+    clean_ip = target_ip
+    if ":" in target_ip:
+        parts = target_ip.split(":", 1)
+        clean_ip = parts[0].strip()
+        try:
+            explicit_port = int(parts[1].strip())
+        except ValueError:
+            pass
+
+    # Try default port (8766 Android), fallback to 8765 (PC) if port was not specified
+    ports_to_try = [explicit_port] if explicit_port else [target_port, 8765 if target_port == 8766 else 8766]
 
     # Gather required images
     image_names = set()
@@ -52,25 +62,31 @@ def send_drop_to_device(target_ip, target_port=8766, notes=None, pin=None, token
         "notes": notes,
         "images": images_payload
     }
+    data = json.dumps(payload).encode("utf-8")
 
-    try:
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            target_url,
-            data=data,
-            headers={
-                "Content-Type": "application/json",
-                "X-AANO-TOKEN": str(token or pin or "")
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            body = resp.read().decode("utf-8")
-            return json.loads(body)
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="ignore")
-        logger.warning("Drop HTTP error %d: %s", e.code, err_body)
-        return {"success": False, "error": f"HTTP {e.code}: {err_body or e.reason}"}
-    except Exception as e:
-        logger.warning("Drop transfer error: %s", e)
-        return {"success": False, "error": str(e)}
+    last_error = None
+    for port in ports_to_try:
+        target_url = f"http://{clean_ip}:{port}/aano/drop"
+        logger.info("Dropping %d notes to %s", len(notes), target_url)
+        try:
+            req = urllib.request.Request(
+                target_url,
+                data=data,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-AANO-TOKEN": str(token or pin or "")
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                body = resp.read().decode("utf-8")
+                return json.loads(body)
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            logger.warning("Drop HTTP error %d from %s: %s", e.code, target_url, err_body)
+            return {"success": False, "error": f"HTTP {e.code}: {err_body or e.reason}"}
+        except Exception as e:
+            last_error = e
+            logger.warning("Drop transfer attempt to %s failed: %s, trying next port...", target_url, e)
+
+    return {"success": False, "error": str(last_error or "Connection failed")}
