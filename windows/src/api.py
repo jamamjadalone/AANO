@@ -398,6 +398,61 @@ class DesktopApi:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def export_vault_zip(self):
+        try:
+            import zipfile
+            from datetime import datetime
+            notes = storage.load_notes()
+            local_notes = [n for n in notes if n.get("isLocal", False) and not n.get("deleted", False)]
+            downloads = os.path.join(os.path.expanduser("~"), "Downloads", "AANO")
+            os.makedirs(downloads, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            zip_filename = f"AANO-LocalVault-{ts}.zip"
+            zip_path = os.path.join(downloads, zip_filename)
+
+            with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr("notes.json", json.dumps(local_notes, indent=2, ensure_ascii=False))
+                images_dir = os.path.join(storage.APPDATA_DIR, "images")
+                if os.path.exists(images_dir):
+                    for img in os.listdir(images_dir):
+                        full_img = os.path.join(images_dir, img)
+                        if os.path.isfile(full_img):
+                            zf.write(full_img, arcname=f"media/images/{img}")
+
+            return {"success": True, "path": zip_path, "count": len(local_notes)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def restore_vault_zip(self, zip_path):
+        try:
+            import zipfile
+            if not os.path.exists(zip_path):
+                return {"success": False, "error": "File does not exist"}
+            images_dir = os.path.join(storage.APPDATA_DIR, "images")
+            os.makedirs(images_dir, exist_ok=True)
+            notes_json_str = None
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for member in zf.namelist():
+                    if member in ("notes.json", "local_notes.json"):
+                        notes_json_str = zf.read(member).decode("utf-8")
+                    elif member.startswith("media/images/") or member.startswith("images/"):
+                        fn = os.path.basename(member)
+                        if fn:
+                            with open(os.path.join(images_dir, fn), "wb") as f:
+                                f.write(zf.read(member))
+            if not notes_json_str:
+                return {"success": False, "error": "No notes.json found in zip"}
+            restored = json.loads(notes_json_str)
+            existing = storage.load_notes()
+            existing_map = {n["id"]: n for n in existing}
+            for n in restored:
+                n["isLocal"] = True
+                existing_map[n["id"]] = n
+            storage.save_notes(list(existing_map.values()))
+            return {"success": True, "count": len(restored)}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def open_external_url(self, url):
         if url and (url.startswith("http://") or url.startswith("https://") or url.startswith("mailto:")):
             try:

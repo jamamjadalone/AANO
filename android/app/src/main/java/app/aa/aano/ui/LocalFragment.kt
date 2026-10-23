@@ -5,17 +5,20 @@
 package app.aa.aano.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import app.aa.aano.R
+import app.aa.aano.data.LocalVaultManager
 import app.aa.aano.data.Note
 import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
@@ -32,6 +35,14 @@ class LocalFragment : Fragment() {
     private lateinit var prefs: Prefs
     private lateinit var adapter: NotesAdapter
     private var loadJob: Job? = null
+
+    private val restoreVaultLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            restoreLocalVault(uri)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +72,14 @@ class LocalFragment : Fragment() {
 
         binding.fabAddLocal.setOnClickListener {
             openEditor(null)
+        }
+
+        binding.btnExportVault.setOnClickListener {
+            exportLocalVault()
+        }
+
+        binding.btnRestoreVault.setOnClickListener {
+            restoreVaultLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
         }
 
         loadLocalNotes()
@@ -167,6 +186,58 @@ class LocalFragment : Fragment() {
             putExtra(Intent.EXTRA_TEXT, text)
         }
         startActivity(Intent.createChooser(send, getString(R.string.share_note)))
+    }
+
+    private fun exportLocalVault() {
+        lifecycleScope.launch {
+            try {
+                val summary = LocalVaultManager.exportVault(requireContext(), repository)
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Media Vault Exported")
+                    .setMessage(
+                        "Local vault archived successfully!\n\n" +
+                        "• Notes: ${summary.notesCount}\n" +
+                        "• Photos: ${summary.imagesCount}\n" +
+                        "• Audio Memos: ${summary.audioCount}\n" +
+                        "• Size: ${summary.fileSizeFormatted}\n\n" +
+                        "Saved to: Downloads/AANO/${summary.fileName}"
+                    )
+                    .setPositiveButton("Share Archive") { _, _ ->
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/zip"
+                            putExtra(Intent.EXTRA_STREAM, summary.zipUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        startActivity(Intent.createChooser(shareIntent, "Share Vault Archive"))
+                    }
+                    .setNegativeButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun restoreLocalVault(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                val summary = LocalVaultManager.restoreVault(requireContext(), uri, repository)
+                loadLocalNotes()
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Media Vault Restored")
+                    .setMessage(
+                        "Vault restore complete!\n\n" +
+                        "• Local Notes: ${summary.notesRestored}\n" +
+                        "• Photos Extracted: ${summary.imagesRestored}\n" +
+                        "• Audio Memos: ${summary.audioRestored}\n\n" +
+                        "Your local multimedia notes are now ready."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun openEditor(noteId: String?) {

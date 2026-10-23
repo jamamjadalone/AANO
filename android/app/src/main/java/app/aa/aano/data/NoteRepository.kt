@@ -498,6 +498,19 @@ class NoteRepository(private val context: Context) {
         }
     }
 
+    suspend fun importLocalVaultNotes(restoredNotes: List<Note>) = withContext(Dispatchers.IO) {
+        val currentNotes = readNotes().toMutableList()
+        for (rn in restoredNotes) {
+            val idx = currentNotes.indexOfFirst { it.id == rn.id }
+            if (idx >= 0) {
+                currentNotes[idx] = rn
+            } else {
+                currentNotes.add(0, rn)
+            }
+        }
+        writeNotes(currentNotes)
+    }
+
     private fun serializeNoteForCloud(note: Note): JSONObject = JSONObject().apply {
         put("id", note.id)
         put("title", note.title)

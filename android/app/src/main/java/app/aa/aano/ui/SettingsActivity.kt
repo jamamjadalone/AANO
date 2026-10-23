@@ -91,6 +91,12 @@ class SettingsActivity : AppCompatActivity() {
         if (uri != null) importBackup(uri)
     }
 
+    private val restoreVaultLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) restoreLocalVault(uri)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
@@ -125,6 +131,11 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnExport.setOnClickListener { exportBackup() }
         binding.btnImport.setOnClickListener {
             importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*"))
+        }
+
+        binding.btnExportVault.setOnClickListener { exportLocalVault() }
+        binding.btnRestoreVault.setOnClickListener {
+            restoreVaultLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
         }
 
         updateCloudUi()
@@ -573,6 +584,34 @@ class SettingsActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 binding.backupResult.text =
                     getString(R.string.backup_import_failed, e.message ?: "error")
+                binding.backupResult.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun exportLocalVault() {
+        lifecycleScope.launch {
+            try {
+                val summary = app.aa.aano.data.LocalVaultManager.exportVault(this@SettingsActivity, repository)
+                binding.backupResult.text = "Media Vault exported (${summary.notesCount} notes, ${summary.imagesCount} photos, ${summary.fileSizeFormatted})"
+                binding.backupResult.visibility = View.VISIBLE
+                Toast.makeText(this@SettingsActivity, "Vault saved to Downloads/AANO/${summary.fileName}", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                binding.backupResult.text = "Vault export failed: ${e.message}"
+                binding.backupResult.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    private fun restoreLocalVault(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                val summary = app.aa.aano.data.LocalVaultManager.restoreVault(this@SettingsActivity, uri, repository)
+                binding.backupResult.text = "Restored ${summary.notesRestored} local notes & ${summary.imagesRestored} photos"
+                binding.backupResult.visibility = View.VISIBLE
+                Toast.makeText(this@SettingsActivity, "Media Vault restored successfully", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                binding.backupResult.text = "Vault restore failed: ${e.message}"
                 binding.backupResult.visibility = View.VISIBLE
             }
         }

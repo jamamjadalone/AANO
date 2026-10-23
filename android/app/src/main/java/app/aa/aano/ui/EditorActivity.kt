@@ -149,6 +149,44 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    private var croppingIndex: Int = -1
+    private val cropImageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK && croppingIndex in attachedImages.indices) {
+            val newPath = result.data?.getStringExtra(CropActivity.EXTRA_OUTPUT_PATH)
+            if (!newPath.isNullOrBlank() && java.io.File(newPath).exists()) {
+                val oldPath = attachedImages[croppingIndex]
+                attachedImages[croppingIndex] = newPath
+                if (oldPath != newPath) {
+                    try { java.io.File(oldPath).delete() } catch (_: Exception) {}
+                }
+                renderAttachedImages()
+                saveSilently()
+            }
+        }
+        croppingIndex = -1
+    }
+
+    private var replacingIndex: Int = -1
+    private val replaceImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && replacingIndex in attachedImages.indices) {
+            val newPath = copyUriToLocalMedia(uri)
+            if (newPath != null) {
+                val oldPath = attachedImages[replacingIndex]
+                attachedImages[replacingIndex] = newPath
+                if (oldPath != newPath) {
+                    try { java.io.File(oldPath).delete() } catch (_: Exception) {}
+                }
+                renderAttachedImages()
+                saveSilently()
+            }
+        }
+        replacingIndex = -1
+    }
+
     private val requestAudioPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -1199,7 +1237,11 @@ class EditorActivity : AppCompatActivity() {
                 isClickable = true
                 isFocusable = true
                 setOnClickListener {
-                    showImagePreview(path)
+                    showImagePreview(path, index)
+                }
+                setOnLongClickListener {
+                    showImageContextMenu(path, index)
+                    true
                 }
             }
 
@@ -1249,12 +1291,11 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    private fun showImagePreview(path: String) {
+    private fun showImagePreview(path: String, index: Int) {
         val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(0xF20B1120.toInt())) // 95% Deep slate background
         val root = android.widget.FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-            setOnClickListener { dialog.dismiss() }
         }
 
         val imageView = ImageView(this).apply {
@@ -1263,7 +1304,7 @@ class EditorActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             ).apply {
                 gravity = android.view.Gravity.CENTER
-                setMargins(20, 80, 20, 80)
+                setMargins(20, 100, 20, 120)
             }
             adjustViewBounds = true
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -1277,23 +1318,138 @@ class EditorActivity : AppCompatActivity() {
         root.addView(imageView)
 
         // Close button at top right
+        val density = resources.displayMetrics.density
         val btnClose = ImageView(this).apply {
-            val size = (44 * resources.displayMetrics.density).toInt()
+            val size = (44 * density).toInt()
             layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
                 gravity = android.view.Gravity.TOP or android.view.Gravity.END
-                setMargins(0, 48, 24, 0)
+                setMargins(0, (40 * density).toInt(), (20 * density).toInt(), 0)
             }
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
             setColorFilter(0xFFFFFFFF.toInt())
             setBackgroundResource(R.drawable.circle_bg_translucent)
-            val pad = (10 * resources.displayMetrics.density).toInt()
+            val pad = (10 * density).toInt()
             setPadding(pad, pad, pad, pad)
             setOnClickListener { dialog.dismiss() }
         }
         root.addView(btnClose)
 
+        // Bottom Action Bar for Crop, Replace, Remove
+        val bottomBar = LinearLayout(this).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL
+                bottomMargin = (32 * density).toInt()
+            }
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.circle_bg_translucent)
+            setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
+        }
+
+        // 1. Crop Button
+        val btnCrop = com.google.android.material.button.MaterialButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt()).apply {
+                marginEnd = (8 * density).toInt()
+            }
+            text = "✂️ Crop"
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0x33FFFFFF.toInt())
+            cornerRadius = (20 * density).toInt()
+            setOnClickListener {
+                dialog.dismiss()
+                croppingIndex = index
+                val intent = Intent(this@EditorActivity, CropActivity::class.java).apply {
+                    putExtra(CropActivity.EXTRA_IMAGE_PATH, path)
+                }
+                cropImageLauncher.launch(intent)
+            }
+        }
+        bottomBar.addView(btnCrop)
+
+        // 2. Replace Button
+        val btnReplace = com.google.android.material.button.MaterialButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt()).apply {
+                marginEnd = (8 * density).toInt()
+            }
+            text = "🔄 Replace"
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0x33FFFFFF.toInt())
+            cornerRadius = (20 * density).toInt()
+            setOnClickListener {
+                dialog.dismiss()
+                replacingIndex = index
+                replaceImageLauncher.launch("image/*")
+            }
+        }
+        bottomBar.addView(btnReplace)
+
+        // 3. Remove Button
+        val btnDelete = com.google.android.material.button.MaterialButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, (40 * density).toInt())
+            text = "🗑️ Remove"
+            setTextColor(0xFFFFCDD2.toInt())
+            setBackgroundColor(0x44C62828.toInt())
+            cornerRadius = (20 * density).toInt()
+            setOnClickListener {
+                MaterialAlertDialogBuilder(this@EditorActivity)
+                    .setTitle("Remove Image")
+                    .setMessage("Remove this image from the note and delete the file from storage?")
+                    .setPositiveButton("Remove") { _, _ ->
+                        dialog.dismiss()
+                        if (index in attachedImages.indices) {
+                            attachedImages.removeAt(index)
+                            try { File(path).delete() } catch (_: Exception) {}
+                            renderAttachedImages()
+                            saveSilently()
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
+        bottomBar.addView(btnDelete)
+
+        root.addView(bottomBar)
+
         dialog.setContentView(root)
         dialog.show()
+    }
+
+    private fun showImageContextMenu(path: String, index: Int) {
+        val options = arrayOf(
+            "👁️ View Fullscreen",
+            "✂️ Crop & Rotate",
+            "🔄 Replace Image",
+            "🗑️ Remove Image"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Image Options")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showImagePreview(path, index)
+                    1 -> {
+                        croppingIndex = index
+                        val intent = Intent(this, CropActivity::class.java).apply {
+                            putExtra(CropActivity.EXTRA_IMAGE_PATH, path)
+                        }
+                        cropImageLauncher.launch(intent)
+                    }
+                    2 -> {
+                        replacingIndex = index
+                        replaceImageLauncher.launch("image/*")
+                    }
+                    3 -> {
+                        attachedImages.removeAt(index)
+                        try { File(path).delete() } catch (_: Exception) {}
+                        renderAttachedImages()
+                        saveSilently()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun renderVoiceMemoBar() {
