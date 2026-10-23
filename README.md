@@ -13,63 +13,101 @@
   </svg>
   <h1 align="center">AANO Notes</h1>
   <p align="center"><b>Minimalist, Beautiful &amp; Private Cross-Platform Notes Suite</b></p>
-  <p align="center"><i>Android • Windows Desktop • Cloudflare Edge Sync</i></p>
+  <p align="center"><i>Android • Windows Desktop • User-Owned Google Drive &amp; Cloudflare Sync</i></p>
 </p>
 
 <p align="center">
-  <a href="https://github.com/jamamjadalone/AANO/releases/tag/v1.0.0-beta"><img src="https://img.shields.io/badge/Release-v1.0.0--beta-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.0.0-beta"></a>
+  <a href="https://github.com/jamamjadalone/AANO/releases/tag/v1.1.0-beta.1"><img src="https://img.shields.io/badge/Release-v1.1.0--beta.1-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.1.0-beta.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-00796B.svg?style=flat-square" alt="License: GPL-3.0"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
-  <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Edge%20WebView2)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
-  <img src="https://img.shields.io/badge/Backend-Cloudflare%20D1%20SQL-orange?style=flat-square&logo=cloudflare&logoColor=white" alt="Backend: Cloudflare">
+  <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Installer)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
+  <img src="https://img.shields.io/badge/Sync-Google%20Drive%20%7C%20Cloudflare-F59E0B?style=flat-square&logo=googledrive&logoColor=white" alt="Sync">
   <img src="https://img.shields.io/badge/Trackers-0%20(Zero%20Telemetry)-10B981?style=flat-square" alt="Zero Trackers">
+</p>
+
+<p align="center">
+  🌐 <b>Live Web &amp; Documentation:</b> <a href="https://jamamjadalone.github.io/AANO/">https://jamamjadalone.github.io/AANO/</a>
 </p>
 
 ---
 
 ## 🌟 Overview
 
-**AANO Notes** is an open-source, privacy-first cross-platform note-taking ecosystem built for users who demand elegant design, distraction-free productivity, and complete ownership of their data.
+**AANO Notes** is an open-source, privacy-first cross-platform note-taking ecosystem built for users who demand elegant design, distraction-free productivity, and absolute ownership of their data.
 
 - **Zero Corporate Surveillance:** No telemetry trackers, no analytics pixels, no third-party advertising SDKs.
-- **Cross-Platform Freedom:** Seamlessly write on your Android phone and continue on your Windows PC.
-- **Dual-Apex Monogram Identity:** Featuring the custom luxury "A.A" origami monogram vector icon across Android adaptive launchers and Windows desktop executables.
-- **Offline First:** Fully functional without internet connectivity. Export and import offline JSON backups at will.
+- **Cross-Platform Freedom:** Seamlessly write on your Android device and continue on your Windows desktop workstation.
+- **Offline-First Storage:** Fully functional with zero internet connectivity. Notes, folders, tags, and media are stored locally on your device.
+- **Hardware-Protected Encryption:** Encrypted notes and sensitive credentials are safeguarded with AES-256-GCM cryptography.
 
 ---
 
-## ✨ Features Across Platforms
+## ✨ Key Features Across Platforms
+
+### 🖼️ Interactive Image Crop & Transform Toolkit
+- **Touch-Crop Overlay:** Crop attached images directly inside the app with interactive touch handles and corner controls.
+- **Aspect Ratio Presets:** 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
+- **90° Lossless Rotation:** Quick rotation button to fix sideways or upside-down document and receipt captures.
+- **Ultra-Efficient WebP Compression:** Automatic optimization (max 1280px resolution, 80% WebP quality), slashing 4–8 MB smartphone photos down to **~100–150 KB** with zero visible quality loss.
+- **Replace & Remove Actions:** Swap an existing photo with a newly cropped one, or permanently delete unwanted photos with instant on-disk file purges.
+
+### 📦 Local Media Vault .zip Backup & Restore
+- **All-in-One Portable Archive:** Bundles all local on-device notes (`notes.json`) along with attached media files (`media/images/`, `media/audio/`) into a single `.zip` file in `Downloads/AANO/`.
+- **Zero-Cloud Device Migration:** Easily transfer your private notes and attachments to a new phone or PC without using cloud services.
+- **1-Click Restore:** Seamlessly unpacks the vault archive, automatically remapping local file paths into the app storage.
+- **Quick UI Access:** Direct *Backup (.zip)* and *Restore (.zip)* actions integrated into the `LocalFragment` header banner and `Settings`.
+
+### ☁️ Dual Synchronization Architecture
+1. **User-Owned Google Drive Sync (Primary)**:
+   - Direct peer-to-peer cloud sync between Android and Windows using your own Google Drive.
+   - Minimal permissions: uses restricted `drive.file` scope (AANO can only access its own `aano-notes.json` sync file).
+   - Clean OAuth 2.0 flow with local loopback listener and branded GitHub Pages redirect (`docs/oauth-success.html`).
+2. **Cloudflare Edge D1 Sync & Gmail OTP (Standalone)**:
+   - Distributed low-latency SQLite synchronization powered by Cloudflare Workers and Cloudflare D1.
+   - Official 6-digit Gmail OTP verification bridge via Google Apps Script.
+
+### ⚡ Super-Responsiveness Engine
+- **Android In-Memory Cache:** Decrypted notes are cached in RAM (`memoryCache`) for instantaneous (0ms) folder filtering, tag extraction, and search queries.
+- **Zero-Stutter Mobile Typing:** Removed network sync from the typing auto-save loop; cloud sync executes cleanly upon closing the editor or app switching.
+- **Windows Zero-Latency Modal Dismissal:** Editor modal dismisses immediately on Save/Close (`0ms`); synchronization runs asynchronously in background threads.
+- **GPU Layer Acceleration & Search Debounce:** 120ms debounce prevents DOM thrashing during rapid typing; CSS GPU compositing (`transform: translateZ(0)`) provides smooth 60 FPS scrolling on integrated Intel graphics.
 
 ### 🎨 Visual & Editor Experience
 - **Emerald Luxury Palette:** Material 3 design centered on deep teal obsidian (`#004D40`) and emerald green (`#00796B`).
-- **9 Pastel Paper Shades:** Dynamic editor background tinting (White, Emerald Mint, Butter Yellow, Leaf Green, Sky Blue, Lavender, Rose Pink, Peach Orange, Coral Red).
+- **12 Aesthetic Paper Themes & Custom Color Palette:**
+  - Dynamic paper background shades: Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.
+  - Custom Color Palette (`🎨`) with live Hex input (`#RRGGBB`) and a 20-color swatch palette grid.
+  - Dynamic contrast adaptation for dark paper backgrounds.
 - **Rich Text Formatting Toolbar:**
-  - Headings: **H1** (1.4x) and **H2** (1.2x).
+  - Headings: **H1** and **H2**.
   - Styling: **Bold**, *Italic*, <u>Underline</u>, <s>Strikethrough</s>.
-  - 🖍️ **Highlighters:** 5 pastel highlighter colors (Yellow, Mint, Pink, Blue, Peach).
-  - 🔤 **Text Colors:** Emerald, Blue, Crimson, Purple, and Obsidian.
-  - Lists: Line-level automatic bullet points.
-  - History: Full Undo / Redo history stack.
-  - Live Statistics: Real-time word and character counter.
+  - 🖍️ Highlighters: 5 pastel highlighter colors (Yellow, Mint, Pink, Blue, Peach).
+  - 🔤 Text Colors: Emerald, Blue, Crimson, Purple, and Obsidian.
+  - Automatic bullet lists, Undo / Redo history, and real-time word counter.
 
-### 📱 Android Application (`/android`)
-- **Native Kotlin Architecture:** Built with Coroutines, StateFlow, Room / Encrypted preferences, and ViewBinding.
-- **Hardware-Protected AppLock:** Salted PBKDF2 PIN lock + Biometric authentication (Fingerprint / Face Unlock).
-- **Privacy Shield:** Android `FLAG_SECURE` prevents screenshots and hides sensitive previews in recent apps.
-- **Docked Soft-Keyboard Toolbar:** Formatting tools remain permanently anchored directly above the keyboard.
+### 🗄️ Dedicated Archive & Batch Organization
+- **Dedicated Archive System:** Archive notes to declutter active lists while keeping folder categorization intact.
+- **Multi-Select Batch Actions:** Long-press (Android) or click "Select" (Windows) to batch archive, delete, or restore multiple notes in seconds.
 
-### 💻 Windows Desktop Client (`/windows`)
-- **Ultra-Lightweight Engine:** Built on native Windows Edge WebView2 runtime (runs under **30MB RAM** on dual-core CPUs).
-- **Flexible Workspace:** Masonry Grid view and List view toggles with real-time title, content, and folder search.
-- **Single-File Setup Installer:** Professional setup wizard (`AANO-Setup.exe`) that installs per-user into `AppData\Local\Programs\AANO Notes`, creates desktop and Start Menu shortcuts with the A.A icon, and registers a clean Windows uninstaller.
+### 🛡️ AppLock & Privacy Shield
+- Salted PBKDF2 PIN lock + Biometric authentication (Fingerprint / Face Unlock).
+- Android `FLAG_SECURE` prevents screenshots and hides previews in recent apps.
 
-### ☁️ Cloud Sync & Security (`/backend`)
-- **Cloudflare Edge Sync:** Low-latency worldwide note synchronization powered by Cloudflare Workers and Cloudflare D1 SQL.
-- **Official Gmail OTP Verification:** Registration protected by 6-digit cryptographic verification codes sent via native Google Apps Script bridge from official Gmail.
-- **Anti-Abuse & DDoS Shields:**
-  - Canonical Gmail address sanitization (blocks `+` alias tricks, strips dots, eliminates deceptive unicode homoglyphs).
-  - IP-based rate limiting (Max 5 OTP requests per 15 mins; 10 failed login limit).
-  - Anti-DDoS payload memory cap (50KB max per note).
+---
+
+## 📥 Download Official Releases
+
+Download pre-built, production-ready binaries directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
+
+| Platform | Download File | Description |
+| :--- | :--- | :--- |
+| **Android** | [`AANO-v1.1.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Compatible with Android 8.0+ (API 26–35) |
+| **Windows** | [`AANO-Setup-v1.1.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Standalone Inno Setup installer for Windows 10 & 11 |
+
+### 📲 Android Sideloading Instructions
+1. Download `AANO-v1.1.0-beta.1.apk` on your Android device.
+2. If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
+3. If Google Play Protect shows *"Unrecognized app"*, tap **More details** and then **Install anyway**. AANO is 100% open source, tracker-free, and contains zero advertising or telemetry code.
 
 ---
 
@@ -77,20 +115,26 @@
 
 ```text
 AANO/
+├── .github/workflows/   # Automated CI/CD (Android APK + Windows Setup installer)
 ├── android/             # Android Studio Kotlin Project (Android 8.0+)
-│   ├── app/             # Application source, Material 3 layouts, vector icons
-│   └── gradle/          # Gradle version catalog and wrappers
+│   ├── app/             # Application source, Material 3 layouts, vector drawables
+│   └── gradle/          # Gradle version catalog and official wrapper
 ├── windows/             # Windows Desktop Application
-│   ├── src/             # Python-Edge WebView2 bridge & modern HTML5/CSS3/JS UI
+│   ├── src/             # Python-Edge WebView2 bridge, Google Drive sync, Web UI
 │   ├── assets/          # Multi-resolution aano.ico & branding assets
-│   └── installer/       # Windows setup wizard & Inno Setup scripts
-├── backend/             # Cloudflare Edge Worker API
+│   ├── installer/       # Inno Setup scripts (aano.iss) & build_installer.py
+│   └── AANO.spec        # PyInstaller specification
+├── backend/             # Cloudflare Edge Worker API (D1 SQLite + Mail OTP Bridge)
 │   ├── worker.js        # Hardened Cloudflare Worker (Rate limiter + OTP)
-│   ├── schema.sql       # Cloudflare D1 SQL table definitions
-│   └── .env.example     # Environment variable documentation
-├── .gitignore           # Strict security exclusions (blocks .jks, .pfx, secrets)
+│   └── schema.sql       # Cloudflare D1 SQL table definitions
+├── docs/                # GitHub Pages Documentation & OAuth Redirect Landing
+│   ├── index.html       # Landing page (jamamjadalone.github.io/AANO)
+│   └── oauth-success.html # Branded Google OAuth redirect screen
+├── bump_version.py      # Unified cross-platform version management script
+├── CHANGELOG.md         # Keep a Changelog documentation
+├── VERSION              # Single source of truth version file (1.1.0-beta.1)
 ├── LICENSE              # GNU General Public License v3.0
-└── README.md            # Master documentation
+└── README.md            # Master repository documentation
 ```
 
 ---
@@ -98,43 +142,37 @@ AANO/
 ## 🚀 Building & Running From Source
 
 ### 1. Android App
-- Open `/android` in **Android Studio** (Hedgehog or newer).
-- JDK 17+, `compileSdk 35`, `minSdk 26`.
-- Build release APK:
+- Requirements: **Android Studio** (Hedgehog or newer), JDK 17+.
+- Build Release APK:
   ```bash
   cd android
-  ./gradlew assembleRelease
+  ./gradlew :app:assembleRelease
   ```
+  Output APK: `android/app/build/outputs/apk/release/app-release.apk`
 
 ### 2. Windows Desktop Client
-- Requirements: Python 3.10+ (Windows 10 / 11)
+- Requirements: Python 3.11+, Inno Setup 6+.
+- Install build dependencies:
+  ```bash
+  pip install pyinstaller pillow pystray
+  ```
 - Run directly from source:
   ```bash
-  pip install pywebview requests
   python windows/src/main.py
   ```
-- To bundle standalone executable and setup installer:
+- Build standalone setup installer:
   ```bash
-  python windows/installer/build_installer.py
+  cd windows
+  pyinstaller --clean -y AANO.spec
+  python installer/build_installer.py
   ```
-  Output installer: `windows/dist/AANO-Setup.exe`.
+  Output Installer: `windows/dist/Installer/AANO-Setup-v1.1.0-beta.1.exe`
 
-### 3. Backend Cloudflare Worker
-- Deploy `backend/worker.js` to [Cloudflare Workers](https://workers.cloudflare.com/).
-- Bind your D1 database as `DB` and execute `backend/schema.sql` in the D1 console.
-- Add encrypted environment variables in Cloudflare Dashboard:
-  - `SECRET_APP_KEY`: Client handshake signature.
-  - `MAIL_BRIDGE_URL`: Your Google Apps Script Web App URL for OTP delivery.
-  - `MAIL_BRIDGE_SECRET`: Shared secret for mail bridge.
-
----
-
-## 📲 Android Sideloading Installation Guide
-
-If you download `aano-v1.0.1-beta.apk` directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases):
-1. **Download APK**: Tap `aano-v1.0.1-beta.apk` on your Android device.
-2. **Allow Installation**: If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
-3. **Play Protect Prompt**: If Google Play Protect shows *"Unrecognized app"*, tap **More details** and then **Install anyway**. AANO is 100% open source, tracker-free, and contains zero malicious permissions.
+### 3. Automated Cloud CI/CD
+AANO features a multi-platform GitHub Actions pipeline (`.github/workflows/release.yml`). Pushing a version tag (e.g. `v1.1.0-beta.1`) automatically triggers:
+- Android release APK compilation on an Ubuntu runner.
+- Windows desktop standalone packaging & Inno Setup compilation on a Windows runner.
+- Automatic changelog extraction from `CHANGELOG.md` and release asset publication.
 
 ---
 
@@ -142,5 +180,3 @@ If you download `aano-v1.0.1-beta.apk` directly from [GitHub Releases](https://g
 
 AANO is free and open-source software licensed under the **GNU General Public License v3.0** ([GPL-3.0](LICENSE)).  
 Copyright (C) 2026 Jam Amjad Rasheed.
-
-
