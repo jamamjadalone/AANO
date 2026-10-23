@@ -103,12 +103,17 @@ async function initApp() {
     } catch (_) {}
   }
 
-  // Smart background auto-sync heartbeat (90s)
-  setInterval(runAutoSyncInterval, 90000);
+  // Smart background auto-sync heartbeat (15s for instant multi-device responsiveness)
+  setInterval(runAutoSyncInterval, 15000);
 
-  // Immediate sync when app window gains focus
+  // Immediate sync when app window gains focus or becomes visible
   window.addEventListener("focus", () => {
     runAutoSyncInterval();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      runAutoSyncInterval();
+    }
   });
 }
 
@@ -137,7 +142,7 @@ async function runAutoSyncInterval() {
     const status = await api.get_cloud_status();
     if (status.is_logged_in && status.auto_sync !== false) {
       const res = await api.sync_now();
-      if (res && res.success && res.count > 0) {
+      if (res && res.success) {
         await refreshData();
       }
       await checkCloudStatus();
@@ -264,7 +269,7 @@ function setupEventListeners() {
 
   // Nav filters
   document.querySelectorAll(".nav-item").forEach(item => {
-    item.addEventListener("click", (e) => {
+    item.addEventListener("click", async (e) => {
       e.preventDefault();
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
@@ -280,7 +285,7 @@ function setupEventListeners() {
         document.getElementById("currentViewTitle").innerText = "All Notes";
       }
       exitSelectionMode();
-      renderNotes();
+      await refreshData();
     });
   });
 
@@ -627,14 +632,14 @@ function renderFolders(folders) {
     item.className = "folder-item" + (currentFilter === "folder:" + folder ? " active" : "");
     const folderSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
     item.innerHTML = `<span>${folderSvg}${escapeHtml(folder)}</span><span class="badge">${count}</span>`;
-    item.addEventListener("click", () => {
+    item.addEventListener("click", async () => {
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
       item.classList.add("active");
       currentFilter = "folder:" + folder;
       document.getElementById("currentViewTitle").innerText = folder;
       exitSelectionMode();
-      renderNotes();
+      await refreshData();
     });
     container.appendChild(item);
   });

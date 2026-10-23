@@ -294,7 +294,7 @@ class NotesFragment : Fragment() {
                 runSilentSyncCheck()
             }
             while (isActive) {
-                kotlinx.coroutines.delay(90_000L) // Smart battery-friendly heartbeat (90s)
+                kotlinx.coroutines.delay(20_000L) // Responsive heartbeat (20s)
                 if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
                     runSilentSyncCheck()
                 }
@@ -304,7 +304,7 @@ class NotesFragment : Fragment() {
 
     private suspend fun runSilentSyncCheck() {
         val res = cloudSyncManager.syncNow()
-        if (res.isSuccess && (res.getOrNull() ?: 0) > 0) {
+        if (res.isSuccess) {
             loadNotes()
             buildFolderChips()
         }
