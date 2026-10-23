@@ -1735,31 +1735,78 @@ class EditorActivity : AppCompatActivity() {
         val dropMgr = AanoDropManager.getInstance(this)
         val myIp = dropMgr.getLocalWifiIp()
         val myPin = dropMgr.pin
+        val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
 
         val inputLayout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(50, 20, 50, 10)
+            setPadding(40, 16, 40, 10)
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
+
+        // Generate QR Code bitmap offline
+        val qrBmp = try {
+            app.aa.aano.drop.QrCode.encodeText(myUri, app.aa.aano.drop.QrCode.Ecc.MEDIUM).toBitmap(360)
+        } catch (_: Exception) { null }
+
+        if (qrBmp != null) {
+            val ivQr = android.widget.ImageView(this).apply {
+                setImageBitmap(qrBmp)
+                layoutParams = android.widget.LinearLayout.LayoutParams(360, 360).apply {
+                    setMargins(0, 0, 0, 12)
+                }
+                setBackgroundColor(android.graphics.Color.WHITE)
+                setPadding(12, 12, 12, 12)
+            }
+            inputLayout.addView(ivQr)
+        }
+
         val tvDeviceInfo = android.widget.TextView(this).apply {
-            text = "📡 This Phone: $myIp:8766\n🔑 Receiving PIN: $myPin"
-            textSize = 13f
-            setPadding(0, 0, 0, 20)
+            text = "📷 Scan with another phone to connect\n📡 This Device: $myIp:8766 | PIN: $myPin"
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 16)
         }
         val etIp = android.widget.EditText(this).apply {
-            hint = "Target IP (PC :8765 or Phone :8766)"
+            hint = "Target IP (e.g. 192.168.1.100 or :8766)"
             setText(prefs.lastDropIp)
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
         val etPin = android.widget.EditText(this).apply {
             hint = "Target 6-Digit PIN"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
+        val btnScanCamera = com.google.android.material.button.MaterialButton(this).apply {
+            text = "📷 Scan PC / Phone QR"
+            setOnClickListener {
+                try {
+                    val lensIntent = Intent(Intent.ACTION_VIEW, Uri.parse("googlelens://v1/camera"))
+                    startActivity(lensIntent)
+                } catch (_: Exception) {
+                    try {
+                        val camIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+                        startActivity(camIntent)
+                    } catch (_: Exception) {
+                        Toast.makeText(this@EditorActivity, "Point your phone camera at the PC screen QR code!", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
         inputLayout.addView(tvDeviceInfo)
+        inputLayout.addView(btnScanCamera)
         inputLayout.addView(etIp)
         inputLayout.addView(etPin)
 
         MaterialAlertDialogBuilder(this)
-            .setTitle("⚡ AANO Drop (Wi-Fi P2P)")
-            .setMessage("Send note and media directly to PC or another Phone over Wi-Fi (Zero internet quota).")
+            .setTitle("⚡ AANO Drop & QR Pair")
+            .setMessage("Instant Wi-Fi P2P transfer (Zero internet data).")
             .setView(inputLayout)
             .setPositiveButton("Send Drop") { _, _ ->
                 val ip = etIp.text.toString().trim()

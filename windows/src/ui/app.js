@@ -1,3 +1,37 @@
+
+// AANO Drop Modal Functions
+async function openDropModal() {
+  const modal = document.getElementById("aanoDropModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+
+  const api = getApi();
+  if (api && api.get_drop_info) {
+    try {
+      const info = await api.get_drop_info();
+      if (info) {
+        const ipEl = document.getElementById("dropServerIp");
+        const pinEl = document.getElementById("dropServerPin");
+        if (ipEl) ipEl.innerText = `IP: ${info.ip || "127.0.0.1"}:${info.port || 8765}`;
+        if (pinEl) pinEl.innerText = info.pin || "------";
+
+        // Render QR Code onto canvas
+        if (typeof renderQrToCanvas === "function") {
+          const qrUri = `aano://drop?ip=${info.ip}&port=${info.port || 8765}&pin=${info.pin}`;
+          renderQrToCanvas("dropQrCanvas", qrUri);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load drop info:", e);
+    }
+  }
+}
+
+function closeDropModal() {
+  const modal = document.getElementById("aanoDropModal");
+  if (modal) modal.classList.add("hidden");
+}
+
 // AANO Windows Desktop App - Frontend Logic
 // Copyright (C) 2026 Jam Amjad Rasheed
 

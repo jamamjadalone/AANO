@@ -33,6 +33,11 @@ class ShareReceiverActivity : AppCompatActivity() {
         val action = intent.action
         val type = intent.type
 
+        if (Intent.ACTION_VIEW == action && intent.data?.scheme == "aano" && intent.data?.host == "drop") {
+            handleDropPairing(intent.data!!)
+            return
+        }
+
         if (Intent.ACTION_SEND == action && type != null) {
             if ("text/plain" == type) {
                 handleSendText(intent)
@@ -163,5 +168,29 @@ class ShareReceiverActivity : AppCompatActivity() {
         } catch (_: Exception) {
             null
         }
+    }
+    private fun handleDropPairing(uri: Uri) {
+        val ip = uri.getQueryParameter("ip") ?: ""
+        val port = uri.getQueryParameter("port")?.toIntOrNull() ?: 8765
+        val pin = uri.getQueryParameter("pin") ?: ""
+
+        if (ip.isBlank()) {
+            Toast.makeText(this, "Invalid AANO Drop QR Code", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        val prefs = app.aa.aano.data.Prefs(this)
+        prefs.lastDropIp = if (port == 8765) ip else "$ip:$port"
+
+        Toast.makeText(this, "⚡ AANO Drop: Paired with $ip (PIN $pin)", Toast.LENGTH_LONG).show()
+
+        val homeIntent = Intent(this, HomeActivity::class.java).apply {
+            putExtra("DROP_TARGET_IP", prefs.lastDropIp)
+            putExtra("DROP_TARGET_PIN", pin)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        startActivity(homeIntent)
+        finish()
     }
 }
