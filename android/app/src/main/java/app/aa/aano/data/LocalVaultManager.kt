@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -131,7 +132,7 @@ object LocalVaultManager {
         }
 
         val sizeFormatted = formatFileSize(tempZip.length())
-        try { tempDir.deleteRecursively() } catch (_: Exception) {}
+        try { tempDir.deleteRecursively() } catch (e: Exception) { Log.w("AANO", "Failed to delete tempDir: ${e.message}") }
 
         VaultExportSummary(
             zipUri = uri,

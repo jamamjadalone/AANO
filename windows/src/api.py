@@ -6,7 +6,10 @@ import time
 import uuid
 import json
 import threading
+import logging
 import storage
+
+logger = logging.getLogger("AANO.API")
 
 def _parse_color(c):
     if isinstance(c, int):
@@ -20,11 +23,11 @@ def _parse_color(c):
                 if val > 0x7FFFFFFF:
                     val -= 0x100000000
                 return val
-            except Exception:
+            except (ValueError, TypeError):
                 return 0
         try:
             return int(c)
-        except Exception:
+        except (ValueError, TypeError):
             return 0
     return 0
 
@@ -50,8 +53,8 @@ class DesktopApi:
                     remaining.append(n)
             if changed:
                 storage.save_notes(remaining)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Trash purge failed: %s", e)
 
     def _async_auto_sync(self):
         cfg = storage.load_config()
@@ -395,7 +398,8 @@ class DesktopApi:
             storage.save_notes(list(local_map.values()))
             self._async_auto_sync()
             return {"success": True, "count": len(incoming)}
-        except Exception as e:
+        except (json.JSONDecodeError, KeyError, OSError) as e:
+            logger.warning("Import notes error: %s", e)
             return {"success": False, "error": str(e)}
 
     def export_vault_zip(self):
@@ -420,7 +424,8 @@ class DesktopApi:
                             zf.write(full_img, arcname=f"media/images/{img}")
 
             return {"success": True, "path": zip_path, "count": len(local_notes)}
-        except Exception as e:
+        except (OSError, Exception) as e:
+            logger.warning("Export vault zip error: %s", e)
             return {"success": False, "error": str(e)}
 
     def restore_vault_zip(self, zip_path):
@@ -450,7 +455,8 @@ class DesktopApi:
                 existing_map[n["id"]] = n
             storage.save_notes(list(existing_map.values()))
             return {"success": True, "count": len(restored)}
-        except Exception as e:
+        except (zipfile.BadZipFile, json.JSONDecodeError, OSError) as e:
+            logger.warning("Restore vault zip error: %s", e)
             return {"success": False, "error": str(e)}
 
     def open_external_url(self, url):
@@ -465,6 +471,6 @@ class DesktopApi:
                 webbrowser.open(url)
                 return True
             except Exception as e:
-                print(f"[AANO Desktop] Failed to open external URL: {e}")
+                logger.warning("Failed to open external URL %s: %s", url, e)
                 return False
         return False

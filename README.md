@@ -31,7 +31,7 @@
 
 ---
 
-## 🌟 Overview
+## Overview
 
 **AANO Notes** is an open-source, privacy-first cross-platform note-taking ecosystem built for users who demand elegant design, distraction-free productivity, and absolute ownership of their data.
 
@@ -42,22 +42,22 @@
 
 ---
 
-## ✨ Key Features Across Platforms
+## Key Features Across Platforms
 
-### 🖼️ Interactive Image Crop & Transform Toolkit
+### Interactive Image Crop & Transform Toolkit
 - **Touch-Crop Overlay:** Crop attached images directly inside the app with interactive touch handles and corner controls.
 - **Aspect Ratio Presets:** 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
 - **90° Lossless Rotation:** Quick rotation button to fix sideways or upside-down document and receipt captures.
 - **Ultra-Efficient WebP Compression:** Automatic optimization (max 1280px resolution, 80% WebP quality), slashing 4–8 MB smartphone photos down to **~100–150 KB** with zero visible quality loss.
 - **Replace & Remove Actions:** Swap an existing photo with a newly cropped one, or permanently delete unwanted photos with instant on-disk file purges.
 
-### 📦 Local Media Vault .zip Backup & Restore
+### Local Media Vault .zip Backup & Restore
 - **All-in-One Portable Archive:** Bundles all local on-device notes (`notes.json`) along with attached media files (`media/images/`, `media/audio/`) into a single `.zip` file in `Downloads/AANO/`.
 - **Zero-Cloud Device Migration:** Easily transfer your private notes and attachments to a new phone or PC without using cloud services.
 - **1-Click Restore:** Seamlessly unpacks the vault archive, automatically remapping local file paths into the app storage.
 - **Quick UI Access:** Direct *Backup (.zip)* and *Restore (.zip)* actions integrated into the `LocalFragment` header banner and `Settings`.
 
-### ☁️ Dual Synchronization Architecture
+### Dual Synchronization Architecture
 1. **User-Owned Google Drive Sync (Primary)**:
    - Direct peer-to-peer cloud sync between Android and Windows using your own Google Drive.
    - Minimal permissions: uses restricted `drive.file` scope (AANO can only access its own `aano-notes.json` sync file).
@@ -66,13 +66,13 @@
    - Distributed low-latency SQLite synchronization powered by Cloudflare Workers and Cloudflare D1.
    - Official 6-digit Gmail OTP verification bridge via Google Apps Script.
 
-### ⚡ Super-Responsiveness Engine
+### Super-Responsiveness Engine
 - **Android In-Memory Cache:** Decrypted notes are cached in RAM (`memoryCache`) for instantaneous (0ms) folder filtering, tag extraction, and search queries.
 - **Zero-Stutter Mobile Typing:** Removed network sync from the typing auto-save loop; cloud sync executes cleanly upon closing the editor or app switching.
 - **Windows Zero-Latency Modal Dismissal:** Editor modal dismisses immediately on Save/Close (`0ms`); synchronization runs asynchronously in background threads.
 - **GPU Layer Acceleration & Search Debounce:** 120ms debounce prevents DOM thrashing during rapid typing; CSS GPU compositing (`transform: translateZ(0)`) provides smooth 60 FPS scrolling on integrated Intel graphics.
 
-### 🎨 Visual & Editor Experience
+### Visual & Editor Experience
 - **Emerald Luxury Palette:** Material 3 design centered on deep teal obsidian (`#004D40`) and emerald green (`#00796B`).
 - **12 Aesthetic Paper Themes & Custom Color Palette:**
   - Dynamic paper background shades: Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.
@@ -85,17 +85,17 @@
   - 🔤 Text Colors: Emerald, Blue, Crimson, Purple, and Obsidian.
   - Automatic bullet lists, Undo / Redo history, and real-time word counter.
 
-### 🗄️ Dedicated Archive & Batch Organization
+### Dedicated Archive & Batch Organization
 - **Dedicated Archive System:** Archive notes to declutter active lists while keeping folder categorization intact.
 - **Multi-Select Batch Actions:** Long-press (Android) or click "Select" (Windows) to batch archive, delete, or restore multiple notes in seconds.
 
-### 🛡️ AppLock & Privacy Shield
+### AppLock & Privacy Shield
 - Salted PBKDF2 PIN lock + Biometric authentication (Fingerprint / Face Unlock).
 - Android `FLAG_SECURE` prevents screenshots and hides previews in recent apps.
 
 ---
 
-## 📥 Download Official Releases
+## Download Official Releases
 
 Download pre-built, production-ready binaries directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
 
@@ -104,14 +104,14 @@ Download pre-built, production-ready binaries directly from [GitHub Releases](ht
 | **Android** | [`AANO-v1.1.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Compatible with Android 8.0+ (API 26–35) |
 | **Windows** | [`AANO-Setup-v1.1.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Standalone Inno Setup installer for Windows 10 & 11 |
 
-### 📲 Android Sideloading Instructions
+### Android Sideloading Instructions
 1. Download `AANO-v1.1.0-beta.1.apk` on your Android device.
 2. If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
 3. If Google Play Protect shows *"Unrecognized app"*, tap **More details** and then **Install anyway**. AANO is 100% open source, tracker-free, and contains zero advertising or telemetry code.
 
 ---
 
-## 🏗️ Repository Architecture
+## Repository Architecture
 
 ```text
 AANO/
@@ -139,7 +139,7 @@ AANO/
 
 ---
 
-## 🚀 Building & Running From Source
+## Building & Running From Source
 
 ### 1. Android App
 - Requirements: **Android Studio** (Hedgehog or newer), JDK 17+.
@@ -176,7 +176,7 @@ AANO features a multi-platform GitHub Actions pipeline (`.github/workflows/relea
 
 ---
 
-## 📄 License
+## License
 
 AANO is free and open-source software licensed under the **GNU General Public License v3.0** ([GPL-3.0](LICENSE)).  
 Copyright (C) 2026 Jam Amjad Rasheed.

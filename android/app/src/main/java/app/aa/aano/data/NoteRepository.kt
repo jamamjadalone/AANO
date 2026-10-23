@@ -7,6 +7,7 @@
 package app.aa.aano.data
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -387,7 +388,8 @@ class NoteRepository(private val context: Context) {
                 val f = File(audioPath)
                 if (f.exists() && f.isFile) f.delete()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w("AANO", "Suppressed cleanupMediaFiles exception: ${e.message}", e)
         }
     }
 
@@ -702,7 +704,9 @@ class NoteRepository(private val context: Context) {
                 val array = JSONArray()
                 notes.forEach { array.put(serializeNote(it)) }
                 notesFile.writeText(array.toString())
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w("AANO", "Suppressed writeNotes exception: ${e.message}", e)
+            }
         }
     }
 

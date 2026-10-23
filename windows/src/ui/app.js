@@ -631,7 +631,7 @@ async function refreshData() {
 
 function renderFolders(folders) {
   const container = document.getElementById("foldersList");
-  container.innerHTML = "";
+  container.replaceChildren();
 
   // Unique list ensuring defaults
   const fSet = new Set(["General", "Work", "Personal", ...folders]);
@@ -639,7 +639,7 @@ function renderFolders(folders) {
 
   // Also update Editor folder select
   const select = document.getElementById("editorFolderSelect");
-  select.innerHTML = "";
+  select.replaceChildren();
   sorted.forEach(f => {
     const opt = document.createElement("option");
     opt.value = f;
@@ -673,7 +673,7 @@ function renderFolders(folders) {
 function renderNotes() {
   const container = document.getElementById("notesContainer");
   const emptyState = document.getElementById("emptyState");
-  container.innerHTML = "";
+  container.replaceChildren();
 
   document.getElementById("allCount").innerText = allNotes.length;
   const archivedCountEl = document.getElementById("archivedCount");
@@ -827,7 +827,7 @@ function renderNotes() {
 // --------------------- Note Editor Modal ---------------------
 function renderColorPalette() {
   const container = document.getElementById("paletteDots");
-  container.innerHTML = "";
+  container.replaceChildren();
   PASTEL_COLORS.forEach((color, idx) => {
     const dot = document.createElement("div");
     const isMatched = (typeof editingColor === "number" && editingColor === idx);
@@ -964,7 +964,7 @@ function openEditor(note = null, defaultFolder = null) {
     setEditorMode(true);
   } else {
     titleInput.value = "";
-    contentArea.innerHTML = "";
+    contentArea.replaceChildren();
     editingColor = 0;
     editingPinned = false;
     folderSelect.value = defaultFolder || (currentFilter.startsWith("folder:") ? currentFilter.replace("folder:", "") : "General");

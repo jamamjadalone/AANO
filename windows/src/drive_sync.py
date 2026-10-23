@@ -12,6 +12,9 @@ import urllib.parse
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import sys
+import logging
+
+logger = logging.getLogger("AANO.DriveSync")
 
 def _load_credentials():
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +31,7 @@ def _load_credentials():
                 with open(p, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return data.get("client_id", ""), data.get("client_secret", "")
-            except Exception:
+            except (json.JSONDecodeError, OSError):
                 pass
     return "", ""
 
@@ -131,7 +134,7 @@ class GoogleDriveSync:
 
         try:
             server.server_close()
-        except Exception:
+        except OSError:
             pass
 
         code = OAuthCallbackHandler.auth_code
@@ -143,8 +146,8 @@ class GoogleDriveSync:
     def _run_server(self, server):
         try:
             server.handle_request()
-        except Exception:
-            pass
+        except (OSError, ValueError) as e:
+            logger.debug("Server request error: %s", e)
 
     def _exchange_code_for_tokens(self, code):
         data = urllib.parse.urlencode({
@@ -159,7 +162,8 @@ class GoogleDriveSync:
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 token_data = json.loads(resp.read().decode("utf-8"))
-        except Exception as e:
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("Token exchange failed: %s", e)
             return {"success": False, "error": f"Token exchange failed: {e}"}
 
         access_token = token_data.get("access_token")
@@ -195,15 +199,16 @@ class GoogleDriveSync:
                 user32.ShowWindow(hwnd, 9)  # SW_RESTORE
                 user32.SetForegroundWindow(hwnd)
                 user32.BringWindowToTop(hwnd)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Bring window to front: %s", e)
 
     def _fetch_user_info(self, access_token):
         req = urllib.request.Request(USERINFO_ENDPOINT, headers={"Authorization": f"Bearer {access_token}"})
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 return json.loads(resp.read().decode("utf-8"))
-        except Exception:
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("Failed to fetch user info: %s", e)
             return {}
 
     def get_valid_access_token(self):
@@ -237,8 +242,8 @@ class GoogleDriveSync:
                 cfg["google_token_expiry"] = int(time.time()) + expires_in
                 self.save_config(cfg)
                 return new_token
-        except Exception as e:
-            print(f"[AANO Drive] Token refresh failed: {e}")
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("Token refresh failed: %s", e)
             return None
 
     def logout(self):
@@ -262,8 +267,8 @@ class GoogleDriveSync:
                 res = json.loads(resp.read().decode("utf-8"))
                 files = res.get("files", [])
                 return files[0] if files else None
-        except Exception as e:
-            print(f"[AANO Drive] find_remote_file error: {e}")
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("find_remote_file error: %s", e)
             return None
 
     def sync_notes(self, local_notes):
@@ -285,8 +290,8 @@ class GoogleDriveSync:
                     remote_notes = json.loads(content)
                     if isinstance(remote_notes, dict) and "notes" in remote_notes:
                         remote_notes = remote_notes["notes"]
-            except Exception as e:
-                print(f"[AANO Drive] Download remote notes failed: {e}")
+            except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+                logger.warning("Download remote notes failed: %s", e)
 
         # Merge local and remote notes
         merged_notes = self._merge_notes(local_notes, remote_notes)
@@ -328,7 +333,8 @@ class GoogleDriveSync:
         try:
             with urllib.request.urlopen(req, timeout=25) as resp:
                 resp.read()
-        except Exception as e:
+        except (urllib.error.URLError, TimeoutError) as e:
+            logger.error("Drive upload failed: %s", e)
             return {"success": False, "error": f"Drive upload failed: {e}"}
 
         return {"success": True, "merged_notes": merged_notes, "count": len(merged_notes)}

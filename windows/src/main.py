@@ -5,10 +5,10 @@ import ctypes
 # Enable Windows Per-Monitor DPI Awareness (V2) to prevent blurry window scaling
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
+except (AttributeError, OSError):
     try:
         ctypes.windll.user32.SetProcessDPIAware()
-    except Exception:
+    except (AttributeError, OSError):
         pass
 
 import webview

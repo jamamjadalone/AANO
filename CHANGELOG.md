@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0-beta.1] - 2026-10-23
 
-### 🚀 Added
+### Added
 - **Interactive Image Crop & Transform Toolkit**:
   - **Precision Touch-Crop Overlay**: Crop attached images directly inside the app with interactive touch handles and corner controls.
   - **Aspect Ratio Presets**: 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
@@ -25,17 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Multi-Platform Release Automation**: Official GitHub Actions workflow for building Android Release APK (Ubuntu runner with JDK 17) and Windows Desktop Installer (Windows runner with Inno Setup LZMA compression).
   - **Automated Tagged Artifacts**: Push-to-release workflow with versioned asset publishing (`AANO-v1.1.0-beta.1.apk` and `AANO-Setup-v1.1.0-beta.1.exe`).
 
-### 🎨 Changed & Improved
+### Changed & Improved
 - Standardized release artifact naming with automated tag interpolation.
 - Upgraded local storage engine to immediately wipe unreferenced disk media on replace and removal.
 
-### 🐛 Fixed
+### Fixed
 - Resolved Android camera/gallery rotation orientation handling when attaching images.
 
 
 ## [1.0.1-beta] - 2026-10-22
 
-### 🚀 Added
+### Added
 - **Super-Responsiveness Engine (Zero-Lag Typing & Instant UI)**:
   - **Android In-Memory Note Cache**: Instantaneous (0ms) folder filtering, tag extraction, and search queries by caching decrypted notes in RAM and updating asynchronously on writes.
   - **Zero-Stutter Mobile Typing**: Removed network sync from the 800ms typing auto-save loop; cloud sync now executes cleanly upon closing the editor (`finish()`) or app switching (`onPause()`).
@@ -70,14 +70,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cloudflare Worker D1 schema auto-migration adding `archived INTEGER DEFAULT 0` column.
   - Full end-to-end cloud synchronization for custom 32-bit ARGB / Hex color codes and `archived` attribute.
 
-### 🎨 Changed & Improved
+### Changed & Improved
 - **Friendly Relative Timestamps**: Note cards now display conversational dates ("Today, 2:30 PM", "Yesterday, 11:15 AM", "22 Oct, 1:00 PM") across Android and Windows.
 - **Instant Title Auto-Focus**: Opening a new note automatically focuses the title input and triggers the keyboard.
 - Note cards dynamically reflect selected status with emerald border highlight and checkbox indicators.
 - Added protective modal confirmation dialogs for batch deletion.
 - Bumped Android `versionCode` to 2 and `versionName` to `1.0.1-beta`.
 
-### 🐛 Fixed
+### Fixed
 - **Android Hardware Back Button in Selection Mode**: Fixed bug where pressing hardware/gesture back in selection mode would close the app; it now cleanly clears selection first.
 - **Folder Count Inflation**: Fixed active folder badges counting archived notes in `NoteRepository.getFolderCounts()` and Windows desktop API.
 - **Polished Archive Cards**: Upgraded Android `item_archive` from bare LinearLayout to rounded `MaterialCardView` with folder badges and dynamic pastel backgrounds.
@@ -86,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-10-22
 
-### 🚀 Added
+### Added
 - **Cross-Platform Real-Time Sync**: Instant bi-directional cloud synchronization between Android and Windows Desktop powered by Cloudflare Workers and Cloudflare D1 distributed SQLite database.
 - **2.5s Foreground Sync Engine**: Active foreground polling engine on both mobile and PC that automatically synchronizes note creations, updates, and deletions within 2.5 seconds without manual refresh.
 - **Hardware-Backed AES-256 Encryption**: Notes and sensitive metadata are locally encrypted using AES-256-GCM cryptography on both Android and Windows clients.
@@ -97,18 +97,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cold-Start & Resume App Lock**: Biometric and 4-digit PIN security shield with `FLAG_SECURE` window protection preventing unauthorized screenshots and app switcher previews on Android.
 - **Modern Windows Inno Setup Installer**: Crisp, lightweight installer (`AANO-Setup.exe`) with multi-resolution per-monitor DPI awareness and desktop integration.
 
-### 🎨 Changed & Modernized
+### Changed & Modernized
 - **Complete Vector Icon Overhaul**: Replaced all legacy and emoji buttons with sleek, minimalist SVG / Material 3 vector icons (Feather & Lucide rounded stroke design) across Android and Windows.
 - **Native Custom Dialogs**: Replaced browser `confirm()`, `prompt()`, and `alert()` popups on Windows with 100% native blurred backdrop modals, eliminating browser URLs (`file:///...`) from all dialogs.
 - **Crisp Multi-Resolution App Icons**: Generated high-fidelity mipmap assets (`mdpi` through `xxxhdpi` on Android, 16px to 256px multi-frame `.ico` on Windows) for pristine clarity across 4K, high-DPI, and mobile displays.
 
-### 🐛 Fixed
+### Fixed
 - **Instant Cross-Device Delete Propagation**: Fixed deletion timestamps (`updatedAt = maxOf(now, existing + 1000L)`) ensuring server-side conflict resolution permanently accepts deletions and immediately removes deleted notes across all paired devices.
 - **Session Expiration & 401 Detection**: Resolved silent sync failures caused by password resets by adding automatic 401 token expiration detection and prompting the user with an Amber session warning.
 - **Direct Editor Delete Action**: Added an immediate delete action (`ic_trash`) inside the Android note editor top bar with confirmation dialog to allow deleting notes without exiting to the main list.
 - **Dex Merging & Daemon Contention**: Resolved Windows file-locking conflicts during automated release compilation.
 
-### 🛡️ Security
+### Security
 - **Cloudflare Edge Shield**: Rate limiting on API endpoints (IP-based brute-force defense on login and OTP generation).
 - **Single Database Integrity**: Verified identical D1 schema and Cloudflare Worker endpoints for mobile and desktop clients to guarantee cross-device data coherence.
 

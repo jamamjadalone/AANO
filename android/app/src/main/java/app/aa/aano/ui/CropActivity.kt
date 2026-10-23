@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -140,7 +141,7 @@ class CropActivity : AppCompatActivity() {
             // Optional purge of original if requested
             if (intent.getBooleanExtra(EXTRA_PURGE_ORIGINAL, false)) {
                 inputPath?.let { old ->
-                    try { File(old).delete() } catch (_: Exception) {}
+                    try { File(old).delete() } catch (e: Exception) { Log.w("AANO", "Failed to purge original image $old: ${e.message}") }
                 }
             }
 

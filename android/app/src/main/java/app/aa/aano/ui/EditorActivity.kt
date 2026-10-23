@@ -12,6 +12,7 @@ import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -159,7 +160,7 @@ class EditorActivity : AppCompatActivity() {
                 val oldPath = attachedImages[croppingIndex]
                 attachedImages[croppingIndex] = newPath
                 if (oldPath != newPath) {
-                    try { java.io.File(oldPath).delete() } catch (_: Exception) {}
+                    try { java.io.File(oldPath).delete() } catch (e: Exception) { Log.w("AANO", "Failed to delete old image $oldPath: ${e.message}") }
                 }
                 renderAttachedImages()
                 saveSilently()
@@ -178,7 +179,7 @@ class EditorActivity : AppCompatActivity() {
                 val oldPath = attachedImages[replacingIndex]
                 attachedImages[replacingIndex] = newPath
                 if (oldPath != newPath) {
-                    try { java.io.File(oldPath).delete() } catch (_: Exception) {}
+                    try { java.io.File(oldPath).delete() } catch (e: Exception) { Log.w("AANO", "Failed to delete old image $oldPath: ${e.message}") }
                 }
                 renderAttachedImages()
                 saveSilently()
@@ -758,7 +759,9 @@ class EditorActivity : AppCompatActivity() {
                     try {
                         val parsed = android.graphics.Color.parseColor(text)
                         updatePreview(parsed)
-                    } catch (_: Exception) {}
+                    } catch (e: IllegalArgumentException) {
+                        Log.d("AANO", "Invalid hex color $text: ${e.message}")
+                    }
                 }
             }
             override fun afterTextChanged(s: Editable?) {}
@@ -837,7 +840,7 @@ class EditorActivity : AppCompatActivity() {
             val isDark = binding.noteTitle.currentTextColor == 0xFFFFFFFF.toInt()
             val linkColor = if (isDark) 0xFF80D8FF.toInt() else ContextCompat.getColor(this, R.color.brand)
             binding.noteContent.setLinkTextColor(linkColor)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("AANO", "Linkify error: ${e.message}") }
     }
 
     inner class SmartTouchMovementMethod(private val onNonLinkTapped: (offset: Int) -> Unit) : LinkMovementMethod() {
@@ -979,7 +982,7 @@ class EditorActivity : AppCompatActivity() {
                 Toast.makeText(this@EditorActivity, "Note archived", Toast.LENGTH_SHORT).show()
                 if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                        try { cloudSyncManager.syncNow() } catch (_: Exception) {}
+                        try { cloudSyncManager.syncNow() } catch (e: Exception) { Log.w("AANO", "Background sync error: ${e.message}") }
                     }
                 }
                 finish()
@@ -1022,7 +1025,7 @@ class EditorActivity : AppCompatActivity() {
                     repository.delete(currentId)
                     if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
                         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                            try { cloudSyncManager.syncNow() } catch (_: Exception) {}
+                            try { cloudSyncManager.syncNow() } catch (e: Exception) { Log.w("AANO", "Background sync error: ${e.message}") }
                         }
                     }
                     finish()
@@ -1263,7 +1266,7 @@ class EditorActivity : AppCompatActivity() {
                 val decodeOpts = BitmapFactory.Options().apply { inSampleSize = scale }
                 val bmp = BitmapFactory.decodeFile(path, decodeOpts)
                 iv.setImageBitmap(bmp)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.w("AANO", "Decode thumbnail error $path: ${e.message}") }
 
             card.addView(iv)
             frame.addView(card)
@@ -1280,7 +1283,7 @@ class EditorActivity : AppCompatActivity() {
                 setPadding((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
                 setOnClickListener {
                     attachedImages.removeAt(index)
-                    try { File(path).delete() } catch (_: Exception) {}
+                    try { File(path).delete() } catch (e: Exception) { Log.w("AANO", "Delete image file error $path: ${e.message}") }
                     renderAttachedImages()
                     saveSilently()
                 }
@@ -1313,7 +1316,7 @@ class EditorActivity : AppCompatActivity() {
         try {
             val bmp = BitmapFactory.decodeFile(path)
             imageView.setImageBitmap(bmp)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("AANO", "Decode preview image error $path: ${e.message}") }
 
         root.addView(imageView)
 
@@ -1400,7 +1403,7 @@ class EditorActivity : AppCompatActivity() {
                         dialog.dismiss()
                         if (index in attachedImages.indices) {
                             attachedImages.removeAt(index)
-                            try { File(path).delete() } catch (_: Exception) {}
+                            try { File(path).delete() } catch (e: Exception) { Log.w("AANO", "Delete image file error $path: ${e.message}") }
                             renderAttachedImages()
                             saveSilently()
                         }
@@ -1442,7 +1445,7 @@ class EditorActivity : AppCompatActivity() {
                     }
                     3 -> {
                         attachedImages.removeAt(index)
-                        try { File(path).delete() } catch (_: Exception) {}
+                        try { File(path).delete() } catch (e: Exception) { Log.w("AANO", "Delete image file error $path: ${e.message}") }
                         renderAttachedImages()
                         saveSilently()
                     }
@@ -1514,7 +1517,7 @@ class EditorActivity : AppCompatActivity() {
         try {
             mediaRecorder?.stop()
             mediaRecorder?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("AANO", "MediaRecorder release error: ${e.message}") }
         mediaRecorder = null
         isRecording = false
         stopRecordingTimer()
@@ -1588,7 +1591,7 @@ class EditorActivity : AppCompatActivity() {
                 try {
                     mediaPlayer?.stop()
                     mediaPlayer?.release()
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.w("AANO", "MediaPlayer release error: ${e.message}") }
                 mediaPlayer = null
                 isPlayingVoice = false
 
@@ -1612,10 +1615,10 @@ class EditorActivity : AppCompatActivity() {
     override fun onDestroy() {
         try {
             mediaRecorder?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("AANO", "MediaRecorder release error: ${e.message}") }
         try {
             mediaPlayer?.release()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.w("AANO", "MediaPlayer release error: ${e.message}") }
         recordingTimerHandler.removeCallbacksAndMessages(null)
         saveHandler.removeCallbacksAndMessages(null)
         super.onDestroy()

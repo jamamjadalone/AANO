@@ -19,13 +19,16 @@ CONFIG_FILE = os.path.join(APPDATA_DIR, "config.json")
 BASE_URL = "https://aano-api.jamamjadalone.workers.dev"
 APP_KEY = "aano_shield_key_2026_pk_sec"
 
+import logging
+logger = logging.getLogger("AANO.Storage")
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Failed to load config: %s", e)
     return {
         "cloud_token": None,
         "cloud_email": None,
@@ -43,16 +46,16 @@ def save_config(cfg):
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, CONFIG_FILE)
-    except Exception as e:
-        print(f"[AANO Storage] save_config error: {e}")
+    except OSError as e:
+        logger.error("Failed to save config: %s", e)
 
 def load_notes():
     if os.path.exists(NOTES_FILE):
         try:
             with open(NOTES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning("Failed to load notes: %s", e)
     now = int(time.time() * 1000)
     welcome_notes = [
         {
@@ -80,8 +83,8 @@ def save_notes(notes):
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, NOTES_FILE)
-    except Exception as e:
-        print(f"[AANO Storage] save_notes error: {e}")
+    except OSError as e:
+        logger.error("Failed to save notes: %s", e)
 
 def post_json(endpoint, payload, token=None):
     url = f"{BASE_URL}{endpoint}"
@@ -102,9 +105,13 @@ def post_json(endpoint, payload, token=None):
         error_body = e.read().decode("utf-8")
         try:
             return json.loads(error_body)
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             return {"error": f"HTTP {e.code}: {e.reason}"}
+    except (urllib.error.URLError, TimeoutError) as e:
+        logger.warning("Network request failed: %s", e)
+        return {"error": str(e)}
     except Exception as e:
+        logger.exception("Unexpected error in post_json: %s", e)
         return {"error": str(e)}
 
 drive_sync_instance = GoogleDriveSync(load_config, save_config)

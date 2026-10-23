@@ -159,6 +159,12 @@ body {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.15s;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-item:hover {
@@ -766,16 +772,24 @@ body {
   overflow: hidden;
 }
 
-.dropdown-content a {
+.dropdown-content a,
+.dropdown-content .dropdown-item {
   color: var(--on-surface);
   padding: 8px 12px;
   text-decoration: none;
   display: flex;
   align-items: center;
   font-size: 12px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.dropdown-content a:hover {
+.dropdown-content a:hover,
+.dropdown-content .dropdown-item:hover {
   background-color: #F1F5F9;
 }
 
