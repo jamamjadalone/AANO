@@ -92,17 +92,17 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
       width: 100%;
       background: var(--brand);
       color: #FFFFFF;
       border: none;
       border-radius: 10px;
-      padding: 12px 20px;
-      font-size: 14px;
+      padding: 13px 20px;
+      font-size: 14.5px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      transition: all 0.2s;
     }
     .btn-close:hover {
       background: #00897B;
@@ -110,10 +110,20 @@
     .btn-close:active {
       transform: scale(0.98);
     }
-    .countdown-note {
-      font-size: 12.5px;
+    .kbd-tag {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 2px 7px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .note-info {
+      font-size: 13px;
       color: #64748B;
-      margin-top: 14px;
+      margin-top: 16px;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -126,22 +136,48 @@
     </div>
     <div class="badge">Google Drive Sync</div>
     <h1>Account Connected!</h1>
-    <p>Your Google Account has been securely linked to AANO Notes. You can safely close this tab and return to the application.</p>
-    <button class="btn-close" onclick="window.close()">Close Window</button>
-    <div class="countdown-note" id="countdown">Closing automatically in <span id="sec">3</span>s...</div>
+    <p>Your Google Account has been securely linked to AANO Notes. You can now close this browser tab and return to the application.</p>
+    
+    <button class="btn-close" id="btnClose" onclick="attemptClose()">
+      <span>Close This Tab</span>
+      <span class="kbd-tag">Ctrl + W</span>
+    </button>
+    
+    <div class="note-info" id="noteInfo">
+      All set! AANO Notes desktop window is now active.
+    </div>
   </div>
 
   <script>
-    let secondsLeft = 3;
-    const secEl = document.getElementById("sec");
-    const interval = setInterval(() => {
-      secondsLeft--;
-      if (secEl) secEl.innerText = secondsLeft;
-      if (secondsLeft <= 0) {
-        clearInterval(interval);
+    function attemptClose() {
+      // Try modern window close techniques
+      try {
+        window.open('', '_self', '');
         window.close();
-      }
-    }, 1000);
+      } catch (e) {}
+
+      // If browser security blocks script-initiated close (standard in Chrome/Edge)
+      setTimeout(function() {
+        var btn = document.getElementById("btnClose");
+        var note = document.getElementById("noteInfo");
+        if (btn) {
+          btn.innerHTML = '<span>Press <strong>Ctrl + W</strong> to Close Tab</span>';
+          btn.style.background = '#1E3A34';
+          btn.style.borderColor = '#00796B';
+        }
+        if (note) {
+          note.innerHTML = 'Browser security requires tabs to be closed with <kbd style="background:#334155;padding:2px 6px;border-radius:4px;color:#fff;font-size:11px;">Ctrl + W</kbd>.<br>Your AANO desktop app is ready to use!';
+          note.style.color = '#94A3B8';
+        }
+      }, 200);
+    }
+
+    // Try auto-close after 1.5 seconds if permitted by browser
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        attemptClose();
+      }, 1500);
+    });
   </script>
 </body>
 </html>

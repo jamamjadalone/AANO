@@ -181,7 +181,22 @@ class GoogleDriveSync:
         cfg["google_connected"] = True
         self.save_config(cfg)
 
+        # Automatically bring AANO Notes window to front so user doesn't need to manually switch
+        self._bring_app_to_front()
+
         return {"success": True, "email": email, "name": name}
+
+    def _bring_app_to_front(self):
+        try:
+            import ctypes
+            user32 = ctypes.windll.user32
+            hwnd = user32.FindWindowW(None, "AANO Notes")
+            if hwnd:
+                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                user32.SetForegroundWindow(hwnd)
+                user32.BringWindowToTop(hwnd)
+        except Exception:
+            pass
 
     def _fetch_user_info(self, access_token):
         req = urllib.request.Request(USERINFO_ENDPOINT, headers={"Authorization": f"Bearer {access_token}"})
