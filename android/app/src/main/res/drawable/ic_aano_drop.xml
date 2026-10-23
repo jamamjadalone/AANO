@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Wi-Fi radar arc top + Lightning drop bolt center -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,3C7.03,3 2.6,5.1 0,8.44L1.8,9.9C4.08,7.01 7.82,5.2 12,5.2C16.18,5.2 19.92,7.01 22.2,9.9L24,8.44C21.4,5.1 16.97,3 12,3ZM12,8C8.54,8 5.46,9.46 3.65,11.8L5.45,13.25C6.91,11.36 9.32,10.2 12,10.2C14.68,10.2 17.09,11.36 18.55,13.25L20.35,11.8C18.54,9.46 15.46,8 12,8ZM11,13L7,19H12L11,23L17,16H12L13,13H11Z"/>
+</vector>

@@ -4,6 +4,15 @@
 
 package app.aa.aano.ui
 
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import app.aa.aano.drop.AanoDropManager
+import app.aa.aano.drop.QrCode
+
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -82,6 +91,49 @@ class LocalFragment : Fragment() {
             restoreVaultLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
         }
 
+        // Toolbar AANO Drop Wi-Fi Radar icon
+        binding.toolbar.inflateMenu(R.menu.menu_local)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.action_drop_hub) {
+                showDropHubDialog()
+                true
+            } else false
+        }
+
+        // Multi-select listener
+        adapter.onSelectionChanged = { count ->
+            if (count > 0) {
+                binding.cardSelectionBar.visibility = View.VISIBLE
+                binding.tvSelectionCount.text = "$count selected"
+                binding.fabAddLocal.hide()
+            } else {
+                binding.cardSelectionBar.visibility = View.GONE
+                binding.fabAddLocal.show()
+            }
+        }
+
+        binding.btnCancelSelection.setOnClickListener {
+            adapter.clearSelection()
+            binding.cardSelectionBar.visibility = View.GONE
+            binding.fabAddLocal.show()
+        }
+
+        binding.btnDropSelected.setOnClickListener {
+            val selectedIds = adapter.getSelectedIds()
+            if (selectedIds.isEmpty()) return@setOnClickListener
+            lifecycleScope.launch {
+                val notes = repository.getLocalNotes().filter { it.id in selectedIds }
+                if (notes.isNotEmpty()) {
+                    val target = prefs.lastDropIp
+                    if (target.isBlank()) {
+                        showDropHubDialog(notesToDrop = notes)
+                    } else {
+                        performBatchDrop(target, "", notes)
+                    }
+                }
+            }
+        }
+
         loadLocalNotes()
     }
 
@@ -113,7 +165,12 @@ class LocalFragment : Fragment() {
     }
 
     private fun showLocalNoteActions(note: Note) {
+        val targetDevice = prefs.lastDropIp
+        val dropLabel = if (targetDevice.isNotBlank()) "⚡ Send to Device ($targetDevice)" else "⚡ Connect & Drop (AANO Drop)"
+
         val items = arrayOf(
+            dropLabel,
+            "☑️ Multi-Select Notes",
             if (note.pinned) "📌 Unpin Note" else "📌 Pin to Top",
             "☁️ Move to Cloud Notes",
             "🎨 Change Color",
@@ -124,18 +181,29 @@ class LocalFragment : Fragment() {
             .setTitle(note.title.ifBlank { "(No title)" })
             .setItems(items) { _, which ->
                 when (which) {
-                    0 -> lifecycleScope.launch {
+                    0 -> {
+                        if (targetDevice.isNotBlank()) {
+                            performBatchDrop(targetDevice, "", listOf(note))
+                        } else {
+                            showDropHubDialog(notesToDrop = listOf(note))
+                        }
+                    }
+                    1 -> {
+                        adapter.isSelectionMode = true
+                        adapter.toggleSelection(note.id)
+                    }
+                    2 -> lifecycleScope.launch {
                         repository.togglePin(note.id)
                         loadLocalNotes()
                     }
-                    1 -> lifecycleScope.launch {
+                    3 -> lifecycleScope.launch {
                         repository.toggleLocal(note.id)
                         loadLocalNotes()
                         Toast.makeText(requireContext(), "Moved to Cloud Notes", Toast.LENGTH_SHORT).show()
                     }
-                    2 -> showChangeColorDialog(note)
-                    3 -> shareNote(note)
-                    4 -> {
+                    4 -> showChangeColorDialog(note)
+                    5 -> shareNote(note)
+                    6 -> {
                         AlertDialog.Builder(requireContext())
                             .setTitle("Delete Local Note")
                             .setMessage("Permanently delete this local note and attached photos/voice memos from this device? This action cannot be undone.")
@@ -252,5 +320,125 @@ class LocalFragment : Fragment() {
         super.onDestroyView()
         loadJob?.cancel()
         _binding = null
+    }
+
+    private fun showDropHubDialog(notesToDrop: List<Note>? = null) {
+        val dropMgr = AanoDropManager.getInstance(requireContext())
+        val myIp = dropMgr.getLocalWifiIp()
+        val myPin = dropMgr.pin
+        val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
+
+        val inputLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 16, 40, 10)
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+        }
+
+        val qrBmp = try {
+            QrCode.encodeText(myUri, QrCode.Ecc.MEDIUM).toBitmap(360)
+        } catch (_: Exception) { null }
+
+        if (qrBmp != null) {
+            val ivQr = ImageView(requireContext()).apply {
+                setImageBitmap(qrBmp)
+                layoutParams = LinearLayout.LayoutParams(360, 360).apply {
+                    setMargins(0, 0, 0, 12)
+                }
+                setBackgroundColor(android.graphics.Color.WHITE)
+                setPadding(12, 12, 12, 12)
+            }
+            inputLayout.addView(ivQr)
+        }
+
+        val tvInfo = TextView(requireContext()).apply {
+            text = "📷 Scan with another phone or PC\n📡 This Device: $myIp:8766 | PIN: $myPin"
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 14)
+        }
+
+        val btnScanCamera = com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "📷 Scan PC / Phone QR"
+            setOnClickListener {
+                try {
+                    val lensIntent = Intent(Intent.ACTION_VIEW, Uri.parse("googlelens://v1/camera"))
+                    startActivity(lensIntent)
+                } catch (_: Exception) {
+                    try {
+                        val camIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
+                        startActivity(camIntent)
+                    } catch (_: Exception) {
+                        Toast.makeText(requireContext(), "Point camera at the other screen QR code!", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+        val etIp = EditText(requireContext()).apply {
+            hint = "Target IP (e.g. 192.168.1.100 or :8765)"
+            setText(prefs.lastDropIp)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val etPin = EditText(requireContext()).apply {
+            hint = "Target 6-Digit PIN (optional)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        inputLayout.addView(tvInfo)
+        inputLayout.addView(btnScanCamera)
+        inputLayout.addView(etIp)
+        inputLayout.addView(etPin)
+
+        val dialogTitle = if (notesToDrop != null) "⚡ Drop ${notesToDrop.size} Note(s)" else "⚡ AANO Drop & Wi-Fi Pairing"
+        val positiveBtnText = if (notesToDrop != null) "Send Now" else "Save & Connect"
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(dialogTitle)
+            .setMessage("Direct Wi-Fi P2P connection (Zero internet data).")
+            .setView(inputLayout)
+            .setPositiveButton(positiveBtnText) { _, _ ->
+                val ip = etIp.text.toString().trim()
+                val pin = etPin.text.toString().trim()
+                if (ip.isNotBlank()) {
+                    prefs.lastDropIp = ip
+                    if (notesToDrop != null) {
+                        performBatchDrop(ip, pin, notesToDrop)
+                    } else {
+                        Toast.makeText(requireContext(), "Connected to $ip", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Please enter or scan target IP", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun performBatchDrop(targetIp: String, pin: String, notesToSend: List<Note>) {
+        Toast.makeText(requireContext(), "Dropping ${notesToSend.size} note(s) to $targetIp...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val res = AanoDropManager.getInstance(requireContext()).sendDropToDevice(
+                targetIp = targetIp,
+                targetPort = 8765,
+                notes = notesToSend,
+                targetPin = pin.ifBlank { null }
+            )
+            res.onSuccess {
+                Toast.makeText(requireContext(), "⚡ Dropped ${notesToSend.size} note(s) successfully!", Toast.LENGTH_LONG).show()
+                adapter.clearSelection()
+                binding.cardSelectionBar.visibility = View.GONE
+                binding.fabAddLocal.show()
+            }.onFailure { e ->
+                Toast.makeText(requireContext(), "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 }

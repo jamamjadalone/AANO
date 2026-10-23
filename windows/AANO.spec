@@ -31,7 +31,7 @@ a = Analysis(
         'sqlite3',
     ],
     noarchive=False,
-    optimize=2,
+    optimize=0,
 )
 pyz = PYZ(a.pure)
 
