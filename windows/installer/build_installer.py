@@ -17,22 +17,40 @@ def find_iscc():
             return c
     return None
 
+def get_app_version(project_dir):
+    repo_root = os.path.dirname(project_dir)
+    version_file = os.path.join(repo_root, "VERSION")
+    if os.path.exists(version_file):
+        with open(version_file, "r", encoding="utf-8") as f:
+            v = f.read().strip()
+            if v:
+                return v
+    iss_file = os.path.join(project_dir, "installer", "aano.iss")
+    if os.path.exists(iss_file):
+        with open(iss_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip().startswith("#define MyAppVersion"):
+                    return line.split('"')[1]
+    return "1.0.1-beta"
+
 def build_with_inno(iscc_path, iss_path, project_dir):
+    version = get_app_version(project_dir)
+    output_filename = f"AANO-Setup-v{version}.exe"
     print(f"[Inno Setup] Using compiler: {iscc_path}")
-    print(f"[Inno Setup] Compiling {iss_path} with LZMA ultra compression...")
+    print(f"[Inno Setup] Compiling {iss_path} for version {version} with LZMA ultra compression...")
     subprocess.check_call([iscc_path, iss_path])
     
     installer_dir = os.path.join(project_dir, "dist", "Installer")
-    output_exe = os.path.join(installer_dir, "AANO-Setup-v1.0.1-beta.exe")
+    output_exe = os.path.join(installer_dir, output_filename)
     if os.path.exists(output_exe):
         size_mb = os.path.getsize(output_exe) / (1024 * 1024)
         print(f"[Inno Setup] Build SUCCESS! Output: {output_exe} ({size_mb:.2f} MB)")
         
-        # Mirror to releases/v1.0.1-beta/
+        # Mirror to releases/v<version>/
         repo_root = os.path.dirname(project_dir)
-        releases_dir = os.path.join(repo_root, "releases", "v1.0.1-beta")
+        releases_dir = os.path.join(repo_root, "releases", f"v{version}")
         os.makedirs(releases_dir, exist_ok=True)
-        dest_exe = os.path.join(releases_dir, "AANO-Setup-v1.0.1-beta.exe")
+        dest_exe = os.path.join(releases_dir, output_filename)
         shutil.copy2(output_exe, dest_exe)
         print(f"[Inno Setup] Synced to releases: {dest_exe}")
         return True
