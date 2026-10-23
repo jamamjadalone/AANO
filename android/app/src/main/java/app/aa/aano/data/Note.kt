@@ -24,7 +24,8 @@ data class Note(
     val isLocal: Boolean = false,
     val images: List<String> = emptyList(),
     val audioUri: String? = null,
-    val audioDuration: Long = 0L
+    val audioDuration: Long = 0L,
+    val purged: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -44,6 +45,7 @@ data class Note(
         put("images", JSONArray(images))
         if (audioUri != null) put("audioUri", audioUri)
         put("audioDuration", audioDuration)
+        put("purged", purged)
     }
 
     companion object {
@@ -70,7 +72,8 @@ data class Note(
                 (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
             audioUri = if (obj.has("audioUri") && !obj.isNull("audioUri")) obj.optString("audioUri") else null,
-            audioDuration = obj.optLong("audioDuration", 0L)
+            audioDuration = obj.optLong("audioDuration", 0L),
+            purged = obj.optBoolean("purged", false)
         )
     }
 }

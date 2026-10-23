@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1-beta] - 2026-10-22
 
 ### 🚀 Added
+- **Hardened Trash & Tombstone Sync Protocol (Zero Ghost Resurrections)**:
+  - **Tombstone Sync (`purged: true`)**: Permanent deletion ("Delete Forever" or "Empty Trash") records a lightweight tombstone with wiped content/media, ensuring other synced devices permanently drop the note rather than resurrecting it back to Google Drive.
+  - **Multimedia Storage Cleanup**: Permanently purging notes physically deletes all associated attached photos (`filesDir/media/images/`) and audio recordings (`filesDir/media/audio/`) from device disk storage, eliminating orphaned media leaks.
+  - **Cross-Platform Auto-Purge Parity**: Android and Windows both auto-purge expired trash and tombstones older than 30 days.
+  - **Windows Immediate Cloud Auto-Sync**: Permanent delete and empty trash actions immediately trigger background Google Drive sync.
+  - **Serialization Integrity**: Fully verified local notes and media fields (`isLocal`, `images`, `audioUri`, `audioDuration`, `purged`) are persisted across all app restarts.
 - **Custom Color Picker & 12 Aesthetic Shades ("Apni Marzi")**:
   - **Custom Color Palette Button (`🎨`)**: Pick any color freely on Android and Windows with live Hex input (`#RRGGBB`) and a 20-color swatch palette grid.
   - **Curated 12 Aesthetic Shades**: Expanded palette to 12 modern pastel and muted paper tones including Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.

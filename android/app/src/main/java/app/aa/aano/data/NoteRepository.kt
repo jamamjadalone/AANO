@@ -148,7 +148,7 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getTrashed(): List<Note> = withContext(Dispatchers.IO) {
-        readNotes().filter { it.deleted }.sortedByDescending { it.deletedAt }
+        readNotes().filter { it.deleted && !it.purged }.sortedByDescending { it.deletedAt }
     }
 
     suspend fun create(
@@ -356,10 +356,80 @@ class NoteRepository(private val context: Context) {
         }
     }
 
+    private fun cleanupMediaFiles(note: Note) {
+        try {
+            for (imgPath in note.images) {
+                val f = File(imgPath)
+                if (f.exists() && f.isFile) f.delete()
+            }
+            note.audioUri?.let { uriStr ->
+                val audioPath = if (uriStr.startsWith("file://")) uriStr.removePrefix("file://") else uriStr
+                val f = File(audioPath)
+                if (f.exists() && f.isFile) f.delete()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     suspend fun purge(id: String) {
         withContext(Dispatchers.IO) {
-            writeNotes(readNotes().filterNot { it.id == id })
+            val notes = readNotes().toMutableList()
+            val index = notes.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val note = notes[index]
+                cleanupMediaFiles(note)
+                if (note.isLocal) {
+                    notes.removeAt(index)
+                } else {
+                    val now = maxOf(System.currentTimeMillis(), note.updatedAt + 1000L)
+                    notes[index] = note.copy(
+                        title = "",
+                        content = "",
+                        images = emptyList(),
+                        audioUri = null,
+                        audioDuration = 0L,
+                        deleted = true,
+                        purged = true,
+                        deletedAt = if (note.deletedAt > 0) note.deletedAt else now,
+                        updatedAt = now
+                    )
+                }
+                writeNotes(notes)
+            }
             NoteReminderReceiver.cancel(context, id)
+        }
+    }
+
+    suspend fun emptyTrash() {
+        withContext(Dispatchers.IO) {
+            val notes = readNotes().toMutableList()
+            val now = System.currentTimeMillis()
+            val updated = mutableListOf<Note>()
+            for (note in notes) {
+                if (note.deleted && !note.purged) {
+                    cleanupMediaFiles(note)
+                    NoteReminderReceiver.cancel(context, note.id)
+                    if (!note.isLocal) {
+                        val stamp = maxOf(now, note.updatedAt + 1000L)
+                        updated.add(
+                            note.copy(
+                                title = "",
+                                content = "",
+                                images = emptyList(),
+                                audioUri = null,
+                                audioDuration = 0L,
+                                deleted = true,
+                                purged = true,
+                                deletedAt = if (note.deletedAt > 0) note.deletedAt else stamp,
+                                updatedAt = stamp
+                            )
+                        )
+                    }
+                } else {
+                    updated.add(note)
+                }
+            }
+            writeNotes(updated)
         }
     }
 
@@ -367,9 +437,17 @@ class NoteRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             val cutoff = System.currentTimeMillis() - maxAgeMs
             val all = readNotes()
-            all.filter { it.deleted && it.deletedAt > 0 && it.deletedAt < cutoff }
-                .forEach { NoteReminderReceiver.cancel(context, it.id) }
-            writeNotes(all.filterNot { it.deleted && it.deletedAt > 0 && it.deletedAt < cutoff })
+            val remaining = mutableListOf<Note>()
+            for (note in all) {
+                val isExpired = (note.deleted || note.purged) && note.deletedAt > 0 && note.deletedAt < cutoff
+                if (isExpired) {
+                    cleanupMediaFiles(note)
+                    NoteReminderReceiver.cancel(context, note.id)
+                } else {
+                    remaining.add(note)
+                }
+            }
+            writeNotes(remaining)
         }
     }
 
@@ -414,6 +492,7 @@ class NoteRepository(private val context: Context) {
         put("tags", JSONArray(note.tags))
         put("reminderAt", note.reminderAt)
         put("archived", note.archived)
+        put("purged", note.purged)
         put("enc", false)
     }
 
@@ -436,6 +515,27 @@ class NoteRepository(private val context: Context) {
             val existing = byId[note.id]
             if (existing != null && existing.isLocal) {
                 // Local-only note must never be overwritten by remote data
+                return@forEach
+            }
+            val isPurged = note.purged || (existing != null && existing.purged)
+            if (isPurged) {
+                if (existing != null && !existing.purged) {
+                    cleanupMediaFiles(existing)
+                }
+                val delAt = maxOf(existing?.deletedAt ?: 0L, note.deletedAt, note.updatedAt)
+                val upAt = maxOf(existing?.updatedAt ?: 0L, note.updatedAt)
+                byId[note.id] = (existing ?: note).copy(
+                    title = "",
+                    content = "",
+                    images = emptyList(),
+                    audioUri = null,
+                    audioDuration = 0L,
+                    deleted = true,
+                    purged = true,
+                    deletedAt = delAt,
+                    updatedAt = upAt,
+                    isLocal = false
+                )
                 return@forEach
             }
             when {
@@ -520,6 +620,12 @@ class NoteRepository(private val context: Context) {
                 }
             } else raw
         }
+        val rawImages = obj.optJSONArray("images")
+        val imagesList = if (rawImages != null) {
+            (0 until rawImages.length()).map { rawImages.getString(it) }
+        } else emptyList()
+        val audioUriStr = if (obj.has("audioUri") && !obj.isNull("audioUri")) obj.optString("audioUri") else null
+
         return Note(
             id = obj.getString("id"),
             title = field("title"),
@@ -538,7 +644,12 @@ class NoteRepository(private val context: Context) {
                 }
             } ?: emptyList(),
             reminderAt = obj.optLong("reminderAt", 0),
-            archived = obj.optBoolean("archived", false)
+            archived = obj.optBoolean("archived", false),
+            isLocal = obj.optBoolean("isLocal", false),
+            images = imagesList,
+            audioUri = audioUriStr,
+            audioDuration = obj.optLong("audioDuration", 0L),
+            purged = obj.optBoolean("purged", false)
         )
     }
 
@@ -562,6 +673,11 @@ class NoteRepository(private val context: Context) {
         put("tags", JSONArray(note.tags.map { cipher.encrypt(it) }))
         put("reminderAt", note.reminderAt)
         put("archived", note.archived)
+        put("isLocal", note.isLocal)
+        put("images", JSONArray(note.images))
+        if (note.audioUri != null) put("audioUri", note.audioUri)
+        put("audioDuration", note.audioDuration)
+        put("purged", note.purged)
         put("enc", true)
     }
 }

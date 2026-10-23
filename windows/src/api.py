@@ -32,8 +32,26 @@ class DesktopApi:
     def __init__(self):
         self._last_url = ""
         self._last_open_time = 0.0
+        self._purge_expired_trash()
         # Trigger background sync on startup if logged in
         self._async_auto_sync()
+
+    def _purge_expired_trash(self, max_age_days=30):
+        try:
+            cutoff = int(time.time() * 1000) - (max_age_days * 24 * 60 * 60 * 1000)
+            notes = storage.load_notes()
+            changed = False
+            remaining = []
+            for n in notes:
+                is_expired = (n.get("deleted", False) or n.get("purged", False)) and (n.get("deletedAt", 0) > 0) and (n.get("deletedAt", 0) < cutoff)
+                if is_expired:
+                    changed = True
+                else:
+                    remaining.append(n)
+            if changed:
+                storage.save_notes(remaining)
+        except Exception:
+            pass
 
     def _async_auto_sync(self):
         cfg = storage.load_config()
@@ -50,7 +68,7 @@ class DesktopApi:
 
     def get_trashed_notes(self):
         notes = storage.load_notes()
-        return [n for n in notes if n.get("deleted", False)]
+        return [n for n in notes if n.get("deleted", False) and not n.get("purged", False)]
 
     def restore_note(self, note_id):
         notes = storage.load_notes()
@@ -60,6 +78,7 @@ class DesktopApi:
                 now = max(now, n.get("updatedAt", 0) + 1000)
                 n["deleted"] = False
                 n["deletedAt"] = 0
+                n["purged"] = False
                 n["updatedAt"] = now
                 break
         storage.save_notes(notes)
@@ -68,14 +87,52 @@ class DesktopApi:
 
     def permanent_delete_note(self, note_id):
         notes = storage.load_notes()
-        notes = [n for n in notes if n["id"] != note_id]
-        storage.save_notes(notes)
+        now = int(time.time() * 1000)
+        updated = []
+        for n in notes:
+            if n["id"] == note_id:
+                if n.get("isLocal", False):
+                    continue  # Local-only: drop immediately
+                else:
+                    stamp = max(now, n.get("updatedAt", 0) + 1000)
+                    n["title"] = ""
+                    n["content"] = ""
+                    n["images"] = []
+                    n["audioUri"] = None
+                    n["deleted"] = True
+                    n["purged"] = True
+                    n["deletedAt"] = n.get("deletedAt") or stamp
+                    n["updatedAt"] = stamp
+                    updated.append(n)
+            else:
+                updated.append(n)
+        storage.save_notes(updated)
+        self._async_auto_sync()
         return {"success": True}
 
     def empty_trash(self):
         notes = storage.load_notes()
-        notes = [n for n in notes if not n.get("deleted", False)]
-        storage.save_notes(notes)
+        now = int(time.time() * 1000)
+        updated = []
+        for n in notes:
+            if n.get("deleted", False) and not n.get("purged", False):
+                if n.get("isLocal", False):
+                    continue  # Local notes dropped
+                else:
+                    stamp = max(now, n.get("updatedAt", 0) + 1000)
+                    n["title"] = ""
+                    n["content"] = ""
+                    n["images"] = []
+                    n["audioUri"] = None
+                    n["deleted"] = True
+                    n["purged"] = True
+                    n["deletedAt"] = n.get("deletedAt") or stamp
+                    n["updatedAt"] = stamp
+                    updated.append(n)
+            else:
+                updated.append(n)
+        storage.save_notes(updated)
+        self._async_auto_sync()
         return {"success": True}
 
     def get_all_folders(self):

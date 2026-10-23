@@ -341,13 +341,32 @@ class GoogleDriveSync:
             existing = local_map.get(rid)
             if existing and existing.get("isLocal"):
                 continue
+
+            rn_updated = rn.get("updatedAt", 0)
+            ex_updated = existing.get("updatedAt", 0) if existing else 0
+            is_purged = bool(rn.get("purged", False) or (existing and existing.get("purged", False)))
+
+            if is_purged:
+                del_at = max(existing.get("deletedAt", 0) if existing else 0, rn.get("deletedAt", 0), rn_updated, ex_updated)
+                up_at = max(rn_updated, ex_updated)
+                base = dict(existing if existing else rn)
+                base["title"] = ""
+                base["content"] = ""
+                base["images"] = []
+                base["audioUri"] = None
+                base["deleted"] = True
+                base["purged"] = True
+                base["deletedAt"] = del_at
+                base["updatedAt"] = up_at
+                base["isLocal"] = False
+                local_map[rid] = base
+                continue
+
             if not existing:
                 local_map[rid] = rn
             else:
                 is_deleted = bool(existing.get("deleted", False) or rn.get("deleted", False))
                 is_archived = bool(existing.get("archived", False) or rn.get("archived", False))
-                rn_updated = rn.get("updatedAt", 0)
-                ex_updated = existing.get("updatedAt", 0)
 
                 if rn_updated >= ex_updated:
                     merged = dict(rn)

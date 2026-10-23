@@ -54,6 +54,7 @@ class TrashActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repository.restore(note.id)
             loadTrash()
+            triggerBackgroundSync()
         }
     }
 
@@ -65,6 +66,7 @@ class TrashActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     repository.purge(note.id)
                     loadTrash()
+                    triggerBackgroundSync()
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -77,11 +79,29 @@ class TrashActivity : AppCompatActivity() {
             .setMessage(R.string.empty_trash_confirm)
             .setPositiveButton(R.string.empty_trash) { _, _ ->
                 lifecycleScope.launch {
-                    repository.getTrashed().forEach { repository.purge(it.id) }
+                    repository.emptyTrash()
                     loadTrash()
+                    triggerBackgroundSync()
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun triggerBackgroundSync() {
+        val prefs = app.aa.aano.data.Prefs(this)
+        if (prefs.autoSync && com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(this) != null) {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val syncManager = app.aa.aano.net.DriveSyncManager(
+                        this@TrashActivity,
+                        repository,
+                        app.aa.aano.data.TaskRepository(this@TrashActivity)
+                    )
+                    syncManager.pushToDrive()
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 }
