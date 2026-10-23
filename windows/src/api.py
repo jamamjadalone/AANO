@@ -11,6 +11,8 @@ import shutil
 import threading
 import logging
 import storage
+import aano_drop_server
+import aano_drop_client
 
 logger = logging.getLogger("AANO.API")
 
@@ -41,6 +43,9 @@ class DesktopApi:
         self._purge_expired_trash()
         # Trigger background sync on startup if logged in
         self._async_auto_sync()
+        # Start AANO Drop Wi-Fi Receiver Daemon on port 8765
+        self._drop_server = aano_drop_server.AanoDropServer(on_receive_callback=self._on_drop_received)
+        self._drop_server.start()
 
     def _purge_expired_trash(self, max_age_days=30):
         try:
@@ -612,3 +617,139 @@ class DesktopApi:
             logger.warning("delete_image_file error: %s", e)
             return {"success": False, "error": str(e)}
 
+
+    def _on_drop_received(self, notes_count, images_count):
+        try:
+            import winsound
+            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+        except Exception:
+            pass
+        try:
+            import webview
+            if webview.windows:
+                w = webview.windows[0]
+                w.evaluate_js(f"window.onDropReceived && window.onDropReceived({notes_count}, {images_count});")
+        except Exception as e:
+            logger.debug("Failed to evaluate onDropReceived in webview: %s", e)
+
+    def get_drop_info(self):
+        if not self._drop_server:
+            self._drop_server = aano_drop_server.AanoDropServer(on_receive_callback=self._on_drop_received)
+            self._drop_server.start()
+        return self._drop_server.get_info()
+
+    def send_drop_to_device(self, target_ip, target_port=8766, note_ids=None, pin=None):
+        try:
+            all_notes = storage.load_notes()
+            if note_ids:
+                id_set = set(note_ids)
+                selected_notes = [n for n in all_notes if n.get("id") in id_set]
+            else:
+                selected_notes = [n for n in all_notes if not n.get("deleted", False)]
+
+            if not selected_notes:
+                return {"success": False, "error": "No notes found to drop"}
+
+            return aano_drop_client.send_drop_to_device(
+                target_ip=target_ip,
+                target_port=int(target_port or 8766),
+                notes=selected_notes,
+                pin=pin
+            )
+        except Exception as e:
+            logger.warning("send_drop_to_device error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def export_note_markdown(self, note_id):
+        try:
+            notes = storage.load_notes()
+            target = next((n for n in notes if n.get("id") == note_id), None)
+            if not target:
+                return {"success": False, "error": "Note not found"}
+
+            title = target.get("title", "Untitled Note")
+            clean_title = "".join(c for c in title if c.isalnum() or c in " _-").strip() or "Note"
+            default_fn = f"{clean_title}.md"
+
+            save_paths = self._choose_files_dialog(
+                save=True,
+                save_filename=default_fn,
+                file_types=('Markdown Files (*.md)', 'All files (*.*)')
+            )
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest = save_paths[0]
+            # Convert basic HTML to clean markdown text
+            content = target.get("content", "")
+            plain = content.replace("<br>", "\n").replace("</div>", "\n").replace("</p>", "\n\n")
+            import re
+            plain = re.sub(r'<[^>]+>', '', plain)
+
+            md_text = f"# {title}\n\n"
+            folder = target.get("folder", "General")
+            md_text += f"> **Folder:** {folder} | **Updated:** {time.strftime('%Y-%m-%d %H:%M')}\n\n"
+            md_text += plain
+
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write(md_text)
+
+            return {"success": True, "path": dest}
+        except Exception as e:
+            logger.warning("export_note_markdown error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def export_note_html_pdf(self, note_id):
+        try:
+            notes = storage.load_notes()
+            target = next((n for n in notes if n.get("id") == note_id), None)
+            if not target:
+                return {"success": False, "error": "Note not found"}
+
+            title = target.get("title", "Untitled Note")
+            clean_title = "".join(c for c in title if c.isalnum() or c in " _-").strip() or "Note"
+            default_fn = f"{clean_title}.html"
+
+            save_paths = self._choose_files_dialog(
+                save=True,
+                save_filename=default_fn,
+                file_types=('Printable HTML / PDF (*.html)', 'All files (*.*)')
+            )
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest = save_paths[0]
+            content = target.get("content", "")
+            folder = target.get("folder", "General")
+
+            html_doc = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{title}</title>
+  <style>
+    @media print {{ @page {{ margin: 20mm; }} }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 30px auto; padding: 20px; color: #1e293b; }}
+    h1 {{ color: #004D40; border-bottom: 2px solid #E2E8F0; padding-bottom: 10px; font-size: 26px; }}
+    .meta {{ font-size: 13px; color: #64748B; margin-bottom: 25px; }}
+    .content {{ font-size: 15px; color: #334155; }}
+    .footer {{ margin-top: 50px; font-size: 11px; color: #94A3B8; text-align: center; border-top: 1px solid #E2E8F0; padding-top: 15px; }}
+  </style>
+</head>
+<body onload="window.print()">
+  <h1>{title}</h1>
+  <div class="meta">Folder: {folder} • Exported from AANO Notes</div>
+  <div class="content">
+    {content}
+  </div>
+  <div class="footer">Exported from AANO Notes • Private &amp; Offline</div>
+</body>
+</html>"""
+
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write(html_doc)
+
+            return {"success": True, "path": dest}
+        except Exception as e:
+            logger.warning("export_note_html_pdf error: %s", e)
+            return {"success": False, "error": str(e)}

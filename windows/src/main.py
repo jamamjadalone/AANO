@@ -38,8 +38,24 @@ def main():
         text_select=True
     )
 
+    from hotkey_daemon import HotkeyDaemon
+
+    def on_scratchpad_hotkey():
+        try:
+            window.show()
+            window.restore()
+            window.evaluate_js("window.openQuickScratchpad && window.openQuickScratchpad()")
+        except Exception:
+            pass
+
+    hotkey = HotkeyDaemon(on_scratchpad_hotkey)
+    hotkey.start()
+
     # Launch PyWebView with native Windows Edge WebView2 runtime
-    webview.start(debug=False)
+    try:
+        webview.start(debug=False)
+    finally:
+        hotkey.stop()
 
 if __name__ == "__main__":
     main()

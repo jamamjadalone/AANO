@@ -249,6 +249,20 @@ class NoteRepository(private val context: Context) {
         }
     }
 
+    suspend fun upsertNote(note: Note) = withContext(Dispatchers.IO) {
+        val notes = readNotes().toMutableList()
+        val index = notes.indexOfFirst { it.id == note.id }
+        if (index >= 0) {
+            notes[index] = note
+        } else {
+            notes.add(0, note)
+        }
+        writeNotes(notes)
+    }
+
+    fun serialize(note: Note): JSONObject = serializeNote(note)
+    fun deserialize(obj: JSONObject): Note = deserializeNote(obj)
+
     suspend fun setReminder(id: String, reminderAt: Long) {
         withContext(Dispatchers.IO) {
             val notes = readNotes().toMutableList()

@@ -4,11 +4,18 @@
 
 package app.aa.aano.ui
 
+import android.view.Menu
+import android.view.MenuItem
+import androidx.core.content.FileProvider
+import app.aa.aano.drop.AanoDropManager
+import app.aa.aano.data.PdfExportManager
+
 import android.Manifest
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
@@ -974,6 +981,8 @@ class EditorActivity : AppCompatActivity() {
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
             R.id.action_archive -> { archiveNote(); true }
+            R.id.action_drop_wifi -> { showDropDialog(); true }
+            R.id.action_export_pdf -> { exportCurrentNoteToPdf(); true }
             R.id.action_delete -> { confirmDeleteNote(); true }
             else -> super.onOptionsItemSelected(item)
         }
@@ -1721,4 +1730,103 @@ class EditorActivity : AppCompatActivity() {
         saveHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
+
+    private fun showDropDialog() {
+        val inputLayout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(50, 20, 50, 10)
+        }
+        val etIp = android.widget.EditText(this).apply {
+            hint = "Target PC IP (e.g. 192.168.1.100)"
+            setText(prefs.lastDropIp)
+        }
+        val etPin = android.widget.EditText(this).apply {
+            hint = "6-Digit PC PIN"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        inputLayout.addView(etIp)
+        inputLayout.addView(etPin)
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("⚡ AANO Drop to PC")
+            .setMessage("Send this note and attached media directly to your PC over Wi-Fi (Zero Internet quota).")
+            .setView(inputLayout)
+            .setPositiveButton("Send Drop") { _, _ ->
+                val ip = etIp.text.toString().trim()
+                val pin = etPin.text.toString().trim()
+                if (ip.isNotBlank()) {
+                    prefs.lastDropIp = ip
+                    performDropSend(ip, pin)
+                } else {
+                    Toast.makeText(this, "Please enter target IP", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun performDropSend(targetIp: String, pin: String) {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val now = System.currentTimeMillis()
+        val noteToSend = Note(
+            id = noteId ?: java.util.UUID.randomUUID().toString(),
+            title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note",
+            content = currentContent,
+            folder = selectedFolder.ifBlank { "General" },
+            color = selectedColor,
+            images = attachedImages.toList(),
+            audioUri = attachedAudioUri,
+            audioDuration = attachedAudioDuration,
+            pinned = false,
+            isLocal = true,
+            createdAt = now,
+            updatedAt = now
+        )
+
+        Toast.makeText(this, "Sending drop to $targetIp:8765...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val res = AanoDropManager.getInstance(this@EditorActivity).sendDropToDevice(
+                targetIp = targetIp,
+                targetPort = 8765,
+                notes = listOf(noteToSend),
+                targetPin = pin
+            )
+            res.onSuccess {
+                Toast.makeText(this@EditorActivity, "⚡ Dropped to PC successfully!", Toast.LENGTH_LONG).show()
+            }.onFailure { e ->
+                Toast.makeText(this@EditorActivity, "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun exportCurrentNoteToPdf() {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val now = System.currentTimeMillis()
+        val noteToExport = Note(
+            id = noteId ?: java.util.UUID.randomUUID().toString(),
+            title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note",
+            content = currentContent,
+            folder = selectedFolder.ifBlank { "General" },
+            color = selectedColor,
+            images = attachedImages.toList(),
+            createdAt = now,
+            updatedAt = now
+        )
+
+        val pdfFile = PdfExportManager(this).exportNoteToPdf(noteToExport)
+        if (pdfFile != null && pdfFile.exists()) {
+            val uri = FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", pdfFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share Note PDF"))
+        } else {
+            Toast.makeText(this, "Failed to generate PDF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 }

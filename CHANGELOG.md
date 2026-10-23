@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0-beta.1] - 2026-10-24
+
+### Added
+- **AANO Drop (Bidirectional Wi-Fi P2P Transfer)**:
+  - **Zero WAN Internet Quota**: Local subnet TCP streaming (`192.168.x.x`) routed strictly at Router Layer 2 (ARP/MAC switching). Packets never touch external internet gateways.
+  - **PC Receiver Daemon**: Multi-threaded Python server on port `8765` with one-time 6-digit PIN and token authentication.
+  - **Android Receiver Daemon**: Lightweight embedded server on port `8766` with explicit Wi-Fi process socket lock (`ConnectivityManager.bindProcessToNetwork`) and haptic chime on arrival.
+  - **Selective & Batch Transfer**: 1-click note drop button in the note editor and bulk drop in multi-selection mode.
+- **Windows Desktop Media Vault Parity**:
+  - **HTML5 Canvas Cropper**: Interactive modal supporting Free, 1:1, 4:3, and 16:9 framing plus 90° clockwise rotation.
+  - **Quality Toggle [HD / STD]**: Switch between ultra-lightweight WebP (~120 KB, 1280px downscale) and uncompressed raw HD captures.
+  - **Image Thumbnail Bar & Full Preview**: Interactive preview modal with "Save to Disk", "Crop & Rotate", and "Remove Attachment" actions.
+- **Flagship Power Utilities**:
+  - **Windows Global Hotkey (`Ctrl + Alt + N`)**: Win32 native `RegisterHotKey` message pump loop to launch instant scratchpad anywhere in the OS without third-party keyboard hooks.
+  - **Android Quick Settings Tile**: System tile for 1-tap note capture from the Android notification shade.
+  - **Smart Web & Text Clipper**: System `Intent.ACTION_SEND` hook for clipping shared articles, web links with OpenGraph title resolution, and pictures directly into AANO.
+  - **1-Click PDF & Markdown Export**: Native Android `PdfDocument` rendering (0 KB library bloat) and desktop Markdown/HTML print export.
+  - **Smart To-Do Auto-Sorting**: Smooth 250ms visual transition moving completed tasks beneath active checklist items.
+
+### Changed & Improved
+- **FixMySlop Code Polish (Grade A 95+)**:
+  - Typed exception handling across all Python and Kotlin modules (`FileNotFoundError`, `JSONDecodeError`, `URLError`, `BadZipFile`), replacing broad and silent try-catches with structured logging.
+  - Memory-safe DOM updates via modern `replaceChildren()` across all Windows UI components.
+  - Accessible semantic `<button type="button">` navigation elements in place of pseudo-links.
+
 ## [1.1.0-beta.1] - 2026-10-23
 
 ### Added

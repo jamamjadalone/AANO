@@ -63,6 +63,10 @@ class Prefs(context: Context) {
         get() = prefs.getStringSet(KEY_CUSTOM_FOLDERS, emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet(KEY_CUSTOM_FOLDERS, value).apply()
 
+    var lastDropIp: String
+        get() = prefs.getString("last_drop_ip", "") ?: ""
+        set(value) = prefs.edit().putString("last_drop_ip", value).apply()
+
     companion object {
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_AUTO_SAVE = "auto_save"

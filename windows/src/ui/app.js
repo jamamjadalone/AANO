@@ -618,6 +618,85 @@ function setupEventListeners() {
 
   setupCropCanvasEvents();
 
+
+  // AANO Drop Modal Listeners
+  const btnAanoDrop = document.getElementById("btnAanoDrop");
+  if (btnAanoDrop) btnAanoDrop.addEventListener("click", openDropModal);
+  const btnCloseAanoDrop = document.getElementById("btnCloseAanoDrop");
+  if (btnCloseAanoDrop) btnCloseAanoDrop.addEventListener("click", closeDropModal);
+  const btnDoneAanoDrop = document.getElementById("btnDoneAanoDrop");
+  if (btnDoneAanoDrop) btnDoneAanoDrop.addEventListener("click", closeDropModal);
+
+  const btnSendDropToPhone = document.getElementById("btnSendDropToPhone");
+  if (btnSendDropToPhone) {
+    btnSendDropToPhone.addEventListener("click", async () => {
+      const ipInput = document.getElementById("targetPhoneIp");
+      const targetIp = ipInput ? ipInput.value.trim() : "";
+      if (!targetIp) {
+        showNativeAlert({ title: "Target IP Required", message: "Please enter your phone IP shown on AANO Android." });
+        return;
+      }
+      const api = getApi();
+      if (!api || !api.send_drop_to_device) return;
+      btnSendDropToPhone.innerText = "Sending...";
+      try {
+        const res = await api.send_drop_to_device(targetIp, 8766, null, null);
+        if (res && res.success) {
+          showNativeAlert({ title: "Drop Complete", message: `Successfully transferred ${res.count || 0} notes to phone!` });
+          closeDropModal();
+        } else {
+          showNativeAlert({ title: "Drop Failed", message: res?.error || "Could not reach phone on Wi-Fi." });
+        }
+      } catch (err) {
+        showNativeAlert({ title: "Error", message: String(err) });
+      } finally {
+        btnSendDropToPhone.innerText = "⚡ Send Notes to Phone";
+      }
+    });
+  }
+
+  // Export Buttons in Editor
+  const btnEditorExportMd = document.getElementById("btnEditorExportMd");
+  if (btnEditorExportMd) {
+    btnEditorExportMd.addEventListener("click", async () => {
+      if (!editingNote || !editingNote.id) {
+        showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
+        return;
+      }
+      const api = getApi();
+      if (api && api.export_note_markdown) {
+        const res = await api.export_note_markdown(editingNote.id);
+        if (res && res.success && res.path) {
+          showNativeAlert({ title: "Markdown Exported", message: `File saved to: ${res.path}` });
+        }
+      }
+    });
+  }
+
+  const btnEditorExportPdf = document.getElementById("btnEditorExportPdf");
+  if (btnEditorExportPdf) {
+    btnEditorExportPdf.addEventListener("click", async () => {
+      if (!editingNote || !editingNote.id) {
+        showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
+        return;
+      }
+      const api = getApi();
+      if (api && api.export_note_html_pdf) {
+        const res = await api.export_note_html_pdf(editingNote.id);
+        if (res && res.success && res.path) {
+          showNativeAlert({ title: "Print / PDF Exported", message: `Printable document saved to: ${res.path}. Open it in your browser to print or save as PDF.` });
+        }
+      }
+    });
+  }
+
+  const btnEditorDrop = document.getElementById("btnEditorDrop");
+  if (btnEditorDrop) {
+    btnEditorDrop.addEventListener("click", () => {
+      openDropModal();
+    });
+  }
+
   // Backup & Restore
   document.getElementById("btnBackup").addEventListener("click", () => {
     document.getElementById("backupModal").classList.remove("hidden");

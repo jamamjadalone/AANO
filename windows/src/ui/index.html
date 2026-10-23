@@ -90,6 +90,10 @@
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
             Backup
           </button>
+          <button id="btnAanoDrop" title="AANO Drop (Wi-Fi Direct)">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Drop
+          </button>
         </div>
       </div>
     </aside>
@@ -192,6 +196,15 @@
             </button>
             <button id="btnEditorArchive" class="btn-icon" title="Archive Note">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+            </button>
+            <button id="btnEditorExportMd" class="btn-icon" title="Export Markdown (.md)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </button>
+            <button id="btnEditorExportPdf" class="btn-icon" title="Print / PDF (.html)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            </button>
+            <button id="btnEditorDrop" class="btn-icon" title="Drop Note to Phone (Wi-Fi)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </button>
             <button id="btnEditorDelete" class="btn-icon btn-danger" title="Delete Note">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
@@ -410,6 +423,43 @@
             <button id="btnCropCancel" class="btn-secondary">Cancel</button>
             <button id="btnCropApply" class="btn-primary">Apply Crop</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- AANO Drop Modal -->
+    <div id="aanoDropModal" class="modal-backdrop hidden">
+      <div class="dialog-box" style="max-width: 440px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="var(--brand)"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            AANO Drop (Wi-Fi P2P)
+          </h3>
+          <button id="btnCloseAanoDrop" class="btn-preview-close">✕</button>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin-bottom: 16px;">
+          Transfer notes &amp; photos directly over local Wi-Fi without internet consumption (Layer 2 routing).
+        </p>
+
+        <!-- Receiver status card -->
+        <div style="background: rgba(0, 121, 107, 0.08); border: 1px solid rgba(0, 121, 107, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <div style="font-size: 11px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+            📡 PC Receiver Ready
+          </div>
+          <div style="font-size: 14px; color: #f1f5f9; font-weight: 600; margin-bottom: 4px;" id="dropServerIp">IP: 192.168.x.x:8765</div>
+          <div style="font-size: 13px; color: #cbd5e1;">6-Digit Security PIN: <b id="dropServerPin" style="color: #38bdf8; letter-spacing: 2px;">------</b></div>
+        </div>
+
+        <!-- Sender card -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px;">Send Notes to Phone:</div>
+          <input type="text" id="targetPhoneIp" class="dialog-input" placeholder="Phone IP (e.g. 192.168.1.105)" style="margin-bottom: 8px;">
+          <button id="btnSendDropToPhone" class="btn-primary" style="width: 100%;">⚡ Send Notes to Phone</button>
+        </div>
+
+        <div class="dialog-buttons">
+          <button id="btnDoneAanoDrop" class="btn-secondary" style="width: 100%;">Close</button>
         </div>
       </div>
     </div>
