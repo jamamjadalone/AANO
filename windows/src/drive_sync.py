@@ -59,40 +59,26 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
             params = urllib.parse.parse_qs(parsed.query)
             if "code" in params:
                 OAuthCallbackHandler.auth_code = params["code"][0]
-                self.send_response(200)
+                redirect_target = "https://jamamjadalone.github.io/AANO/oauth-success.html"
+                self.send_response(302)
+                self.send_header("Location", redirect_target)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
-                html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <title>AANO Notes — Connected</title>
-                    <style>
-                        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc; text-align: center; }
-                        .card { background: #1e293b; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); max-width: 420px; border: 1px solid #334155; }
-                        h2 { color: #38bdf8; margin-top: 0; }
-                        p { color: #94a3b8; line-height: 1.5; font-size: 15px; }
-                        .badge { display: inline-block; padding: 6px 16px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-radius: 20px; font-weight: 600; margin-bottom: 16px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="card">
-                        <div class="badge">Google Account Connected</div>
-                        <h2>AANO Notes Sync Ready!</h2>
-                        <p>Aapka Google account successfully connect ho chuka hai.<br>Aap is browser tab ko band karke AANO app par wapas ja sakte hain.</p>
-                    </div>
-                    <script>setTimeout(function() { window.close(); }, 3000);</script>
-                </body>
-                </html>
-                """
-                self.wfile.write(html.encode("utf-8"))
+                fallback_html = f"""<!DOCTYPE html>
+<html><head>
+<meta http-equiv="refresh" content="0; url={redirect_target}">
+<title>Redirecting...</title>
+</head><body>
+<p>Authentication successful. <a href="{redirect_target}">Click here to continue</a>.</p>
+<script>window.location.href = "{redirect_target}";</script>
+</body></html>"""
+                self.wfile.write(fallback_html.encode("utf-8"))
             else:
                 OAuthCallbackHandler.auth_error = params.get("error", ["Unknown error"])[0]
                 self.send_response(400)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(f"<h3>Login Failed: {OAuthCallbackHandler.auth_error}</h3>".encode("utf-8"))
+                self.wfile.write(f"<h3>Authentication Failed: {OAuthCallbackHandler.auth_error}</h3><p>Please close this tab and try again from the AANO app.</p>".encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()

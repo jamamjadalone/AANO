@@ -168,13 +168,18 @@ function setupEventListeners() {
   const searchInput = document.getElementById("searchInput");
   const btnClearSearch = document.getElementById("btnClearSearch");
 
+  let searchDebounceTimer = null;
   searchInput.addEventListener("input", (e) => {
     currentSearch = e.target.value.trim().toLowerCase();
     btnClearSearch.classList.toggle("hidden", !currentSearch);
-    renderNotes();
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      renderNotes();
+    }, 120);
   });
 
   btnClearSearch.addEventListener("click", () => {
+    clearTimeout(searchDebounceTimer);
     searchInput.value = "";
     currentSearch = "";
     btnClearSearch.classList.add("hidden");
@@ -282,14 +287,21 @@ function setupEventListeners() {
   // Empty Trash button
   const btnEmptyTrash = document.getElementById("btnEmptyTrash");
   if (btnEmptyTrash) {
-    btnEmptyTrash.addEventListener("click", () => {
-      showNativeConfirm("Empty Trash", "Are you sure you want to permanently delete all notes in Trash? This cannot be undone.", async () => {
+    btnEmptyTrash.addEventListener("click", async () => {
+      const confirmed = await showNativeConfirm({
+        title: "Empty Trash",
+        message: "Are you sure you want to permanently delete all notes in Trash? This cannot be undone.",
+        confirmText: "Empty Trash",
+        cancelText: "Cancel",
+        danger: true
+      });
+      if (confirmed) {
         const api = getApi();
         if (api && api.empty_trash) {
           await api.empty_trash();
           await refreshData();
         }
-      });
+      }
     });
   }
 
@@ -730,15 +742,22 @@ function renderNotes() {
 
       const btnDelete = card.querySelector(".btn-trash-delete");
       if (btnDelete) {
-        btnDelete.addEventListener("click", (e) => {
+        btnDelete.addEventListener("click", async (e) => {
           e.stopPropagation();
-          showNativeConfirm("Delete Forever", "Permanently delete this note? This action cannot be undone.", async () => {
+          const confirmed = await showNativeConfirm({
+            title: "Delete Forever",
+            message: "Permanently delete this note? This action cannot be undone.",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            danger: true
+          });
+          if (confirmed) {
             const api = getApi();
             if (api && api.permanent_delete_note) {
               await api.permanent_delete_note(note.id);
               await refreshData();
             }
-          });
+          }
         });
       }
     } else {
@@ -956,32 +975,33 @@ async function closeAndSaveEditor() {
   const title = document.getElementById("editorTitle").value.trim();
   const content = document.getElementById("editorContent").innerHTML.trim();
   const folder = document.getElementById("editorFolderSelect").value;
+  const noteToSave = {
+    id: editingNote ? editingNote.id : null,
+    title: title || "Untitled Note",
+    content: content,
+    folder: folder,
+    color: editingColor,
+    pinned: editingPinned
+  };
 
-  // Don't save empty notes
   const isCompletelyEmpty = !title && (!content || content === "<br>");
 
+  // 1. Close modal IMMEDIATELY (0ms latency, instant response)
+  closeEditorWithoutSaving();
+
+  // 2. Perform save & refresh asynchronously without blocking the UI
   if (!isCompletelyEmpty) {
     const api = getApi();
     if (api) {
-      await api.save_note({
-        id: editingNote ? editingNote.id : null,
-        title: title || "Untitled Note",
-        content: content,
-        folder: folder,
-        color: editingColor,
-        pinned: editingPinned
-      });
       try {
-        await api.sync_now();
+        await api.save_note(noteToSave);
+        await refreshData();
+        api.sync_now().then(() => checkCloudStatus()).catch(() => {});
       } catch (err) {
-        console.warn("Immediate sync failed, queued for auto-sync:", err);
+        console.warn("Save note failed:", err);
       }
     }
   }
-
-  closeEditorWithoutSaving();
-  await refreshData();
-  await checkCloudStatus();
 }
 
 function closeEditorWithoutSaving() {

@@ -1070,12 +1070,14 @@ class EditorActivity : AppCompatActivity() {
         if (titleAndContentEmpty() && noteId == null) return
         lifecycleScope.launch {
             persist()
-            if (prefs.autoSync && cloudSyncManager.isLoggedIn && !isLocalNote) {
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                    try {
-                        cloudSyncManager.syncNow()
-                    } catch (_: Exception) {}
-                }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (!isDeleted && loaded && !titleAndContentEmpty()) {
+            lifecycleScope.launch {
+                persist()
             }
         }
     }

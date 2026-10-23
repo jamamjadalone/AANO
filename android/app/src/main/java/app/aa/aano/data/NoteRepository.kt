@@ -19,6 +19,12 @@ enum class SortBy { UPDATED_DESC, CREATED_DESC, TITLE_ASC, PINNED_FIRST }
 
 class NoteRepository(private val context: Context) {
 
+    companion object {
+        @Volatile
+        private var memoryCache: MutableList<Note>? = null
+        private val cacheLock = Any()
+    }
+
     private val notesFile: File = File(context.filesDir, "notes.json")
     private val cipher = NoteCipher()
     private val prefs = Prefs(context)
@@ -578,24 +584,33 @@ class NoteRepository(private val context: Context) {
     }
 
     private fun readNotes(): List<Note> {
-        if (!notesFile.exists()) return emptyList()
-        return try {
-            val list = deserializeNotes(notesFile.readText())
-            var needsResave = false
-            val fixed = list.map { note ->
-                if (note.deleted && note.deletedAt > 0 && note.updatedAt < note.deletedAt) {
-                    needsResave = true
-                    note.copy(updatedAt = note.deletedAt)
-                } else {
-                    note
+        synchronized(cacheLock) {
+            memoryCache?.let { return it.toList() }
+            if (!notesFile.exists()) {
+                memoryCache = mutableListOf()
+                return emptyList()
+            }
+            return try {
+                val list = deserializeNotes(notesFile.readText())
+                var needsResave = false
+                val fixed = list.map { note ->
+                    if (note.deleted && note.deletedAt > 0 && note.updatedAt < note.deletedAt) {
+                        needsResave = true
+                        note.copy(updatedAt = note.deletedAt)
+                    } else {
+                        note
+                    }
                 }
+                memoryCache = fixed.toMutableList()
+                if (needsResave) {
+                    val array = JSONArray()
+                    fixed.forEach { array.put(serializeNote(it)) }
+                    notesFile.writeText(array.toString())
+                }
+                fixed
+            } catch (e: Exception) {
+                emptyList()
             }
-            if (needsResave) {
-                writeNotes(fixed)
-            }
-            fixed
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
@@ -654,9 +669,14 @@ class NoteRepository(private val context: Context) {
     }
 
     private fun writeNotes(notes: List<Note>) {
-        val array = JSONArray()
-        notes.forEach { array.put(serializeNote(it)) }
-        notesFile.writeText(array.toString())
+        synchronized(cacheLock) {
+            memoryCache = notes.toMutableList()
+            try {
+                val array = JSONArray()
+                notes.forEach { array.put(serializeNote(it)) }
+                notesFile.writeText(array.toString())
+            } catch (_: Exception) {}
+        }
     }
 
     private fun serializeNote(note: Note): JSONObject = JSONObject().apply {

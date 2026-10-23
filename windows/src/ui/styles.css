@@ -425,6 +425,7 @@ body {
   gap: 16px;
   align-content: start;
   padding-bottom: 40px;
+  contain: layout paint;
 }
 
 .notes-list-view {
@@ -440,7 +441,9 @@ body {
   box-shadow: var(--shadow);
   border: 1px solid rgba(0, 0, 0, 0.06);
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
   display: flex;
   flex-direction: column;
   position: relative;
