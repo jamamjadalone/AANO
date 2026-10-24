@@ -123,6 +123,27 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // Theme selection setup
+        when (prefs.appTheme) {
+            "light" -> binding.toggleThemeGroup.check(R.id.btnThemeLight)
+            "dark" -> binding.toggleThemeGroup.check(R.id.btnThemeDark)
+            else -> binding.toggleThemeGroup.check(R.id.btnThemeSystem)
+        }
+
+        binding.toggleThemeGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                val newTheme = when (checkedId) {
+                    R.id.btnThemeLight -> "light"
+                    R.id.btnThemeDark -> "dark"
+                    else -> "system"
+                }
+                if (prefs.appTheme != newTheme) {
+                    prefs.appTheme = newTheme
+                    app.aa.aano.AanoApp.applyTheme(newTheme)
+                }
+            }
+        }
+
         binding.switchAutoSync.isChecked = prefs.autoSync
         binding.switchAutoSync.setOnCheckedChangeListener { _, checked ->
             prefs.autoSync = checked

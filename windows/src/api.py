@@ -118,7 +118,10 @@ class DesktopApi:
             else:
                 updated.append(n)
         storage.save_notes(updated)
-        self._async_auto_sync()
+        try:
+            storage.sync_with_cloud()
+        except Exception as e:
+            logger.warning("Permanent delete sync failed: %s", e)
         return {"success": True}
 
     def empty_trash(self):
@@ -143,7 +146,10 @@ class DesktopApi:
             else:
                 updated.append(n)
         storage.save_notes(updated)
-        self._async_auto_sync()
+        try:
+            storage.sync_with_cloud()
+        except Exception as e:
+            logger.warning("Empty trash sync failed: %s", e)
         return {"success": True}
 
     def get_all_folders(self):
@@ -160,7 +166,9 @@ class DesktopApi:
         notes = storage.load_notes()
         now = int(time.time() * 1000)
         note_id = note_data.get("id")
+        is_local = bool(note_data.get("isLocal", False))
 
+        found = False
         if note_id:
             for idx, n in enumerate(notes):
                 if n["id"] == note_id:
@@ -172,12 +180,16 @@ class DesktopApi:
                         "tags": note_data.get("tags", []),
                         "images": note_data.get("images", []),
                         "pinned": bool(note_data.get("pinned", False)),
+                        "isLocal": bool(note_data.get("isLocal", n.get("isLocal", False))),
                         "updatedAt": now
                     })
+                    is_local = bool(notes[idx].get("isLocal", False))
+                    found = True
                     break
-        else:
+
+        if not found:
             new_note = {
-                "id": str(uuid.uuid4()),
+                "id": note_id or str(uuid.uuid4()),
                 "title": note_data.get("title", ""),
                 "content": note_data.get("content", ""),
                 "folder": note_data.get("folder", "General"),
@@ -185,16 +197,18 @@ class DesktopApi:
                 "tags": note_data.get("tags", []),
                 "images": note_data.get("images", []),
                 "pinned": bool(note_data.get("pinned", False)),
+                "isLocal": is_local,
                 "createdAt": now,
                 "updatedAt": now,
                 "deleted": False,
-                "deletedAt": 0
+                "deletedAt": 0,
+                "archived": False
             }
             notes.insert(0, new_note)
 
         storage.save_notes(notes)
-        # Automatic cloud sync on every note creation/edit
-        self._async_auto_sync()
+        if not is_local:
+            self._async_auto_sync()
         return {"success": True}
 
     def delete_note(self, note_id):
@@ -660,6 +674,107 @@ class DesktopApi:
             logger.warning("send_drop_to_device error: %s", e)
             return {"success": False, "error": str(e)}
 
+    def get_paired_peer(self):
+        if not self._drop_server:
+            self.get_drop_info()
+        return self._drop_server.get_paired_peer()
+
+    def pair_with_device(self, target_ip, target_port=8766, pin=None):
+        return aano_drop_client.pair_with_device(target_ip, target_port, pin)
+
+    def unpair_peer(self):
+        if not self._drop_server:
+            self.get_drop_info()
+        self._drop_server.unpair()
+        return {"success": True}
+
+    def scan_nearby_devices(self):
+        return aano_drop_client.scan_nearby_devices()
+
+    def _format_duration_str(self, duration_ms):
+        if not duration_ms or duration_ms <= 0:
+            return "Voice Memo"
+        total_sec = int(duration_ms / 1000)
+        mins = total_sec // 60
+        secs = total_sec % 60
+        return f"{mins:02d}:{secs:02d}"
+
+    def _resolve_image_path(self, img_ref):
+        if not img_ref:
+            return None
+        if os.path.isabs(img_ref) and os.path.isfile(img_ref):
+            return img_ref
+        fn = os.path.basename(img_ref)
+        p = os.path.join(storage.IMAGES_DIR, fn)
+        if os.path.isfile(p):
+            return p
+        return None
+
+    def _resolve_audio_path(self, audio_ref):
+        if not audio_ref:
+            return None
+        if os.path.isabs(audio_ref) and os.path.isfile(audio_ref):
+            return audio_ref
+        fn = os.path.basename(audio_ref)
+        audio_dir = os.path.join(storage.APPDATA_DIR, "audio")
+        p = os.path.join(audio_dir, fn)
+        if os.path.isfile(p):
+            return p
+        return None
+
+    def export_note_text(self, note_id):
+        try:
+            notes = storage.load_notes()
+            target = next((n for n in notes if n.get("id") == note_id), None)
+            if not target:
+                return {"success": False, "error": "Note not found"}
+
+            title = target.get("title", "Untitled Note")
+            clean_title = "".join(c for c in title if c.isalnum() or c in " _-").strip() or "Note"
+            default_fn = f"{clean_title}.txt"
+
+            save_paths = self._choose_files_dialog(
+                save=True,
+                save_filename=default_fn,
+                file_types=('Text Files (*.txt)', 'All files (*.*)')
+            )
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest = save_paths[0]
+            content = target.get("content", "")
+            plain = content.replace("<br>", "\n").replace("</div>", "\n").replace("</p>", "\n\n")
+            import re
+            plain = re.sub(r'<[^>]+>', '', plain)
+
+            text_doc = f"{title}\n"
+            text_doc += "=" * len(title) + "\n\n"
+            folder = target.get("folder", "General")
+            text_doc += f"Folder: {folder} | Updated: {time.strftime('%Y-%m-%d %H:%M')}\n\n"
+            text_doc += plain.strip() + "\n"
+
+            attached_imgs = [self._resolve_image_path(img) for img in target.get("images", []) if self._resolve_image_path(img)]
+            audio_p = self._resolve_audio_path(target.get("audioUri"))
+            audio_duration = target.get("audioDuration", 0)
+
+            if attached_imgs or audio_p:
+                text_doc += "\n" + "-" * 40 + "\nATTACHMENTS:\n"
+                if audio_p:
+                    dur_str = self._format_duration_str(audio_duration)
+                    text_doc += f"- 🎙️ Voice Memo: {os.path.basename(audio_p)} ({dur_str})\n"
+                if attached_imgs:
+                    text_doc += f"- 📷 Photos ({len(attached_imgs)}):\n"
+                    for p in attached_imgs:
+                        text_doc += f"  * {os.path.basename(p)}\n"
+
+            with open(dest, "w", encoding="utf-8") as f:
+                f.write(text_doc)
+
+            return {"success": True, "path": dest}
+        except Exception as e:
+            logger.warning("export_note_text error: %s", e)
+            return {"success": False, "error": str(e)}
+
     def export_note_markdown(self, note_id):
         try:
             notes = storage.load_notes()
@@ -680,7 +795,6 @@ class DesktopApi:
                 return {"success": False, "cancelled": True}
 
             dest = save_paths[0]
-            # Convert basic HTML to clean markdown text
             content = target.get("content", "")
             plain = content.replace("<br>", "\n").replace("</div>", "\n").replace("</p>", "\n\n")
             import re
@@ -689,7 +803,22 @@ class DesktopApi:
             md_text = f"# {title}\n\n"
             folder = target.get("folder", "General")
             md_text += f"> **Folder:** {folder} | **Updated:** {time.strftime('%Y-%m-%d %H:%M')}\n\n"
-            md_text += plain
+            md_text += plain.strip() + "\n"
+
+            attached_imgs = [self._resolve_image_path(img) for img in target.get("images", []) if self._resolve_image_path(img)]
+            audio_p = self._resolve_audio_path(target.get("audioUri"))
+            audio_duration = target.get("audioDuration", 0)
+
+            if attached_imgs or audio_p:
+                md_text += "\n\n---\n### Attachments\n\n"
+                if audio_p:
+                    dur_str = self._format_duration_str(audio_duration)
+                    md_text += f"> 🎙️ **Voice Memo:** `{os.path.basename(audio_p)}` ({dur_str})\n\n"
+                if attached_imgs:
+                    md_text += f"#### Photos ({len(attached_imgs)}):\n"
+                    for p in attached_imgs:
+                        fn = os.path.basename(p)
+                        md_text += f"- ![{fn}]({fn})\n"
 
             with open(dest, "w", encoding="utf-8") as f:
                 f.write(md_text)
@@ -722,6 +851,36 @@ class DesktopApi:
             content = target.get("content", "")
             folder = target.get("folder", "General")
 
+            attached_imgs = [self._resolve_image_path(img) for img in target.get("images", []) if self._resolve_image_path(img)]
+            audio_p = self._resolve_audio_path(target.get("audioUri"))
+            audio_duration = target.get("audioDuration", 0)
+
+            audio_html = ""
+            if audio_p or target.get("audioUri"):
+                dur_str = self._format_duration_str(audio_duration)
+                fn = os.path.basename(audio_p) if audio_p else "Voice Memo"
+                audio_html = f'''<div style="display: flex; align-items: center; gap: 12px; background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 10px; padding: 12px 16px; margin: 20px 0;">
+  <span style="font-size: 24px;">🎙️</span>
+  <div>
+    <div style="font-weight: 600; font-size: 14px; color: #0F172A;">Voice Memo ({dur_str})</div>
+    <div style="font-size: 11px; color: #64748B;">{fn} • Attached to note</div>
+  </div>
+</div>'''
+
+            gallery_html = ""
+            if attached_imgs:
+                gallery_html = '<div style="margin-top: 30px; border-top: 1px solid #E2E8F0; padding-top: 20px;"><h3 style="font-size: 16px; color: #004D40; margin-bottom: 15px;">Attached Photos</h3><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;">'
+                for p in attached_imgs:
+                    try:
+                        ext = os.path.splitext(p)[1].lower().replace(".", "")
+                        mime = "image/png" if ext == "png" else "image/webp" if ext == "webp" else "image/jpeg"
+                        with open(p, "rb") as img_f:
+                            b64 = base64.b64encode(img_f.read()).decode("ascii")
+                        gallery_html += f'<div style="border-radius: 8px; overflow: hidden; border: 1px solid #CBD5E1; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><img src="data:{mime};base64,{b64}" style="width: 100%; height: auto; display: block;" /></div>'
+                    except Exception as img_err:
+                        logger.warning("Failed to embed image %s: %s", p, img_err)
+                gallery_html += '</div></div>'
+
             html_doc = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -739,9 +898,11 @@ class DesktopApi:
 <body onload="window.print()">
   <h1>{title}</h1>
   <div class="meta">Folder: {folder} • Exported from AANO Notes</div>
+  {audio_html}
   <div class="content">
     {content}
   </div>
+  {gallery_html}
   <div class="footer">Exported from AANO Notes • Private &amp; Offline</div>
 </body>
 </html>"""
@@ -752,4 +913,242 @@ class DesktopApi:
             return {"success": True, "path": dest}
         except Exception as e:
             logger.warning("export_note_html_pdf error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def export_note_zip(self, note_id):
+        try:
+            import zipfile
+            notes = storage.load_notes()
+            target = next((n for n in notes if n.get("id") == note_id), None)
+            if not target:
+                return {"success": False, "error": "Note not found"}
+
+            title = target.get("title", "Untitled Note")
+            clean_title = "".join(c for c in title if c.isalnum() or c in " _-").strip() or "Note"
+            default_fn = f"{clean_title}.zip"
+
+            save_paths = self._choose_files_dialog(
+                save=True,
+                save_filename=default_fn,
+                file_types=('ZIP Archive (*.zip)', 'All files (*.*)')
+            )
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest = save_paths[0]
+            content = target.get("content", "")
+            plain = content.replace("<br>", "\n").replace("</div>", "\n").replace("</p>", "\n\n")
+            import re
+            plain = re.sub(r'<[^>]+>', '', plain)
+
+            folder = target.get("folder", "General")
+            updated_str = time.strftime('%Y-%m-%d %H:%M')
+
+            # 1. Text format
+            text_doc = f"{title}\n"
+            text_doc += "=" * len(title) + "\n\n"
+            text_doc += f"Folder: {folder} | Updated: {updated_str}\n\n"
+            text_doc += plain.strip() + "\n"
+
+            # 2. Markdown format
+            md_doc = f"# {title}\n\n"
+            md_doc += f"> **Folder:** {folder} | **Updated:** {updated_str}\n\n"
+            md_doc += plain.strip() + "\n"
+
+            attached_imgs = [self._resolve_image_path(img) for img in target.get("images", []) if self._resolve_image_path(img)]
+            audio_p = self._resolve_audio_path(target.get("audioUri"))
+            audio_duration = target.get("audioDuration", 0)
+
+            if attached_imgs or audio_p:
+                text_doc += "\n" + "-" * 40 + "\nATTACHMENTS:\n"
+                md_doc += "\n\n---\n### Attachments\n\n"
+                if audio_p:
+                    dur_str = self._format_duration_str(audio_duration)
+                    fn = os.path.basename(audio_p)
+                    text_doc += f"- Voice Memo: {fn} ({dur_str})\n"
+                    md_doc += f"> 🎙️ **Voice Memo:** `{fn}` ({dur_str})\n\n"
+                if attached_imgs:
+                    text_doc += f"- Photos ({len(attached_imgs)}):\n"
+                    md_doc += f"#### Photos ({len(attached_imgs)}):\n"
+                    for p in attached_imgs:
+                        fn = os.path.basename(p)
+                        text_doc += f"  * {fn}\n"
+                        md_doc += f"- ![{fn}](media/images/{fn})\n"
+
+            with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr(f"{clean_title}.txt", text_doc)
+                zf.writestr(f"{clean_title}.md", md_doc)
+                for p in attached_imgs:
+                    zf.write(p, arcname=f"media/images/{os.path.basename(p)}")
+                if audio_p:
+                    zf.write(audio_p, arcname=f"media/audio/{os.path.basename(audio_p)}")
+
+            return {"success": True, "path": dest}
+        except Exception as e:
+            logger.warning("export_note_zip error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def export_note_aano(self, note_id):
+        try:
+            import zipfile
+            notes = storage.load_notes()
+            target = next((n for n in notes if n.get("id") == note_id), None)
+            if not target:
+                return {"success": False, "error": "Note not found"}
+
+            title = target.get("title", "Untitled Note")
+            clean_title = "".join(c for c in title if c.isalnum() or c in " _-").strip() or "Note"
+            default_fn = f"{clean_title}.aano"
+
+            save_paths = self._choose_files_dialog(
+                save=True,
+                save_filename=default_fn,
+                file_types=('AANO Note Package (*.aano)', 'All files (*.*)')
+            )
+            if not save_paths:
+                return {"success": False, "cancelled": True}
+
+            dest = save_paths[0]
+            content = target.get("content", "")
+            plain = content.replace("<br>", "\n").replace("</div>", "\n").replace("</p>", "\n\n")
+            import re
+            plain = re.sub(r'<[^>]+>', '', plain)
+
+            folder = target.get("folder", "General")
+            updated_str = time.strftime('%Y-%m-%d %H:%M')
+
+            md_doc = f"# {title}\n\n"
+            md_doc += f"> **Folder:** {folder} | **Updated:** {updated_str}\n\n"
+            md_doc += plain.strip() + "\n"
+
+            attached_imgs = [self._resolve_image_path(img) for img in target.get("images", []) if self._resolve_image_path(img)]
+            audio_p = self._resolve_audio_path(target.get("audioUri"))
+            audio_duration = target.get("audioDuration", 0)
+
+            # Package JSON metadata
+            pkg_json = {
+                "id": target.get("id", str(uuid.uuid4())),
+                "title": title,
+                "content": content,
+                "folder": folder,
+                "color": target.get("color", 0),
+                "audioDuration": audio_duration,
+                "createdAt": target.get("createdAt", int(time.time() * 1000)),
+                "updatedAt": int(time.time() * 1000),
+                "images": [os.path.basename(p) for p in attached_imgs],
+                "audioUri": os.path.basename(audio_p) if audio_p else None
+            }
+
+            with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as zf:
+                zf.writestr("note.json", json.dumps(pkg_json, indent=2, ensure_ascii=False))
+                zf.writestr(f"{clean_title}.md", md_doc)
+                for p in attached_imgs:
+                    zf.write(p, arcname=f"media/images/{os.path.basename(p)}")
+                if audio_p:
+                    zf.write(audio_p, arcname=f"media/audio/{os.path.basename(audio_p)}")
+
+            return {"success": True, "path": dest}
+        except Exception as e:
+            logger.warning("export_note_aano error: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def import_aano_package(self, aano_path=None):
+        try:
+            import zipfile
+            if not aano_path:
+                paths = self._choose_files_dialog(
+                    file_types=('AANO Note Package (*.aano;*.zip)', 'All files (*.*)')
+                )
+                if not paths:
+                    return {"success": False, "cancelled": True}
+                aano_path = paths[0]
+
+            if not os.path.exists(aano_path):
+                return {"success": False, "error": "File does not exist"}
+
+            dest_images_dir = storage.IMAGES_DIR
+            dest_audio_dir = os.path.join(storage.APPDATA_DIR, "audio")
+            os.makedirs(dest_images_dir, exist_ok=True)
+            os.makedirs(dest_audio_dir, exist_ok=True)
+
+            note_json_data = None
+            fallback_md = None
+            extracted_images = []
+            extracted_audio = None
+
+            with zipfile.ZipFile(aano_path, "r") as zf:
+                for member in zf.namelist():
+                    if member == "note.json":
+                        note_json_data = json.loads(zf.read(member).decode("utf-8"))
+                    elif member.endswith(".md") and "/" not in member:
+                        fallback_md = zf.read(member).decode("utf-8", errors="ignore")
+                    elif member.startswith("media/images/") or member.startswith("images/"):
+                        fn = os.path.basename(member)
+                        if fn:
+                            target_fn = f"pkg_{int(time.time()*1000)}_{fn}"
+                            target_p = os.path.join(dest_images_dir, target_fn)
+                            with open(target_p, "wb") as out_f:
+                                out_f.write(zf.read(member))
+                            extracted_images.append(target_fn)
+                    elif member.startswith("media/audio/") or member.startswith("audio/"):
+                        fn = os.path.basename(member)
+                        if fn:
+                            target_fn = f"pkg_{int(time.time()*1000)}_{fn}"
+                            target_p = os.path.join(dest_audio_dir, target_fn)
+                            with open(target_p, "wb") as out_f:
+                                out_f.write(zf.read(member))
+                            extracted_audio = target_fn
+
+            now = int(time.time() * 1000)
+            if note_json_data:
+                imported_note = {
+                    "id": str(uuid.uuid4()),
+                    "title": note_json_data.get("title", "Imported Note"),
+                    "content": note_json_data.get("content", ""),
+                    "folder": note_json_data.get("folder", "General"),
+                    "color": _parse_color(note_json_data.get("color", 0)),
+                    "createdAt": now,
+                    "updatedAt": now,
+                    "deleted": False,
+                    "pinned": False,
+                    "archived": False,
+                    "isLocal": True,
+                    "images": extracted_images if extracted_images else note_json_data.get("images", []),
+                    "audioUri": extracted_audio,
+                    "audioDuration": note_json_data.get("audioDuration", 0)
+                }
+            elif fallback_md:
+                lines = [l for l in fallback_md.splitlines() if l.strip()]
+                first_line = lines[0] if lines else "Imported Note"
+                clean_title = first_line.lstrip("#").strip()[:50]
+                imported_note = {
+                    "id": str(uuid.uuid4()),
+                    "title": clean_title,
+                    "content": fallback_md,
+                    "folder": "General",
+                    "color": 0,
+                    "createdAt": now,
+                    "updatedAt": now,
+                    "deleted": False,
+                    "pinned": False,
+                    "archived": False,
+                    "isLocal": True,
+                    "images": extracted_images,
+                    "audioUri": extracted_audio,
+                    "audioDuration": 0
+                }
+            else:
+                return {"success": False, "error": "Invalid or empty AANO note package"}
+
+            notes = storage.load_notes()
+            notes.insert(0, imported_note)
+            storage.save_notes(notes)
+
+            return {
+                "success": True,
+                "note_id": imported_note["id"],
+                "title": imported_note["title"]
+            }
+        except Exception as e:
+            logger.warning("import_aano_package error: %s", e)
             return {"success": False, "error": str(e)}

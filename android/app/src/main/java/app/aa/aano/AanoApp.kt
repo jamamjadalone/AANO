@@ -16,10 +16,20 @@ class AanoApp : Application(), Application.ActivityLifecycleCallbacks {
     companion object {
         var isUnlockedThisSession = false
         private var activeActivityCount = 0
+
+        fun applyTheme(theme: String) {
+            when (theme) {
+                "light" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO)
+                "dark" -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES)
+                else -> androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            }
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
+        val prefs = app.aa.aano.data.Prefs(this)
+        applyTheme(prefs.appTheme)
         registerActivityLifecycleCallbacks(this)
     }
 

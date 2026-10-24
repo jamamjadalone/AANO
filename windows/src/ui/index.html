@@ -77,6 +77,10 @@
       </div>
 
       <div class="sidebar-footer">
+        <div id="dropPeerBadge" class="cloud-status" style="margin-bottom: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;" title="AANO Drop Persistent Peer Status">
+          <div id="dropPeerDot" class="status-dot" style="background: #64748b;"></div>
+          <span id="dropPeerText" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Drop: Standby</span>
+        </div>
         <div id="cloudStatusBadge" class="cloud-status">
           <div class="status-dot"></div>
           <span id="cloudStatusText">Offline</span>
@@ -122,6 +126,13 @@
           <button id="btnViewToggle" class="btn-icon" title="Toggle Grid/List View">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M4 14h4v-4H4v4zm0 5h4v-4H4v4zM4 9h4V5H4v4zm5 5h12v-4H9v4zm0 5h12v-4H9v4zM9 5v4h12V5H9z"/></svg>
           </button>
+          <button id="btnImportAano" class="btn-icon" title="Import AANO Note (.aano / .zip)">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </button>
+          <button id="btnThemeToggle" class="btn-icon" title="Toggle Light/Dark Theme">
+            <svg id="themeIconSun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg id="themeIconMoon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
         </div>
       </header>
 
@@ -132,6 +143,10 @@
           <button id="btnBatchSelectAll" class="btn-batch-text">Select All</button>
         </div>
         <div class="batch-right">
+          <button id="btnBatchDrop" class="btn-batch" style="background: rgba(0, 121, 107, 0.2); color: var(--brand); border-color: rgba(0, 121, 107, 0.3);" title="Drop selected notes via AANO Drop">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span id="batchDropLabel">Drop</span>
+          </button>
           <button id="btnBatchArchive" class="btn-batch btn-batch-archive">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.83 1H5.42l.82-1zM19 19H5V8h14v11zm-8-7h2v3h3l-4 4-4-4h3z"/></svg>
             <span id="batchArchiveLabel">Archive</span>
@@ -187,6 +202,10 @@
               <option value="Personal">📁 Personal</option>
               <option value="__new__">+ New Folder...</option>
             </select>
+            <button id="btnEditorSyncToggle" class="btn-editor-sync" type="button" title="Toggle Cloud Sync (Drive) or On-Device Only">
+              <span id="editorSyncDot" class="editor-sync-dot">☁️</span>
+              <span id="editorSyncLabel">Synced</span>
+            </button>
           </div>
 
           <div class="editor-right-actions">
@@ -197,12 +216,50 @@
             <button id="btnEditorArchive" class="btn-icon" title="Archive Note">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
             </button>
-            <button id="btnEditorExportMd" class="btn-icon" title="Export Markdown (.md)">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </button>
-            <button id="btnEditorExportPdf" class="btn-icon" title="Print / PDF (.html)">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            </button>
+            <div class="export-dropdown-wrapper">
+              <button id="btnEditorExport" class="btn-export-dropdown" type="button" title="Export Note">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export</span>
+                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div id="exportMenu" class="export-menu hidden">
+                <button type="button" class="export-menu-item" id="btnExportAano" style="background: rgba(0, 77, 64, 0.05); border-left: 3px solid var(--primary);">
+                  <span class="export-icon">⚡</span>
+                  <div class="export-info">
+                    <span class="export-name" style="color: var(--primary); font-weight: 600;">AANO Package</span>
+                    <span class="export-ext">.aano (Direct Open)</span>
+                  </div>
+                </button>
+                <button type="button" class="export-menu-item" id="btnExportTxt">
+                  <span class="export-icon">📄</span>
+                  <div class="export-info">
+                    <span class="export-name">Text File</span>
+                    <span class="export-ext">.txt (Plain Text)</span>
+                  </div>
+                </button>
+                <button type="button" class="export-menu-item" id="btnExportPdf">
+                  <span class="export-icon">📕</span>
+                  <div class="export-info">
+                    <span class="export-name">PDF Document</span>
+                    <span class="export-ext">.pdf (Printable)</span>
+                  </div>
+                </button>
+                <button type="button" class="export-menu-item" id="btnExportMd">
+                  <span class="export-icon">📝</span>
+                  <div class="export-info">
+                    <span class="export-name">Markdown</span>
+                    <span class="export-ext">.md (Formatted)</span>
+                  </div>
+                </button>
+                <button type="button" class="export-menu-item" id="btnExportZip">
+                  <span class="export-icon">📦</span>
+                  <div class="export-info">
+                    <span class="export-name">ZIP Archive</span>
+                    <span class="export-ext">.zip (With Media)</span>
+                  </div>
+                </button>
+              </div>
+            </div>
             <button id="btnEditorDrop" class="btn-icon" title="Drop Note to Phone (Wi-Fi)">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </button>
@@ -442,21 +499,54 @@
           Transfer notes &amp; photos directly over local Wi-Fi without internet consumption (Layer 2 routing).
         </p>
 
-        <!-- Receiver status card with QR Code -->
-        <div style="background: rgba(0, 121, 107, 0.08); border: 1px solid rgba(0, 121, 107, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: center;">
-          <div style="font-size: 11px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
-            📡 Scan with Phone Camera to Connect
+        <!-- Active Paired Peer status -->
+        <div id="activePeerCard" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></div>
+              <div>
+                <div id="activePeerName" style="font-weight: 700; color: #f1f5f9; font-size: 13px;">Connected Peer</div>
+                <div id="activePeerEndpoint" style="color: #94a3b8; font-size: 11px;">192.168.x.x:8766</div>
+              </div>
+            </div>
+            <button id="btnUnpairPeer" class="btn-clear" style="font-size: 11px; color: #ef4444; text-decoration: underline; cursor: pointer; border: none; background: transparent;">Disconnect</button>
           </div>
-          <div style="display: flex; justify-content: center; margin: 10px 0;">
-            <canvas id="dropQrCanvas" width="160" height="160" style="background: #ffffff; border-radius: 8px; padding: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);"></canvas>
+        </div>
+
+        <!-- Actions: Camera QR Scanner + Wi-Fi Radar Scan -->
+        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+          <button id="btnOpenQrScanner" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px; background: linear-gradient(135deg, #0284c7, #06b6d4); border: none;">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>📷 Scan Phone QR</span>
+          </button>
+          <button id="btnScanRadar" class="btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            <span id="radarScanLabel">🔍 Radar Scan</span>
+          </button>
+        </div>
+        <div id="radarResultsContainer" style="display: none; margin-bottom: 14px; max-height: 110px; overflow-y: auto; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px;"></div>
+
+        <!-- Modern Receiver status card with Retina QR Code -->
+        <div class="drop-qr-card">
+          <div class="drop-qr-badge">
+            <span>⚡</span> This PC's Drop Coordinates
           </div>
-          <div style="font-size: 13px; color: #f1f5f9; font-weight: 600; margin-bottom: 2px;" id="dropServerIp">IP: 192.168.x.x:8765</div>
-          <div style="font-size: 12px; color: #cbd5e1;">Security PIN: <b id="dropServerPin" style="color: #38bdf8; letter-spacing: 2px;">------</b></div>
+          <div style="display: flex; justify-content: center; margin: 8px 0 12px 0;">
+            <div style="padding: 12px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.45), 0 0 20px rgba(2, 132, 199, 0.25); display: inline-flex;">
+              <canvas id="dropQrCanvas" width="220" height="220" style="display: block; width: 220px; height: 220px; border-radius: 8px;"></canvas>
+            </div>
+          </div>
+          <div style="font-size: 13px; color: #f1f5f9; font-weight: 700; margin-bottom: 3px;" id="dropServerIp">IP: 192.168.x.x:8765</div>
+          <div style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>Security PIN:</span>
+            <b id="dropServerPin" style="color: #38bdf8; letter-spacing: 2.5px; font-family: monospace; font-size: 13px;">------</b>
+            <button id="btnCopyDropUri" class="icon-button" style="padding: 2px 6px; font-size: 11px; margin-left: 4px;" title="Copy Drop URI">📋</button>
+          </div>
         </div>
 
         <!-- Sender card with Selective Notes Selection -->
         <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-          <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Send Selected Notes:</div>
+          <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Manual IP / Target Endpoint:</div>
           <input type="text" id="targetPhoneIp" class="dialog-input" placeholder="Target IP (e.g. 192.168.1.105:8766)" style="margin-bottom: 6px;">
           <input type="text" id="targetPhonePin" class="dialog-input" placeholder="Target 6-Digit PIN (optional)" style="margin-bottom: 8px;">
 
@@ -478,8 +568,42 @@
       </div>
     </div>
 
+    <!-- Live Camera QR Scanner Modal -->
+    <div id="aanoScannerModal" class="dialog-overlay hidden">
+      <div class="dialog" style="max-width: 440px; text-align: center; border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 15px 45px rgba(0,0,0,0.7), 0 0 25px rgba(2, 132, 199, 0.25);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 15px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+            <span>📷</span> AANO Drop QR Scanner
+          </h3>
+          <button id="btnCloseScannerModal" class="icon-button" style="color: #94a3b8; font-size: 16px;">✕</button>
+        </div>
+
+        <div class="qr-scanner-frame" id="qrScannerFrame">
+          <video id="qrScannerVideo" playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+          <div class="qr-scanner-laser"></div>
+          <div class="qr-scanner-reticle"></div>
+        </div>
+
+        <div id="qrScannerStatus" style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
+          Point camera at phone's AANO Drop QR code
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button id="btnUploadQrImage" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
+            <span>📁</span> Open Screenshot
+          </button>
+          <button id="btnPasteQrCode" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
+            <span>📋</span> Paste Pairing URI
+          </button>
+          <input type="file" id="qrFileInput" accept="image/*" style="display: none;">
+        </div>
+      </div>
+    </div>
+
   </div>
 
+  <script src="jsQR.min.js"></script>
+  <script src="qrcode.min.js"></script>
   <script src="qr.js"></script>
   <script src="app.js"></script>
 </body>

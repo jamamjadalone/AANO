@@ -51,6 +51,18 @@ def main():
     hotkey = HotkeyDaemon(on_scratchpad_hotkey)
     hotkey.start()
 
+    def on_loaded():
+        if len(sys.argv) > 1:
+            arg_path = sys.argv[1]
+            if os.path.exists(arg_path) and (arg_path.lower().endswith(".aano") or arg_path.lower().endswith(".zip")):
+                import json
+                try:
+                    window.evaluate_js(f"window.importAanoOnStartup && window.importAanoOnStartup({json.dumps(os.path.abspath(arg_path))});")
+                except Exception:
+                    pass
+
+    window.events.loaded += on_loaded
+
     # Launch PyWebView with native Windows Edge WebView2 runtime
     try:
         webview.start(debug=False)

@@ -254,33 +254,374 @@
     }
   };
 
-  // Helper to draw QR directly to canvas
-  global.renderQrToCanvas = function(canvasId, text) {
+  // Helper function to draw rounded rectangles
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  // Draw modern positioning finder pattern (7x7 module eye)
+  function drawModernFinderPattern(ctx, x, y, cellSize, darkColor, lightColor) {
+    var size = 7 * cellSize;
+    var outerRadius = cellSize * 1.8;
+    var innerRadius = cellSize * 1.2;
+    var eyeRadius = cellSize * 0.9;
+
+    // Outer 7x7 rounded box
+    ctx.fillStyle = darkColor;
+    drawRoundedRect(ctx, x, y, size, size, outerRadius);
+    ctx.fill();
+
+    // 5x5 cutout
+    ctx.fillStyle = lightColor;
+    drawRoundedRect(ctx, x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize, innerRadius);
+    ctx.fill();
+
+    // 3x3 inner eye
+    ctx.fillStyle = darkColor;
+    drawRoundedRect(ctx, x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize, eyeRadius);
+    ctx.fill();
+  }
+
+  // Modern Retina-Ready QR Code Renderer with Rounded Modules & Center Lightning Emblem
+  global.renderQrToCanvas = function(canvasId, text, opts) {
+    opts = opts || {};
     var canvas = typeof canvasId === "string" ? document.getElementById(canvasId) : canvasId;
     if (!canvas) return;
+
+    var displaySize = opts.size || parseInt(canvas.getAttribute("width"), 10) || 220;
+
+    // 1. Prioritize official standard QRCode.js if available in page
+    if (typeof global.QRCode !== "undefined") {
+      try {
+        var tempDiv = document.createElement("div");
+        new global.QRCode(tempDiv, {
+          text: text,
+          width: displaySize,
+          height: displaySize,
+          correctLevel: global.QRCode.CorrectLevel.M
+        });
+        var srcCanvas = tempDiv.querySelector("canvas");
+        if (srcCanvas) {
+          canvas.width = displaySize;
+          canvas.height = displaySize;
+          canvas.style.width = displaySize + "px";
+          canvas.style.height = displaySize + "px";
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(srcCanvas, 0, 0, displaySize, displaySize);
+          return;
+        }
+      } catch (e) {
+        console.warn("Standard QRCode.js render error:", e);
+      }
+    }
+
     try {
-      var qr = new QRCode(4, 0); // Type 4+, Medium ECC
+      var qr = new QRCode(4, 0); // Error level M (15% redundancy)
       qr.addData(text);
       qr.make();
       var count = qr.getModuleCount();
       var ctx = canvas.getContext("2d");
-      var size = canvas.width;
-      var cellSize = Math.floor(size / (count + 2));
+
+      // High-DPI Display Support (2x Super-Sampling)
+      var displaySize = opts.size || parseInt(canvas.getAttribute("width"), 10) || 160;
+      var dpr = 2; // Fixed 2x retina crispness
+      canvas.width = displaySize * dpr;
+      canvas.height = displaySize * dpr;
+      canvas.style.width = displaySize + "px";
+      canvas.style.height = displaySize + "px";
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      var size = displaySize;
+      var paddingCells = 2;
+      var cellSize = Math.floor(size / (count + paddingCells * 2));
       var offset = Math.floor((size - (cellSize * count)) / 2);
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = "#000000";
+      // Colors
+      var darkColor = opts.darkColor || "#0f172a";      // Deep Obsidian
+      var accentColor = opts.accentColor || "#0284c7";  // Vibrant AANO Cyan/Sky
+      var bgColor = opts.bgColor || "#ffffff";          // Pure Crisp White
 
+      // 1. Draw rounded canvas background
+      ctx.fillStyle = bgColor;
+      drawRoundedRect(ctx, 0, 0, size, size, 12);
+      ctx.fill();
+
+      // 2. Identify finder patterns
+      var isFinder = function(r, c) {
+        if (r < 7 && c < 7) return true;                     // Top-Left
+        if (r < 7 && c >= count - 7) return true;             // Top-Right
+        if (r >= count - 7 && c < 7) return true;             // Bottom-Left
+        return false;
+      };
+
+      // 3. Draw the 3 modern finder patterns
+      drawModernFinderPattern(ctx, offset, offset, cellSize, darkColor, bgColor);
+      drawModernFinderPattern(ctx, offset + (count - 7) * cellSize, offset, cellSize, darkColor, bgColor);
+      drawModernFinderPattern(ctx, offset, offset + (count - 7) * cellSize, cellSize, darkColor, bgColor);
+
+      // 4. Center badge exclusion zone (Radius in module units)
+      var centerRow = count / 2;
+      var centerCol = count / 2;
+      var badgeModuleRadius = 2.9;
+
+      // 5. Draw data modules as sleek rounded dots
+      ctx.fillStyle = darkColor;
       for (var r = 0; r < count; r++) {
         for (var c = 0; c < count; c++) {
+          if (isFinder(r, c)) continue;
+
+          // Check if inside center badge zone
+          var dist = Math.hypot(r - centerRow + 0.5, c - centerCol + 0.5);
+          if (dist < badgeModuleRadius) continue;
+
           if (qr.isDark(r, c)) {
-            ctx.fillRect(offset + c * cellSize, offset + r * cellSize, cellSize, cellSize);
+            var cx = offset + c * cellSize + cellSize / 2;
+            var cy = offset + r * cellSize + cellSize / 2;
+            var dotRadius = cellSize * 0.44;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
           }
         }
       }
+
+      // 6. Draw Modern Center AANO Lightning Emblem
+      var centerX = size / 2;
+      var centerY = size / 2;
+      var badgePixelRadius = (badgeModuleRadius - 0.2) * cellSize;
+
+      // Outer badge circle
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, badgePixelRadius, 0, Math.PI * 2);
+      ctx.fillStyle = bgColor;
+      ctx.shadowColor = "rgba(0, 0, 0, 0.16)";
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 2;
+      ctx.fill();
+
+      // Reset shadow for crisp border
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(2, 132, 199, 0.35)"; // Subtle cyan rim
+      ctx.stroke();
+
+      // Draw AANO ⚡ Lightning Bolt inside badge
+      var boltScale = badgePixelRadius * 0.72;
+      ctx.beginPath();
+      ctx.moveTo(centerX + boltScale * 0.18, centerY - boltScale * 0.95);
+      ctx.lineTo(centerX - boltScale * 0.62, centerY + boltScale * 0.05);
+      ctx.lineTo(centerX - boltScale * 0.04, centerY + boltScale * 0.05);
+      ctx.lineTo(centerX - boltScale * 0.18, centerY + boltScale * 0.95);
+      ctx.lineTo(centerX + boltScale * 0.62, centerY - boltScale * 0.05);
+      ctx.lineTo(centerX + boltScale * 0.04, centerY - boltScale * 0.05);
+      ctx.closePath();
+
+      var gradient = ctx.createLinearGradient(centerX - boltScale, centerY - boltScale, centerX + boltScale, centerY + boltScale);
+      gradient.addColorStop(0, "#0284c7");
+      gradient.addColorStop(1, "#06b6d4");
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.restore();
     } catch (e) {
-      console.warn("QR render error:", e);
+      console.warn("Modern QR render error:", e);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // AANO Drop Real-Time Scanner Engine (Camera, Image & Code Decoder)
+  // -------------------------------------------------------------
+  global.AanoQrScanner = {
+    _stream: null,
+    _animId: null,
+    _detector: null,
+
+    // Check if system supports hardware barcode scanning
+    hasBarcodeDetector: function() {
+      return "BarcodeDetector" in window;
+    },
+
+    // Get detector instance
+    getDetector: function() {
+      if (!this._detector && this.hasBarcodeDetector()) {
+        try {
+          this._detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        } catch (e) {
+          console.warn("BarcodeDetector init failed:", e);
+        }
+      }
+      return this._detector;
+    },
+
+    // Parse aano://drop or raw URI
+    parseDropUri: function(text) {
+      if (!text || typeof text !== "string") return null;
+      var clean = text.trim();
+      var ip = "", port = "8765", pin = "";
+
+      if (clean.startsWith("aano://drop")) {
+        try {
+          var url = new URL(clean);
+          ip = url.searchParams.get("ip") || "";
+          port = url.searchParams.get("port") || "8765";
+          pin = url.searchParams.get("pin") || "";
+        } catch (e) {
+          // Fallback regex parsing
+          var ipMatch = clean.match(/ip=([0-9a-zA-Z.:]+)/);
+          var portMatch = clean.match(/port=([0-9]+)/);
+          var pinMatch = clean.match(/pin=([0-9a-zA-Z]+)/);
+          if (ipMatch) ip = ipMatch[1];
+          if (portMatch) port = portMatch[1];
+          if (pinMatch) pin = pinMatch[1];
+        }
+      } else if (clean.includes(":") && clean.split(":").length >= 2) {
+        var parts = clean.split(":");
+        ip = parts[0];
+        port = parts[1];
+        if (parts.length > 2) pin = parts[2];
+      }
+
+      if (ip) {
+        return { valid: true, ip: ip, port: port, pin: pin, raw: clean };
+      }
+      return null;
+    },
+
+    // Start live webcam scanner
+    startCamera: async function(videoEl, onDetected, onError) {
+      this.stopCamera();
+      var self = this;
+
+      try {
+        var constraints = {
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        };
+
+        this._stream = await navigator.mediaDevices.getUserMedia(constraints);
+        videoEl.srcObject = this._stream;
+        await videoEl.play();
+
+        var detector = this.getDetector();
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+        var scanFrame = async function() {
+          if (!self._stream || videoEl.paused || videoEl.ended) return;
+
+          try {
+            if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+              // 1. Primary: Use standalone pure-JS jsQR decoder (Universal, zero browser flag requirement)
+              if (window.jsQR) {
+                if (canvas.width !== videoEl.videoWidth || canvas.height !== videoEl.videoHeight) {
+                  canvas.width = videoEl.videoWidth;
+                  canvas.height = videoEl.videoHeight;
+                }
+                ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                var code = window.jsQR(imgData.data, imgData.width, imgData.height, {
+                  inversionAttempts: "dontInvert"
+                });
+                if (code && code.data) {
+                  self.stopCamera();
+                  if (onDetected) onDetected(code.data);
+                  return;
+                }
+              }
+
+              // 2. Secondary fallback: Hardware BarcodeDetector
+              if (detector) {
+                var barcodes = await detector.detect(videoEl);
+                if (barcodes && barcodes.length > 0) {
+                  for (var i = 0; i < barcodes.length; i++) {
+                    var val = barcodes[i].rawValue;
+                    if (val) {
+                      self.stopCamera();
+                      if (onDetected) onDetected(val);
+                      return;
+                    }
+                  }
+                }
+              }
+            }
+          } catch (detErr) {
+            // Frame detection skipped
+          }
+
+          if (self._stream) {
+            self._animId = setTimeout(scanFrame, 150); // ~7 FPS scanning loop
+          }
+        };
+
+        this._animId = setTimeout(scanFrame, 200);
+      } catch (err) {
+        console.error("Camera access error:", err);
+        if (onError) onError(err);
+      }
+    },
+
+    // Stop camera and release hardware
+    stopCamera: function() {
+      if (this._animId) {
+        clearTimeout(this._animId);
+        this._animId = null;
+      }
+      if (this._stream) {
+        this._stream.getTracks().forEach(function(t) {
+          try { t.stop(); } catch (_) {}
+        });
+        this._stream = null;
+      }
+    },
+
+    // Decode QR code from an image file / screenshot
+    decodeImageFile: function(file, onDetected, onError) {
+      try {
+        var img = new Image();
+        img.onload = function() {
+          try {
+            var canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            if (window.jsQR) {
+              var code = window.jsQR(imgData.data, imgData.width, imgData.height);
+              if (code && code.data) {
+                if (onDetected) onDetected(code.data);
+                return;
+              }
+            }
+            throw new Error("No QR code found in selected image.");
+          } catch (err) {
+            if (onError) onError(err);
+          }
+        };
+        img.onerror = function() {
+          if (onError) onError(new Error("Failed to load image file."));
+        };
+        img.src = URL.createObjectURL(file);
+      } catch (e) {
+        if (onError) onError(e);
+      }
     }
   };
 })(window);

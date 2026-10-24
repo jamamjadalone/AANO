@@ -53,6 +53,8 @@ import android.media.MediaPlayer
 import android.os.SystemClock
 import android.graphics.BitmapFactory
 import androidx.activity.result.contract.ActivityResultContracts
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
@@ -203,6 +205,13 @@ class EditorActivity : AppCompatActivity() {
             startVoiceRecording()
         } else {
             Toast.makeText(this, "Microphone permission required for voice memo", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val qrScannerLauncher = registerForActivityResult(ScanContract()) { result ->
+        val scanned = result.contents
+        if (!scanned.isNullOrBlank()) {
+            handleScannedDropQr(scanned)
         }
     }
 
@@ -967,22 +976,11 @@ class EditorActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_toggle_local -> {
-                isLocalNote = !isLocalNote
-                updateLocalChipDisplay()
-                Toast.makeText(
-                    this,
-                    if (isLocalNote) "Marked as Local (100% on-device)" else "Marked as Cloud note",
-                    Toast.LENGTH_SHORT
-                ).show()
-                saveSilently()
-                true
-            }
             R.id.action_share -> { shareNote(); true }
             R.id.action_remind -> { pickReminder(); true }
             R.id.action_archive -> { archiveNote(); true }
             R.id.action_drop_wifi -> { showDropDialog(); true }
-            R.id.action_export_pdf -> { exportCurrentNoteToPdf(); true }
+            R.id.action_export_note -> { showExportDialog(); true }
             R.id.action_delete -> { confirmDeleteNote(); true }
             else -> super.onOptionsItemSelected(item)
         }
@@ -1209,7 +1207,7 @@ class EditorActivity : AppCompatActivity() {
             attachedAudioUri.isNullOrEmpty()
 
     private fun updateLocalChipDisplay() {
-        binding.chipLocal.visibility = if (isLocalNote) View.VISIBLE else View.GONE
+        binding.chipLocal.visibility = View.GONE
     }
 
     private fun copyUriToLocalMedia(uri: Uri): String? {
@@ -1731,95 +1729,213 @@ class EditorActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun showDropDialog() {
+    private fun launchBuiltInQrScanner() {
+        val options = ScanOptions().apply {
+            setPrompt("Point camera at PC screen or phone QR Code")
+            setBeepEnabled(true)
+            setOrientationLocked(false)
+            setBarcodeImageEnabled(false)
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+        }
+        qrScannerLauncher.launch(options)
+    }
+
+    private fun handleScannedDropQr(contents: String) {
+        val uri = try { Uri.parse(contents) } catch (_: Exception) { null }
+        val ip: String?
+        val port: Int
+        val pin: String?
+        if (uri != null && uri.scheme == "aano" && uri.host == "drop") {
+            ip = uri.getQueryParameter("ip")
+            port = uri.getQueryParameter("port")?.toIntOrNull() ?: 8765
+            pin = uri.getQueryParameter("pin")
+        } else if (contents.contains(":")) {
+            val parts = contents.split(":")
+            ip = parts[0].trim()
+            port = parts.getOrNull(1)?.toIntOrNull() ?: 8765
+            pin = parts.getOrNull(2)?.trim()
+        } else {
+            ip = contents.trim()
+            port = 8765
+            pin = null
+        }
+
+        if (!ip.isNullOrBlank()) {
+            val fullIp = if (port == 8765) ip else "$ip:$port"
+            prefs.lastDropIp = fullIp
+            if (!pin.isNullOrBlank()) prefs.lastDropPin = pin
+            lifecycleScope.launch {
+                val dropMgr = AanoDropManager.getInstance(this@EditorActivity)
+                val pairRes = dropMgr.pairWithPeer(ip, port, pin)
+                pairRes.onSuccess { peer ->
+                    prefs.lastDropPeerName = peer.name
+                    Toast.makeText(this@EditorActivity, "⚡ Paired with ${peer.name} ($fullIp)!", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(this@EditorActivity, "⚡ Paired with $fullIp!", Toast.LENGTH_SHORT).show()
+                }
+                // Automatically send this note immediately upon QR scan!
+                performDropSend(fullIp, pin ?: prefs.lastDropPin)
+            }
+        } else {
+            Toast.makeText(this, "Invalid QR Code", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showDropDialog(prefilledIp: String? = null, prefilledPin: String? = null) {
         val dropMgr = AanoDropManager.getInstance(this)
         val myIp = dropMgr.getLocalWifiIp()
         val myPin = dropMgr.pin
         val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
 
+        val dm = resources.displayMetrics
+        val density = dm.density
+        val padH = (20 * density).toInt()
+        val padV = (12 * density).toInt()
+
         val inputLayout = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(40, 16, 40, 10)
+            setPadding(padH, padV, padH, padV)
             gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
 
-        // Generate QR Code bitmap offline
+        var dialogRef: androidx.appcompat.app.AlertDialog? = null
+
+        // 1-Tap Direct Drop Button if already paired
+        val pairedIp = prefs.lastDropIp
+        val pairedPeerName = prefs.lastDropPeerName.ifBlank { "Desktop PC" }
+        if (pairedIp.isNotBlank()) {
+            val btnDirectDrop = com.google.android.material.button.MaterialButton(this).apply {
+                text = "⚡ Instant Drop to $pairedPeerName ($pairedIp)"
+                setBackgroundColor(android.graphics.Color.parseColor("#0284C7"))
+                setTextColor(android.graphics.Color.WHITE)
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, (10 * density).toInt()) }
+                setOnClickListener {
+                    dialogRef?.dismiss()
+                    performDropSend(pairedIp, prefs.lastDropPin)
+                }
+            }
+            inputLayout.addView(btnDirectDrop)
+        }
+
+        // Generate QR Code bitmap offline - responsive DP sizing capped at 50% screen width
+        val qrTargetPx = (170 * density).toInt().coerceAtMost((dm.widthPixels * 0.50).toInt())
         val qrBmp = try {
-            app.aa.aano.drop.QrCode.encodeText(myUri, app.aa.aano.drop.QrCode.Ecc.MEDIUM).toBitmap(360)
+            app.aa.aano.drop.QrCode.encodeText(myUri, app.aa.aano.drop.QrCode.Ecc.MEDIUM).toBitmap(qrTargetPx)
         } catch (_: Exception) { null }
 
         if (qrBmp != null) {
             val ivQr = android.widget.ImageView(this).apply {
                 setImageBitmap(qrBmp)
-                layoutParams = android.widget.LinearLayout.LayoutParams(360, 360).apply {
-                    setMargins(0, 0, 0, 12)
+                layoutParams = android.widget.LinearLayout.LayoutParams(qrTargetPx, qrTargetPx).apply {
+                    setMargins(0, 0, 0, (10 * density).toInt())
                 }
                 setBackgroundColor(android.graphics.Color.WHITE)
-                setPadding(12, 12, 12, 12)
+                val padQr = (8 * density).toInt()
+                setPadding(padQr, padQr, padQr, padQr)
             }
             inputLayout.addView(ivQr)
         }
 
         val tvDeviceInfo = android.widget.TextView(this).apply {
-            text = "📷 Scan with another phone to connect\n📡 This Device: $myIp:8766 | PIN: $myPin"
+            text = "📷 Scan with another phone or PC\n📡 This Device: $myIp:8766 | PIN: $myPin"
             textSize = 12f
             gravity = android.view.Gravity.CENTER
-            setPadding(0, 0, 0, 16)
+            setPadding(0, 0, 0, 12)
         }
-        val etIp = android.widget.EditText(this).apply {
-            hint = "Target IP (e.g. 192.168.1.100 or :8766)"
-            setText(prefs.lastDropIp)
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-        val etPin = android.widget.EditText(this).apply {
-            hint = "Target 6-Digit PIN"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
+        inputLayout.addView(tvDeviceInfo)
+
         val btnScanCamera = com.google.android.material.button.MaterialButton(this).apply {
-            text = "📷 Scan PC / Phone QR"
+            text = "📷 Scan PC / Phone QR (Built-in Scanner)"
             setOnClickListener {
-                try {
-                    val lensIntent = Intent(Intent.ACTION_VIEW, Uri.parse("googlelens://v1/camera"))
-                    startActivity(lensIntent)
-                } catch (_: Exception) {
-                    try {
-                        val camIntent = Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE)
-                        startActivity(camIntent)
-                    } catch (_: Exception) {
-                        Toast.makeText(this@EditorActivity, "Point your phone camera at the PC screen QR code!", Toast.LENGTH_LONG).show()
+                dialogRef?.dismiss()
+                launchBuiltInQrScanner()
+            }
+        }
+        inputLayout.addView(btnScanCamera)
+
+        val btnRadar = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+            setOnClickListener {
+                text = "Scanning Subnet..."
+                isEnabled = false
+                lifecycleScope.launch {
+                    val peers = dropMgr.discoverNearbyPeers()
+                    isEnabled = true
+                    text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+                    if (peers.isEmpty()) {
+                        Toast.makeText(this@EditorActivity, "No nearby AANO devices detected on Wi-Fi", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val peerItems = peers.map { "${it.name} (${it.ip}:${it.port})" }.toTypedArray()
+                        AlertDialog.Builder(this@EditorActivity)
+                            .setTitle("Select Nearby Device")
+                            .setItems(peerItems) { _, which ->
+                                val selectedPeer = peers[which]
+                                lifecycleScope.launch {
+                                    val pairRes = dropMgr.pairWithPeer(selectedPeer.ip, selectedPeer.port)
+                                    pairRes.onSuccess {
+                                        prefs.lastDropIp = if (selectedPeer.port == 8765) selectedPeer.ip else "${selectedPeer.ip}:${selectedPeer.port}"
+                                        prefs.lastDropPeerName = selectedPeer.name
+                                        Toast.makeText(this@EditorActivity, "Paired with ${selectedPeer.name}!", Toast.LENGTH_SHORT).show()
+                                        dialogRef?.dismiss()
+                                        showDropDialog(prefilledIp = prefs.lastDropIp, prefilledPin = prefs.lastDropPin)
+                                    }
+                                }
+                            }
+                            .show()
                     }
                 }
             }
         }
+        inputLayout.addView(btnRadar)
 
-        inputLayout.addView(tvDeviceInfo)
-        inputLayout.addView(btnScanCamera)
+        val etIp = android.widget.EditText(this).apply {
+            hint = "Target IP (e.g. 192.168.1.100:8765)"
+            setText(prefilledIp ?: prefs.lastDropIp)
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 10, 0, 0) }
+        }
+        val etPin = android.widget.EditText(this).apply {
+            hint = "Target 6-Digit PIN (Optional)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(prefilledPin ?: prefs.lastDropPin)
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
         inputLayout.addView(etIp)
         inputLayout.addView(etPin)
 
-        MaterialAlertDialogBuilder(this)
+        val scrollView = android.widget.ScrollView(this).apply {
+            isFillViewport = true
+            overScrollMode = android.view.View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            addView(inputLayout)
+        }
+
+        dialogRef = MaterialAlertDialogBuilder(this)
             .setTitle("⚡ AANO Drop & QR Pair")
             .setMessage("Instant Wi-Fi P2P transfer (Zero internet data).")
-            .setView(inputLayout)
+            .setView(scrollView)
             .setPositiveButton("Send Drop") { _, _ ->
                 val ip = etIp.text.toString().trim()
                 val pin = etPin.text.toString().trim()
                 if (ip.isNotBlank()) {
                     prefs.lastDropIp = ip
-                    performDropSend(ip, pin)
+                    if (pin.isNotBlank()) prefs.lastDropPin = pin
+                    performDropSend(ip, pin.ifBlank { prefs.lastDropPin })
                 } else {
                     Toast.makeText(this, "Please enter target IP", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            .create()
+
+        dialogRef?.show()
     }
 
     private fun performDropSend(targetIp: String, pin: String) {
@@ -1857,6 +1973,130 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
+    private fun showExportDialog() {
+        val formats = arrayOf(
+            "⚡  AANO Package (.aano - Direct Open)",
+            "📄  Text File (.txt)",
+            "📕  PDF Document (.pdf)",
+            "📝  Markdown (.md)",
+            "📦  ZIP Archive (.zip with Media)"
+        )
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Export Note")
+            .setItems(formats) { _, which ->
+                when (which) {
+                    0 -> exportCurrentNoteToAano()
+                    1 -> exportCurrentNoteToTxt()
+                    2 -> exportCurrentNoteToPdf()
+                    3 -> exportCurrentNoteToMd()
+                    4 -> exportCurrentNoteToZip()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun exportCurrentNoteToTxt() {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+            android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        } else {
+            currentContent.trim()
+        }
+        val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
+        val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
+
+        val sb = StringBuilder()
+        sb.append(title).append("\n")
+        sb.append("=".repeat(title.length.coerceAtLeast(8))).append("\n\n")
+        sb.append("Folder: ").append(selectedFolder.ifBlank { "General" }).append("\n\n")
+        sb.append(plainContent).append("\n")
+
+        if (attachedImages.isNotEmpty() || !attachedAudioUri.isNullOrBlank()) {
+            sb.append("\n----------------------------------------\nATTACHMENTS:\n")
+            if (!attachedAudioUri.isNullOrBlank()) {
+                val durStr = formatDuration(attachedAudioDuration)
+                val audioFn = File(attachedAudioUri!!).name
+                sb.append("- 🎙️ Voice Memo: $audioFn ($durStr)\n")
+            }
+            if (attachedImages.isNotEmpty()) {
+                sb.append("- 📷 Photos (${attachedImages.size}):\n")
+                attachedImages.forEach { path ->
+                    sb.append("  * ").append(File(path).name).append("\n")
+                }
+            }
+        }
+
+        try {
+            val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+            val txtFile = File(exportDir, "$cleanTitle.txt")
+            txtFile.writeText(sb.toString(), Charsets.UTF_8)
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", txtFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                putExtra(Intent.EXTRA_TEXT, plainContent)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Export Note (.txt)"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to export Text: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun exportCurrentNoteToMd() {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+            android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        } else {
+            currentContent.trim()
+        }
+        val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
+        val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
+
+        val sb = StringBuilder()
+        sb.append("# ").append(title).append("\n\n")
+        sb.append("> **Folder:** ").append(selectedFolder.ifBlank { "General" }).append("\n\n")
+        sb.append(plainContent).append("\n")
+
+        if (attachedImages.isNotEmpty() || !attachedAudioUri.isNullOrBlank()) {
+            sb.append("\n\n---\n### Attachments\n\n")
+            if (!attachedAudioUri.isNullOrBlank()) {
+                val durStr = formatDuration(attachedAudioDuration)
+                val audioFn = File(attachedAudioUri!!).name
+                sb.append("> 🎙️ **Voice Memo:** `$audioFn` ($durStr)\n\n")
+            }
+            if (attachedImages.isNotEmpty()) {
+                sb.append("#### Photos (${attachedImages.size}):\n")
+                attachedImages.forEach { path ->
+                    val fn = File(path).name
+                    sb.append("- ![$fn]($fn)\n")
+                }
+            }
+        }
+
+        try {
+            val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+            val mdFile = File(exportDir, "$cleanTitle.md")
+            mdFile.writeText(sb.toString(), Charsets.UTF_8)
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", mdFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/markdown"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Export Note (.md)"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to export Markdown: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun exportCurrentNoteToPdf() {
         val currentTitle = binding.noteTitle.text.toString().trim()
         val currentContent = binding.noteContent.text.toString()
@@ -1868,13 +2108,15 @@ class EditorActivity : AppCompatActivity() {
             folder = selectedFolder.ifBlank { "General" },
             color = selectedColor,
             images = attachedImages.toList(),
+            audioUri = attachedAudioUri,
+            audioDuration = attachedAudioDuration,
             createdAt = now,
             updatedAt = now
         )
 
         val pdfFile = PdfExportManager(this).exportNoteToPdf(noteToExport)
         if (pdfFile != null && pdfFile.exists()) {
-            val uri = FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", pdfFile)
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", pdfFile)
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/pdf"
                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -1883,6 +2125,192 @@ class EditorActivity : AppCompatActivity() {
             startActivity(Intent.createChooser(shareIntent, "Share Note PDF"))
         } else {
             Toast.makeText(this, "Failed to generate PDF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun exportCurrentNoteToZip() {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+            android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        } else {
+            currentContent.trim()
+        }
+        val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
+        val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
+
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+        val dateStr = sdf.format(java.util.Date(now))
+
+        val txtSb = StringBuilder()
+        txtSb.append(title).append("\n")
+        txtSb.append("=".repeat(title.length.coerceAtLeast(8))).append("\n\n")
+        txtSb.append("Folder: ").append(selectedFolder.ifBlank { "General" }).append(" | Updated: ").append(dateStr).append("\n\n")
+        txtSb.append(plainContent).append("\n")
+
+        val mdSb = StringBuilder()
+        mdSb.append("# ").append(title).append("\n\n")
+        mdSb.append("> **Folder:** ").append(selectedFolder.ifBlank { "General" }).append(" | **Updated:** ").append(dateStr).append("\n\n")
+        mdSb.append(plainContent).append("\n")
+
+        if (attachedImages.isNotEmpty() || !attachedAudioUri.isNullOrBlank()) {
+            txtSb.append("\n----------------------------------------\nATTACHMENTS:\n")
+            mdSb.append("\n\n---\n### Attachments\n\n")
+            if (!attachedAudioUri.isNullOrBlank()) {
+                val durStr = formatDuration(attachedAudioDuration)
+                val audioFn = File(attachedAudioUri!!).name
+                txtSb.append("- 🎙️ Voice Memo: $audioFn ($durStr)\n")
+                mdSb.append("> 🎙️ **Voice Memo:** `$audioFn` ($durStr)\n\n")
+            }
+            if (attachedImages.isNotEmpty()) {
+                txtSb.append("- 📷 Photos (${attachedImages.size}):\n")
+                mdSb.append("#### Photos (${attachedImages.size}):\n")
+                attachedImages.forEach { path ->
+                    val fn = File(path).name
+                    txtSb.append("  * ").append(fn).append("\n")
+                    mdSb.append("- ![$fn](media/images/$fn)\n")
+                }
+            }
+        }
+
+        try {
+            val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+            val zipFile = File(exportDir, "${cleanTitle}_bundle.zip")
+            java.util.zip.ZipOutputStream(java.io.FileOutputStream(zipFile)).use { zos ->
+                // 1. Text
+                val txtEntry = java.util.zip.ZipEntry("$cleanTitle.txt")
+                zos.putNextEntry(txtEntry)
+                zos.write(txtSb.toString().toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+
+                // 2. Markdown
+                val mdEntry = java.util.zip.ZipEntry("$cleanTitle.md")
+                zos.putNextEntry(mdEntry)
+                zos.write(mdSb.toString().toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+
+                // 3. Images
+                for (imgPath in attachedImages) {
+                    val imgFile = File(imgPath)
+                    if (imgFile.exists() && imgFile.length() > 0) {
+                        val imgEntry = java.util.zip.ZipEntry("media/images/${imgFile.name}")
+                        zos.putNextEntry(imgEntry)
+                        imgFile.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
+                }
+
+                // 4. Voice Memo
+                if (!attachedAudioUri.isNullOrBlank()) {
+                    val audioFile = File(attachedAudioUri!!)
+                    if (audioFile.exists() && audioFile.length() > 0) {
+                        val audioEntry = java.util.zip.ZipEntry("media/audio/${audioFile.name}")
+                        zos.putNextEntry(audioEntry)
+                        audioFile.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
+                }
+            }
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", zipFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "$title (ZIP Bundle)")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share Note ZIP Bundle"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to export ZIP: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun exportCurrentNoteToAano() {
+        val currentTitle = binding.noteTitle.text.toString().trim()
+        val currentContent = binding.noteContent.text.toString()
+        val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
+        val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
+
+        val now = System.currentTimeMillis()
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+        val dateStr = sdf.format(java.util.Date(now))
+
+        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+            android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        } else {
+            currentContent.trim()
+        }
+
+        val mdSb = StringBuilder()
+        mdSb.append("# ").append(title).append("\n\n")
+        mdSb.append("> **Folder:** ").append(selectedFolder.ifBlank { "General" }).append(" | **Updated:** ").append(dateStr).append("\n\n")
+        mdSb.append(plainContent).append("\n")
+
+        val jsonObj = org.json.JSONObject().apply {
+            put("id", noteId ?: java.util.UUID.randomUUID().toString())
+            put("title", title)
+            put("content", currentContent)
+            put("folder", selectedFolder.ifBlank { "General" })
+            put("color", selectedColor)
+            put("audioDuration", attachedAudioDuration)
+            put("createdAt", now)
+            put("updatedAt", now)
+            put("images", org.json.JSONArray(attachedImages.map { File(it).name }))
+            if (!attachedAudioUri.isNullOrBlank()) {
+                put("audioUri", File(attachedAudioUri!!).name)
+            }
+        }
+
+        try {
+            val exportDir = File(cacheDir, "exports").apply { mkdirs() }
+            val aanoFile = File(exportDir, "$cleanTitle.aano")
+            java.util.zip.ZipOutputStream(java.io.FileOutputStream(aanoFile)).use { zos ->
+                // 1. note.json (AANO native descriptor)
+                val jsonEntry = java.util.zip.ZipEntry("note.json")
+                zos.putNextEntry(jsonEntry)
+                zos.write(jsonObj.toString(2).toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+
+                // 2. Markdown human readable
+                val mdEntry = java.util.zip.ZipEntry("$cleanTitle.md")
+                zos.putNextEntry(mdEntry)
+                zos.write(mdSb.toString().toByteArray(Charsets.UTF_8))
+                zos.closeEntry()
+
+                // 3. Images
+                for (imgPath in attachedImages) {
+                    val imgFile = File(imgPath)
+                    if (imgFile.exists() && imgFile.length() > 0) {
+                        val imgEntry = java.util.zip.ZipEntry("media/images/${imgFile.name}")
+                        zos.putNextEntry(imgEntry)
+                        imgFile.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
+                }
+
+                // 4. Voice Memo
+                if (!attachedAudioUri.isNullOrBlank()) {
+                    val audioFile = File(attachedAudioUri!!)
+                    if (audioFile.exists() && audioFile.length() > 0) {
+                        val audioEntry = java.util.zip.ZipEntry("media/audio/${audioFile.name}")
+                        zos.putNextEntry(audioEntry)
+                        audioFile.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
+                }
+            }
+
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "app.aa.aano.fileprovider", aanoFile)
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "$title (AANO Package)")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share AANO Note Package (.aano)"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to create AANO package: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

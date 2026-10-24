@@ -27,6 +27,19 @@ import app.aa.aano.data.SortBy
 import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.FragmentNotesBinding
 import app.aa.aano.net.CloudSyncManager
+import app.aa.aano.drop.AanoDropManager
+import app.aa.aano.drop.QrCode
+import app.aa.aano.data.LocalVaultManager
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.EditText
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -41,6 +54,19 @@ class NotesFragment : Fragment() {
     private lateinit var cloudSyncManager: CloudSyncManager
     private lateinit var adapter: NotesAdapter
     private lateinit var prefs: Prefs
+
+    private val qrScannerLauncher = registerForActivityResult(ScanContract()) { result ->
+        val scanned = result.contents
+        if (!scanned.isNullOrBlank()) {
+            handleScannedDropQr(scanned)
+        }
+    }
+
+    private val restoreVaultLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            restoreLocalVault(uri)
+        }
+    }
 
     private var loadJob: Job? = null
     private var autoSyncJob: Job? = null
@@ -90,8 +116,7 @@ class NotesFragment : Fragment() {
         adapter = NotesAdapter(
             onClick = { openEditor(it.id) },
             onLongClick = { note ->
-                if (!adapter.isSelectionMode) {
-                    adapter.isSelectionMode = true
+                if (adapter.isSelectionMode) {
                     adapter.toggleSelection(note.id)
                 } else {
                     showNoteActions(note)
@@ -169,13 +194,20 @@ class NotesFragment : Fragment() {
             binding.searchInput.text?.clear()
         }
 
+        binding.btnCloseSearch.setOnClickListener {
+            hideSearchBar()
+        }
+
         updateFilterHeader()
         buildFolderChips()
         loadNotes()
     }
 
     private fun updateFilterHeader() {
-        if (currentFolder != null) {
+        if (currentFolder == "__LOCAL__") {
+            binding.filterHeaderBar.visibility = View.VISIBLE
+            binding.filterStatusText.text = "⚡ Showing: On-Device Notes (Local Vault)"
+        } else if (currentFolder != null) {
             binding.filterHeaderBar.visibility = View.VISIBLE
             binding.filterStatusText.text = "📁 Showing notes in: $currentFolder"
         } else {
@@ -187,6 +219,7 @@ class NotesFragment : Fragment() {
         lifecycleScope.launch {
             val counts = repository.getFolderCounts()
             val totalNotes = counts.values.sum()
+            val localCount = repository.getLocalNotes().size
             binding.folderChips.removeAllViews()
 
             val all = com.google.android.material.chip.Chip(requireContext()).apply {
@@ -200,6 +233,20 @@ class NotesFragment : Fragment() {
                 }
             }
             binding.folderChips.addView(all)
+
+            if (localCount > 0) {
+                val localChip = com.google.android.material.chip.Chip(requireContext()).apply {
+                    text = "⚡ On-Device ($localCount)"
+                    isCheckable = true
+                    isChecked = currentFolder == "__LOCAL__"
+                    id = View.generateViewId()
+                    setOnClickListener {
+                        binding.folderChips.check(id)
+                        filterByFolder("__LOCAL__")
+                    }
+                }
+                binding.folderChips.addView(localChip)
+            }
 
             counts.keys.sorted().forEach { folder ->
                 val count = counts[folder] ?: 0
@@ -246,10 +293,30 @@ class NotesFragment : Fragment() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_search -> {
+                if (binding.searchCard.visibility == View.VISIBLE) {
+                    hideSearchBar()
+                } else {
+                    showSearchBar()
+                }
+                true
+            }
             R.id.action_view_mode -> {
                 prefs.isGridView = !prefs.isGridView
                 applyLayoutManager()
                 activity?.invalidateOptionsMenu()
+                true
+            }
+            R.id.action_drop -> {
+                showDropHubDialog()
+                true
+            }
+            R.id.action_export_vault -> {
+                exportLocalVault()
+                true
+            }
+            R.id.action_restore_vault -> {
+                restoreVaultLauncher.launch("application/zip")
                 true
             }
             R.id.action_sort -> { showSortDialog(); true }
@@ -265,6 +332,22 @@ class NotesFragment : Fragment() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun showSearchBar() {
+        binding.searchCard.visibility = View.VISIBLE
+        binding.searchInput.requestFocus()
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        imm?.showSoftInput(binding.searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideSearchBar() {
+        binding.searchCard.visibility = View.GONE
+        binding.searchInput.text?.clear()
+        query = ""
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        imm?.hideSoftInputFromWindow(binding.searchInput.windowToken, 0)
+        loadNotes()
     }
 
     override fun onResume() {
@@ -341,8 +424,15 @@ class NotesFragment : Fragment() {
     }
 
     private fun showNoteActions(note: Note) {
+        val pairedIp = prefs.lastDropIp
+        val peerName = prefs.lastDropPeerName.ifBlank { "Connected Device" }
+        val dropLabel = if (pairedIp.isNotBlank()) "⚡ Send to $peerName ($pairedIp)" else "⚡ AANO Drop (Send to PC/Phone)"
+
         val items = arrayOf(
+            dropLabel,
+            "☑️ Multi-Select Mode",
             if (note.pinned) "📌 Unpin Note" else "📌 Pin to Top",
+            if (note.isLocal) "☁️ Move to Cloud Notes" else "⚡ Move to On-Device (Local Vault)",
             "📦 Archive Note",
             "📁 Move to Folder",
             "🎨 Change Color",
@@ -353,29 +443,115 @@ class NotesFragment : Fragment() {
             .setTitle(note.title.ifBlank { "(No title)" })
             .setItems(items) { _, which ->
                 when (which) {
-                    0 -> lifecycleScope.launch {
+                    0 -> {
+                        if (pairedIp.isNotBlank()) {
+                            val dropMgr = AanoDropManager.getInstance(requireContext())
+                            Toast.makeText(requireContext(), "⚡ Dropping to $peerName...", Toast.LENGTH_SHORT).show()
+                            lifecycleScope.launch {
+                                val res = dropMgr.sendDropToDevice(
+                                    targetIp = pairedIp,
+                                    targetPort = 8765,
+                                    notes = listOf(note),
+                                    targetPin = prefs.lastDropPin
+                                )
+                                res.onSuccess {
+                                    Toast.makeText(requireContext(), "⚡ Dropped successfully to $peerName!", Toast.LENGTH_LONG).show()
+                                }.onFailure { e ->
+                                    Toast.makeText(requireContext(), "Drop failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    showDropHubDialog(prefilledIp = pairedIp, prefilledPin = prefs.lastDropPin, notesToDrop = listOf(note))
+                                }
+                            }
+                        } else {
+                            showDropHubDialog(notesToDrop = listOf(note))
+                        }
+                    }
+                    1 -> {
+                        adapter.isSelectionMode = true
+                        adapter.toggleSelection(note.id)
+                    }
+                    2 -> lifecycleScope.launch {
                         repository.togglePin(note.id)
                         loadNotes()
                         if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                     }
-                    1 -> lifecycleScope.launch {
+                    3 -> lifecycleScope.launch {
+                        repository.toggleLocal(note.id)
+                        loadNotes()
+                        buildFolderChips()
+                        Toast.makeText(requireContext(), if (note.isLocal) "Moved to Cloud Notes" else "Moved to On-Device Vault", Toast.LENGTH_SHORT).show()
+                    }
+                    4 -> lifecycleScope.launch {
                         repository.archive(note.id)
                         loadNotes()
                         buildFolderChips()
                         Toast.makeText(requireContext(), "Note archived", Toast.LENGTH_SHORT).show()
                         if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                     }
-                    2 -> showMoveFolderDialog(note)
-                    3 -> showChangeColorDialog(note)
-                    4 -> shareNote(note)
-                    5 -> lifecycleScope.launch {
+                    5 -> showMoveFolderDialog(note)
+                    6 -> showChangeColorDialog(note)
+                    7 -> shareNote(note)
+                    8 -> lifecycleScope.launch {
                         repository.delete(note.id)
                         loadNotes()
+                        buildFolderChips()
                         if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                     }
                 }
             }
             .show()
+    }
+
+    private fun exportLocalVault() {
+        lifecycleScope.launch {
+            try {
+                val summary = LocalVaultManager.exportVault(requireContext(), repository)
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Media Vault Exported")
+                    .setMessage(
+                        "Local vault archived successfully!\n\n" +
+                        "• Notes: ${summary.notesCount}\n" +
+                        "• Photos: ${summary.imagesCount}\n" +
+                        "• Audio Memos: ${summary.audioCount}\n" +
+                        "• Size: ${summary.fileSizeFormatted}\n\n" +
+                        "Saved to: Downloads/AANO/${summary.fileName}"
+                    )
+                    .setPositiveButton("Share Archive") { _, _ ->
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/zip"
+                            putExtra(Intent.EXTRA_STREAM, summary.zipUri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        startActivity(Intent.createChooser(shareIntent, "Share Vault Archive"))
+                    }
+                    .setNegativeButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun restoreLocalVault(uri: Uri) {
+        lifecycleScope.launch {
+            try {
+                val summary = LocalVaultManager.restoreVault(requireContext(), uri, repository)
+                loadNotes()
+                buildFolderChips()
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Media Vault Restored")
+                    .setMessage(
+                        "Vault restore complete!\n\n" +
+                        "• Notes Restored: ${summary.notesRestored}\n" +
+                        "• Photos Extracted: ${summary.imagesRestored}\n" +
+                        "• Audio Memos: ${summary.audioRestored}\n\n" +
+                        "Your multimedia notes are now ready."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     private fun showMoveFolderDialog(note: Note) {
@@ -592,6 +768,7 @@ class NotesFragment : Fragment() {
         loadJob = lifecycleScope.launch {
             val notes = when {
                 query.isNotBlank() -> repository.search(query)
+                currentFolder == "__LOCAL__" -> repository.getLocalNotes()
                 currentFolder != null -> repository.getVisibleInFolder(currentFolder)
                 else -> repository.getVisible()
             }
@@ -655,6 +832,273 @@ class NotesFragment : Fragment() {
                 .putExtra(EditorActivity.EXTRA_NOTE_ID, noteId)
                 .putExtra(EditorActivity.EXTRA_FOLDER, defaultFolder ?: currentFolder ?: "")
         )
+    }
+
+    private fun launchBuiltInQrScanner() {
+        val options = ScanOptions().apply {
+            setPrompt("Point camera at PC screen or phone QR Code")
+            setBeepEnabled(true)
+            setOrientationLocked(false)
+            setBarcodeImageEnabled(false)
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+        }
+        qrScannerLauncher.launch(options)
+    }
+
+    private var pendingNotesToDrop: List<Note>? = null
+
+    private fun handleScannedDropQr(contents: String) {
+        val uri = try { Uri.parse(contents) } catch (_: Exception) { null }
+        val ip: String?
+        val port: Int
+        val pin: String?
+        if (uri != null && uri.scheme == "aano" && uri.host == "drop") {
+            ip = uri.getQueryParameter("ip")
+            port = uri.getQueryParameter("port")?.toIntOrNull() ?: 8765
+            pin = uri.getQueryParameter("pin")
+        } else if (contents.contains(":")) {
+            val parts = contents.split(":")
+            ip = parts[0].trim()
+            port = parts.getOrNull(1)?.toIntOrNull() ?: 8765
+            pin = parts.getOrNull(2)?.trim()
+        } else {
+            ip = contents.trim()
+            port = 8765
+            pin = null
+        }
+
+        if (!ip.isNullOrBlank()) {
+            val fullIp = if (port == 8765) ip else "$ip:$port"
+            prefs.lastDropIp = fullIp
+            if (!pin.isNullOrBlank()) prefs.lastDropPin = pin
+            lifecycleScope.launch {
+                val dropMgr = AanoDropManager.getInstance(requireContext())
+                val pairRes = dropMgr.pairWithPeer(ip, port, pin)
+                pairRes.onSuccess { peer ->
+                    prefs.lastDropPeerName = peer.name
+                    Toast.makeText(requireContext(), "⚡ AANO Drop: Paired with ${peer.name} ($fullIp)!", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    Toast.makeText(requireContext(), "⚡ AANO Drop: Paired with $fullIp!", Toast.LENGTH_SHORT).show()
+                }
+
+                val notes = pendingNotesToDrop
+                pendingNotesToDrop = null
+                if (notes != null && notes.isNotEmpty()) {
+                    Toast.makeText(requireContext(), "⚡ Dropping ${notes.size} note(s) to $fullIp...", Toast.LENGTH_SHORT).show()
+                    val dropRes = dropMgr.sendDropToDevice(fullIp, notes = notes, targetPin = pin ?: prefs.lastDropPin)
+                    dropRes.onSuccess {
+                        Toast.makeText(requireContext(), "⚡ Dropped successfully!", Toast.LENGTH_LONG).show()
+                        if (adapter.isSelectionMode) adapter.clearSelection()
+                    }.onFailure { err ->
+                        Toast.makeText(requireContext(), "Drop failed: ${err.message}", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    showDropHubDialog(prefilledIp = fullIp, prefilledPin = pin ?: prefs.lastDropPin)
+                }
+            }
+        } else {
+            Toast.makeText(requireContext(), "Invalid QR Code", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showDropHubDialog(
+        prefilledIp: String? = null,
+        prefilledPin: String? = null,
+        notesToDrop: List<Note>? = null
+    ) {
+        if (notesToDrop != null) {
+            pendingNotesToDrop = notesToDrop
+        }
+        val dropMgr = AanoDropManager.getInstance(requireContext())
+        val myIp = dropMgr.getLocalWifiIp()
+        val myPin = dropMgr.pin
+        val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
+
+        val dm = resources.displayMetrics
+        val density = dm.density
+        val padH = (20 * density).toInt()
+        val padV = (12 * density).toInt()
+
+        val inputLayout = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(padH, padV, padH, padV)
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+        }
+
+        // Direct 1-Tap Send Button if peer is already paired
+        var dialogRef: androidx.appcompat.app.AlertDialog? = null
+        val pairedIp = prefs.lastDropIp
+        val pairedPeerName = prefs.lastDropPeerName.ifBlank { "Desktop PC" }
+        val selectedIds = adapter.getSelectedIds()
+        val isBatch = selectedIds.isNotEmpty()
+
+        if (pairedIp.isNotBlank()) {
+            val btnDirect = MaterialButton(requireContext()).apply {
+                text = "⚡ Instant Drop to $pairedPeerName ($pairedIp)"
+                setBackgroundColor(android.graphics.Color.parseColor("#0284C7"))
+                setTextColor(android.graphics.Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, (10 * density).toInt()) }
+                setOnClickListener {
+                    dialogRef?.dismiss()
+                    lifecycleScope.launch {
+                        val targetList = notesToDrop ?: (if (isBatch) repository.getAll().filter { selectedIds.contains(it.id) } else repository.getVisible())
+                        if (targetList.isEmpty()) {
+                            Toast.makeText(requireContext(), "No notes to drop!", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        Toast.makeText(requireContext(), "⚡ Dropping ${targetList.size} notes to $pairedPeerName...", Toast.LENGTH_SHORT).show()
+                        val res = dropMgr.sendDropToDevice(pairedIp, notes = targetList, targetPin = prefs.lastDropPin)
+                        res.onSuccess {
+                            Toast.makeText(requireContext(), "⚡ Dropped successfully to $pairedPeerName!", Toast.LENGTH_LONG).show()
+                            if (isBatch) adapter.clearSelection()
+                        }.onFailure { e ->
+                            Toast.makeText(requireContext(), "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            inputLayout.addView(btnDirect)
+        }
+
+        // Responsive QR size: ~170dp, capped at 50% screen width to guarantee fit on compact Vivo/720p screens
+        val qrTargetPx = (170 * density).toInt().coerceAtMost((dm.widthPixels * 0.50).toInt())
+        val qrBmp = try {
+            QrCode.encodeText(myUri, QrCode.Ecc.MEDIUM).toBitmap(qrTargetPx)
+        } catch (_: Exception) { null }
+
+        if (qrBmp != null) {
+            val ivQr = ImageView(requireContext()).apply {
+                setImageBitmap(qrBmp)
+                layoutParams = LinearLayout.LayoutParams(qrTargetPx, qrTargetPx).apply {
+                    setMargins(0, 0, 0, (10 * density).toInt())
+                }
+                setBackgroundColor(android.graphics.Color.WHITE)
+                val padQr = (8 * density).toInt()
+                setPadding(padQr, padQr, padQr, padQr)
+            }
+            inputLayout.addView(ivQr)
+        }
+
+        val tvInfo = TextView(requireContext()).apply {
+            text = "📷 Scan with another phone or PC\n📡 This Device: $myIp:8766 | PIN: $myPin"
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, 0, 0, 12)
+        }
+        inputLayout.addView(tvInfo)
+
+        val btnScanCamera = MaterialButton(requireContext()).apply {
+            text = "📷 Scan PC / Phone QR (Built-in Scanner)"
+            setOnClickListener {
+                dialogRef?.dismiss()
+                launchBuiltInQrScanner()
+            }
+        }
+        inputLayout.addView(btnScanCamera)
+
+        val btnRadar = MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+            setOnClickListener {
+                text = "Scanning Subnet..."
+                isEnabled = false
+                lifecycleScope.launch {
+                    val peers = dropMgr.discoverNearbyPeers()
+                    isEnabled = true
+                    text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+                    if (peers.isEmpty()) {
+                        Toast.makeText(requireContext(), "No nearby AANO devices detected on Wi-Fi", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val peerItems = peers.map { "${it.name} (${it.ip}:${it.port})" }.toTypedArray()
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Select Nearby Device")
+                            .setItems(peerItems) { _, which ->
+                                val selectedPeer = peers[which]
+                                lifecycleScope.launch {
+                                    val pairRes = dropMgr.pairWithPeer(selectedPeer.ip, selectedPeer.port)
+                                    pairRes.onSuccess {
+                                        prefs.lastDropIp = if (selectedPeer.port == 8765) selectedPeer.ip else "${selectedPeer.ip}:${selectedPeer.port}"
+                                        prefs.lastDropPeerName = selectedPeer.name
+                                        Toast.makeText(requireContext(), "Paired with ${selectedPeer.name}!", Toast.LENGTH_SHORT).show()
+                                        dialogRef?.dismiss()
+                                        showDropHubDialog(prefilledIp = prefs.lastDropIp, prefilledPin = prefs.lastDropPin, notesToDrop = notesToDrop)
+                                    }
+                                }
+                            }
+                            .show()
+                    }
+                }
+            }
+        }
+        inputLayout.addView(btnRadar)
+
+        val etIp = EditText(requireContext()).apply {
+            hint = "Target IP (e.g. 192.168.1.5:8765)"
+            setText(prefilledIp ?: prefs.lastDropIp)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 10, 0, 0) }
+        }
+        val etPin = EditText(requireContext()).apply {
+            hint = "Target 6-Digit PIN (Optional)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(prefilledPin ?: prefs.lastDropPin)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        inputLayout.addView(etIp)
+        inputLayout.addView(etPin)
+
+        val btnActionText = if (notesToDrop != null) "Drop ${notesToDrop.size} Note(s)" else if (isBatch) "Drop ${selectedIds.size} Notes" else "Drop All Active Notes"
+
+        val scrollView = android.widget.ScrollView(requireContext()).apply {
+            isFillViewport = true
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            addView(inputLayout)
+        }
+
+        dialogRef = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("⚡ AANO Drop (Wi-Fi P2P)")
+            .setMessage("Instant local transfer with zero cloud data.")
+            .setView(scrollView)
+            .setPositiveButton(btnActionText) { _, _ ->
+                val ip = etIp.text.toString().trim()
+                val pin = etPin.text.toString().trim()
+                if (ip.isNotBlank()) {
+                    prefs.lastDropIp = ip
+                    if (pin.isNotBlank()) prefs.lastDropPin = pin
+                    lifecycleScope.launch {
+                        val targetList = notesToDrop ?: (if (isBatch) {
+                            repository.getAll().filter { selectedIds.contains(it.id) }
+                        } else {
+                            repository.getVisible()
+                        })
+                        if (targetList.isEmpty()) {
+                            Toast.makeText(requireContext(), "No notes to drop!", Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+                        Toast.makeText(requireContext(), "Sending ${targetList.size} notes...", Toast.LENGTH_SHORT).show()
+                        val res = dropMgr.sendDropToDevice(ip, notes = targetList, targetPin = pin.ifBlank { prefs.lastDropPin.ifBlank { null } })
+                        res.onSuccess {
+                            Toast.makeText(requireContext(), "⚡ Successfully dropped ${targetList.size} notes to $ip!", Toast.LENGTH_LONG).show()
+                            if (isBatch) adapter.clearSelection()
+                        }.onFailure { err ->
+                            Toast.makeText(requireContext(), "Drop failed: ${err.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Please enter or scan target IP", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        dialogRef?.show()
     }
 
     override fun onDestroyView() {

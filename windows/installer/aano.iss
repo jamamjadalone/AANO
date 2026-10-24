@@ -25,6 +25,7 @@ LZMANumBlockThreads=4
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
+ChangesAssociations=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -38,6 +39,12 @@ Source: "..\dist\AANO\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\aano.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\aano.ico"; Tasks: desktopicon
+
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\.aano"; ValueType: string; ValueName: ""; ValueData: "AANONotePackage"; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\AANONotePackage"; ValueType: string; ValueName: ""; ValueData: "AANO Note Package"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\AANONotePackage\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\aano.ico,0"
+Root: HKCU; Subkey: "Software\Classes\AANONotePackage\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

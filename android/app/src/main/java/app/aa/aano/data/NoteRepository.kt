@@ -120,7 +120,7 @@ class NoteRepository(private val context: Context) {
     }
 
     suspend fun getFolderCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted && !it.archived && !it.isLocal }
+        val all = readNotes().filter { !it.deleted && !it.archived }
         val counts = mutableMapOf<String, Int>()
         // Initialize custom folders with 0
         prefs.customFolders.forEach { f ->
@@ -136,11 +136,11 @@ class NoteRepository(private val context: Context) {
 
     /** Distinct tags in use, for the filter chips. */
     suspend fun tags(): List<String> = withContext(Dispatchers.IO) {
-        readNotes().flatMap { it.tags }.filter { it.isNotBlank() }.distinct().sorted()
+        readNotes().filter { !it.deleted && !it.archived }.flatMap { it.tags }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
     suspend fun getVisibleInFolder(folder: String?): List<Note> = withContext(Dispatchers.IO) {
-        val all = readNotes().filter { !it.deleted && !it.archived && !it.isLocal }
+        val all = readNotes().filter { !it.deleted && !it.archived }
         val filtered = when {
             folder.isNullOrBlank() -> all
             folder.equals("General", ignoreCase = true) -> all.filter { it.folder.isBlank() || it.folder.equals("General", ignoreCase = true) }

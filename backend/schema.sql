@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS notes (
     pinned INTEGER,
     updated_at INTEGER,
     deleted INTEGER,
-    archived INTEGER DEFAULT 0
+    archived INTEGER DEFAULT 0,
+    purged INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS email_otps (

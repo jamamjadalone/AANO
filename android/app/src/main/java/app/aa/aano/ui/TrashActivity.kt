@@ -12,13 +12,19 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import app.aa.aano.R
 import app.aa.aano.data.Note
 import app.aa.aano.data.NoteRepository
+import app.aa.aano.data.Prefs
+import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.ActivityTrashBinding
+import app.aa.aano.net.CloudSyncManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class TrashActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTrashBinding
     private lateinit var repository: NoteRepository
+    private lateinit var cloudSyncManager: CloudSyncManager
+    private lateinit var prefs: Prefs
     private lateinit var adapter: TrashAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +34,8 @@ class TrashActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         repository = NoteRepository(this)
+        cloudSyncManager = CloudSyncManager(this, repository, TaskRepository(this))
+        prefs = Prefs(this)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         adapter = TrashAdapter(
@@ -89,16 +97,10 @@ class TrashActivity : AppCompatActivity() {
     }
 
     private fun triggerBackgroundSync() {
-        val prefs = app.aa.aano.data.Prefs(this)
-        if (prefs.autoSync && com.google.android.gms.auth.api.signin.GoogleSignIn.getLastSignedInAccount(this) != null) {
-            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
+            lifecycleScope.launch(Dispatchers.IO) {
                 try {
-                    val syncManager = app.aa.aano.net.DriveSyncManager(
-                        this@TrashActivity,
-                        repository,
-                        app.aa.aano.data.TaskRepository(this@TrashActivity)
-                    )
-                    syncManager.pushToDrive()
+                    cloudSyncManager.syncNow()
                 } catch (_: Exception) {
                 }
             }

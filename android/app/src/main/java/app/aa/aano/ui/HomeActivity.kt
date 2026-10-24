@@ -85,7 +85,7 @@ class HomeActivity : AppCompatActivity() {
 
     private fun fragmentFor(itemId: Int): Fragment = when (itemId) {
         R.id.nav_folders -> FoldersFragment()
-        R.id.nav_local -> LocalFragment()
+        R.id.nav_tasks -> TasksFragment()
         R.id.nav_more -> MoreFragment()
         else -> NotesFragment()
     }

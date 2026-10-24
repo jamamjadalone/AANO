@@ -67,7 +67,20 @@ class Prefs(context: Context) {
         get() = prefs.getString("last_drop_ip", "") ?: ""
         set(value) = prefs.edit().putString("last_drop_ip", value).apply()
 
+    var lastDropPeerName: String
+        get() = prefs.getString("last_drop_peer_name", "") ?: ""
+        set(value) = prefs.edit().putString("last_drop_peer_name", value).apply()
+
+    var lastDropPin: String
+        get() = prefs.getString("last_drop_pin", "") ?: ""
+        set(value) = prefs.edit().putString("last_drop_pin", value).apply()
+
+    var appTheme: String
+        get() = prefs.getString(KEY_APP_THEME, "light") ?: "light"
+        set(value) = prefs.edit().putString(KEY_APP_THEME, value).apply()
+
     companion object {
+        private const val KEY_APP_THEME = "app_theme"
         private const val KEY_AUTO_SYNC = "auto_sync"
         private const val KEY_AUTO_SAVE = "auto_save"
         private const val KEY_SORT = "sort_by"

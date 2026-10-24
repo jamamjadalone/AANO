@@ -88,7 +88,11 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 # Validate PIN or Token
                 incoming_token = payload.get("token") or self.headers.get("X-AANO-TOKEN")
                 server = self.server.app_server
-                if server.pin and str(incoming_token).strip() != str(server.pin).strip() and str(incoming_token).strip() != str(server.token).strip():
+                client_ip = self.client_address[0]
+                paired_peer = getattr(server, "paired_peer", None)
+                is_paired_ip = bool(paired_peer and paired_peer.get("ip") == client_ip)
+
+                if server.pin and not is_paired_ip and str(incoming_token).strip() != str(server.pin).strip() and str(incoming_token).strip() != str(server.token).strip():
                     self.send_response(403)
                     self._send_cors_headers()
                     self.end_headers()
@@ -131,6 +135,12 @@ class AanoDropHandler(BaseHTTPRequestHandler):
 
                 storage.save_notes(list(existing_map.values()))
 
+                # 3. Auto-pair with sender if sender provided info
+                sender_name = payload.get("sender_name") or "Android Phone"
+                sender_ip = payload.get("sender_ip") or self.client_address[0]
+                sender_port = int(payload.get("sender_port", 8766))
+                server.set_paired_peer(sender_name, sender_ip, sender_port)
+
                 if server.on_receive_callback:
                     try:
                         server.on_receive_callback(saved_notes, saved_images)
@@ -155,6 +165,39 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 err_res = {"success": False, "error": str(e)}
                 self.wfile.write(json.dumps(err_res).encode("utf-8"))
+        elif self.path == "/aano/pair" or self.path == "/aano/pair/":
+            try:
+                content_len = int(self.headers.get("Content-Length", 0))
+                raw_body = self.rfile.read(content_len) if content_len > 0 else b"{}"
+                payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+                server = self.server.app_server
+                incoming_pin = payload.get("pin")
+                if server.pin and incoming_pin and str(incoming_pin).strip() != str(server.pin).strip():
+                    self.send_response(403)
+                    self._send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(b'{"success":false,"error":"Invalid PIN"}')
+                    return
+                peer_name = payload.get("name", "Android Device")
+                peer_ip = payload.get("ip") or self.client_address[0]
+                peer_port = int(payload.get("port", 8766))
+                server.set_paired_peer(peer_name, peer_ip, peer_port)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self._send_cors_headers()
+                self.end_headers()
+                res = {
+                    "success": True,
+                    "name": f"Desktop PC ({socket.gethostname()})",
+                    "ip": get_local_ip(),
+                    "port": server.port
+                }
+                self.wfile.write(json.dumps(res).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self._send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
@@ -194,12 +237,48 @@ class AanoDropServer:
                 logger.warning("Error stopping drop server: %s", e)
         self._running = False
 
+    def get_paired_peer(self):
+        cfg = storage.load_config()
+        return cfg.get("drop_paired_peer")
+
+    def set_paired_peer(self, name, ip, port=8766):
+        cfg = storage.load_config()
+        cfg["drop_paired_peer"] = {
+            "name": name,
+            "ip": ip,
+            "port": int(port or 8766),
+            "connected_at": int(time.time())
+        }
+        storage.save_config(cfg)
+        logger.info("AANO Drop paired with peer: %s (%s:%s)", name, ip, port)
+
+    def unpair(self):
+        cfg = storage.load_config()
+        cfg.pop("drop_paired_peer", None)
+        storage.save_config(cfg)
+
     def get_info(self):
+        qr_uri = f"aano://drop?ip={get_local_ip()}&port={self.port}&pin={self.pin}&token={self.token}"
+        qr_data_url = None
+        try:
+            import cv2
+            import base64
+            encoder = cv2.QRCodeEncoder_create()
+            mat = encoder.encode(qr_uri)
+            bordered = cv2.copyMakeBorder(mat, 4, 4, 4, 4, cv2.BORDER_CONSTANT, value=255)
+            resized = cv2.resize(bordered, (280, 280), interpolation=cv2.INTER_NEAREST)
+            _, png_bytes = cv2.imencode(".png", resized)
+            qr_data_url = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
+        except Exception as e:
+            logger.warning("Could not generate OpenCV QR code: %s", e)
+
         return {
             "running": self._running,
             "ip": get_local_ip(),
             "port": self.port,
             "pin": self.pin,
             "token": self.token,
-            "qr_data": f"aano://drop?ip={get_local_ip()}&port={self.port}&pin={self.pin}&token={self.token}"
+            "paired_peer": self.get_paired_peer(),
+            "qr_data": qr_uri,
+            "qr_data_url": qr_data_url
         }

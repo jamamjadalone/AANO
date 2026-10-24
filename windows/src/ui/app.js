@@ -1,9 +1,63 @@
 
 // AANO Drop Modal Functions
+let activePairedPeer = null;
+
+async function checkDropPeerStatus() {
+  const api = getApi();
+  if (!api || !api.get_paired_peer) return;
+
+  try {
+    const peer = await api.get_paired_peer();
+    const dot = document.getElementById("dropPeerDot");
+    const text = document.getElementById("dropPeerText");
+    const badge = document.getElementById("dropPeerBadge");
+    const card = document.getElementById("activePeerCard");
+    const peerNameEl = document.getElementById("activePeerName");
+    const peerEpEl = document.getElementById("activePeerEndpoint");
+    const ipInput = document.getElementById("targetPhoneIp");
+
+    if (peer && peer.ip) {
+      activePairedPeer = peer;
+      if (dot) {
+        dot.style.background = "#22c55e";
+        dot.style.boxShadow = "0 0 8px #22c55e";
+      }
+      if (text) {
+        text.innerText = "Drop: " + (peer.name || peer.ip);
+      }
+      if (badge) {
+        badge.title = `Connected to ${peer.name || "Device"} (${peer.ip}:${peer.port}). Click to manage.`;
+      }
+      if (card) card.style.display = "block";
+      if (peerNameEl) peerNameEl.innerText = peer.name || "Connected Peer";
+      if (peerEpEl) peerEpEl.innerText = `${peer.ip}:${peer.port}`;
+      if (ipInput && !ipInput.value) {
+        ipInput.value = `${peer.ip}:${peer.port}`;
+      }
+    } else {
+      activePairedPeer = null;
+      if (dot) {
+        dot.style.background = "#64748b";
+        dot.style.boxShadow = "none";
+      }
+      if (text) {
+        text.innerText = "Drop: Standby";
+      }
+      if (badge) {
+        badge.title = "AANO Drop: Standby (Click to connect/pair)";
+      }
+      if (card) card.style.display = "none";
+    }
+  } catch (err) {
+    console.warn("checkDropPeerStatus error:", err);
+  }
+}
+
 async function openDropModal() {
   const modal = document.getElementById("aanoDropModal");
   if (!modal) return;
   modal.classList.remove("hidden");
+  await checkDropPeerStatus();
 
   // Populate selective notes picker
   const pickerContainer = document.getElementById("dropNotesPickerContainer");
@@ -54,10 +108,23 @@ async function openDropModal() {
         if (ipEl) ipEl.innerText = `IP: ${info.ip || "127.0.0.1"}:${info.port || 8765}`;
         if (pinEl) pinEl.innerText = info.pin || "------";
 
-        // Render QR Code onto canvas
-        if (typeof renderQrToCanvas === "function") {
-          const qrUri = `aano://drop?ip=${info.ip}&port=${info.port || 8765}&pin=${info.pin}`;
-          renderQrToCanvas("dropQrCanvas", qrUri);
+        // Render High-Contrast Standard QR Code onto canvas (220px)
+        const canvas = document.getElementById("dropQrCanvas");
+        if (info.qr_data_url && canvas) {
+          const ctx = canvas.getContext("2d");
+          const img = new Image();
+          img.onload = () => {
+            canvas.width = 220;
+            canvas.height = 220;
+            canvas.style.width = "220px";
+            canvas.style.height = "220px";
+            ctx.clearRect(0, 0, 220, 220);
+            ctx.drawImage(img, 0, 0, 220, 220);
+          };
+          img.src = info.qr_data_url;
+        } else if (typeof renderQrToCanvas === "function") {
+          const qrUri = info.qr_data || `aano://drop?ip=${info.ip}&port=${info.port || 8765}&pin=${info.pin}`;
+          renderQrToCanvas("dropQrCanvas", qrUri, { size: 220 });
         }
       }
     } catch (e) {
@@ -83,33 +150,62 @@ function closeDropModal() {
 // AANO Windows Desktop App - Frontend Logic
 // Copyright (C) 2026 Jam Amjad Rasheed
 
-const PASTEL_COLORS = [
-  "#FFFFFF", // 0: White Default
-  "#FEF9C3", // 1: Pastel Lemon
-  "#DCFCE7", // 2: Pastel Mint
-  "#CCFBF1", // 3: Pastel Teal
-  "#E0F2FE", // 4: Pastel Sky
-  "#E0E7FF", // 5: Pastel Indigo
-  "#F3E8FF", // 6: Pastel Lavender
-  "#FCE7F3", // 7: Pastel Rose
-  "#FFEDD5", // 8: Pastel Peach
-  "#FEE2E2", // 9: Pastel Coral
-  "#F5F5F4", // 10: Muted Sand
-  "#E2E8F0", // 11: Muted Slate
-  "#1E293B"  // 12: Charcoal Dark
+const PALETTE_LIGHT = [
+  "#FFFFFF", // 0: Pure Studio White
+  "#F0FDF4", // 1: Crisp Sage Mint
+  "#FEF9C3", // 2: Soft Lemon Chiffon
+  "#F0F9FF", // 3: Nordic Glacier Blue
+  "#EEF2FF", // 4: Royal Soft Iris
+  "#FAF5FF", // 5: Lavender Mist
+  "#FFF1F2", // 6: Velvet Peony
+  "#FFF7ED", // 7: Peach Sorbet
+  "#FEF3C7", // 8: Warm Amber Honey
+  "#F8FAFC", // 9: Slate Porcelain
+  "#F3F4F6", // 10: Urban Sandstone
+  "#1E293B"  // 11: Deep Obsidian Accent
 ];
 
+const PALETTE_DARK = [
+  "#161B22", // 0: Deep Obsidian Canvas
+  "#0F291E", // 1: Emerald Forest
+  "#2E2510", // 2: Golden Topaz Glow
+  "#0E2338", // 3: Arctic Midnight Blue
+  "#171C3D", // 4: Deep Royal Indigo
+  "#241738", // 5: Twilight Amethyst
+  "#331422", // 6: Crimson Velvet
+  "#311B11", // 7: Burnt Terracotta
+  "#2D2110", // 8: Sahara Espresso
+  "#1C2128", // 9: Graphite Slate
+  "#21262D", // 10: Charcoal Ash
+  "#0B0E14"  // 11: Pure Onyx
+];
+
+const PASTEL_COLORS = PALETTE_LIGHT;
+
+function isCurrentThemeDark() {
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
+
 function resolveNoteColor(colorVal) {
-  if (colorVal === undefined || colorVal === null) return "#FFFFFF";
-  if (typeof colorVal === "string" && colorVal.startsWith("#")) return colorVal;
+  const isDark = isCurrentThemeDark();
+  const palette = isDark ? PALETTE_DARK : PALETTE_LIGHT;
+  const defaultBg = isDark ? "#161B22" : "#FFFFFF";
+
+  if (colorVal === undefined || colorVal === null) return defaultBg;
+  if (typeof colorVal === "string" && colorVal.startsWith("#")) {
+    if (isDark && (colorVal.toUpperCase() === "#FFFFFF" || colorVal === "#00000000")) return defaultBg;
+    if (!isDark && (colorVal.toUpperCase() === "#161B22" || colorVal.toUpperCase() === "#182234")) return "#FFFFFF";
+    return colorVal;
+  }
   if (typeof colorVal === "number") {
-    if (colorVal >= 0 && colorVal < PASTEL_COLORS.length) {
-      return PASTEL_COLORS[colorVal];
+    if (colorVal === 0 || colorVal === 0x00000000) return defaultBg;
+    if (colorVal >= 0 && colorVal < palette.length) {
+      return palette[colorVal];
     }
     const unsigned = (colorVal >>> 0).toString(16).padStart(8, "0");
     return "#" + unsigned.slice(2);
   }
-  return "#FFFFFF";
+  return defaultBg;
 }
 
 function hexToColorInt(hex) {
@@ -176,13 +272,77 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 300);
 });
 
+// Theme Engine (Dark / Light)
+function applyTheme(theme) {
+  const root = document.documentElement;
+  const sun = document.getElementById("themeIconSun");
+  const moon = document.getElementById("themeIconMoon");
+  if (theme === "dark") {
+    root.setAttribute("data-theme", "dark");
+    if (sun) sun.classList.remove("hidden");
+    if (moon) moon.classList.add("hidden");
+  } else {
+    root.removeAttribute("data-theme");
+    if (sun) sun.classList.add("hidden");
+    if (moon) moon.classList.remove("hidden");
+  }
+  localStorage.setItem("aano_theme", theme);
+  renderNotes();
+  renderColorPalette();
+  if (document.getElementById("editorModal") && !document.getElementById("editorModal").classList.contains("hidden")) {
+    updateEditorBackgroundColor();
+  }
+}
+
+function updateEditorBackgroundColor() {
+  const resolvedBg = resolveNoteColor(editingColor);
+  applyEditorColor(resolvedBg);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem("aano_theme");
+  if (saved) {
+    applyTheme(saved);
+  } else {
+    applyTheme("light");
+  }
+}
+
+function toggleTheme() {
+  const isDark = isCurrentThemeDark();
+  applyTheme(isDark ? "light" : "dark");
+}
+
+let editingIsLocal = false;
+
+function updateEditorSyncButton() {
+  const btn = document.getElementById("btnEditorSyncToggle");
+  const dot = document.getElementById("editorSyncDot");
+  const lbl = document.getElementById("editorSyncLabel");
+  if (!btn || !lbl) return;
+
+  if (editingIsLocal) {
+    btn.classList.add("local");
+    btn.title = "On-Device Note (Strictly offline, never uploaded to cloud)";
+    if (dot) dot.innerText = "📱";
+    lbl.innerText = "On-Device";
+  } else {
+    btn.classList.remove("local");
+    btn.title = "Cloud Synced Note (Will sync automatically to your Google Drive)";
+    if (dot) dot.innerText = "☁️";
+    lbl.innerText = "Synced";
+  }
+}
+
 async function initApp() {
   if (isAppInitialized) return;
   isAppInitialized = true;
+  initTheme();
   setupEventListeners();
   renderColorPalette();
   await refreshData();
   await checkCloudStatus();
+  await checkDropPeerStatus();
 
   // If user is logged in, perform immediate auto-sync on app open
   const api = getApi();
@@ -240,12 +400,50 @@ async function runAutoSyncInterval() {
       }
       await checkCloudStatus();
     }
+    await checkDropPeerStatus();
   } catch (err) {
     console.error("Auto-sync tick error:", err);
   }
 }
 
 function setupEventListeners() {
+  // Click outside dialog to dismiss any modal
+  document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) {
+        backdrop.classList.add("hidden");
+      }
+    });
+  });
+
+  // Global Escape key to dismiss any active modal
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach(modal => {
+        modal.classList.add("hidden");
+      });
+      const editorModal = document.getElementById("editorModal");
+      if (editorModal && !editorModal.classList.contains("hidden")) {
+        closeEditorWithoutSaving();
+      }
+    }
+  });
+
+  // Theme Switcher Toggle
+  const btnThemeToggle = document.getElementById("btnThemeToggle");
+  if (btnThemeToggle) {
+    btnThemeToggle.addEventListener("click", toggleTheme);
+  }
+
+  // Editor Sync vs On-Device Toggle
+  const btnEditorSyncToggle = document.getElementById("btnEditorSyncToggle");
+  if (btnEditorSyncToggle) {
+    btnEditorSyncToggle.addEventListener("click", () => {
+      editingIsLocal = !editingIsLocal;
+      updateEditorSyncButton();
+    });
+  }
+
   // Auto-Sync Toggle Button
   const btnAutoSync = document.getElementById("btnAutoSyncToggle");
   if (btnAutoSync) {
@@ -388,6 +586,8 @@ function setupEventListeners() {
       currentFilter = item.dataset.filter;
       if (item.dataset.filter === "pinned") {
         document.getElementById("currentViewTitle").innerText = "Pinned Notes";
+      } else if (item.dataset.filter === "local") {
+        document.getElementById("currentViewTitle").innerText = "Local Notes (On-Device)";
       } else if (item.dataset.filter === "archived") {
         document.getElementById("currentViewTitle").innerText = "Archive";
       } else if (item.dataset.filter === "trash") {
@@ -702,12 +902,212 @@ function setupEventListeners() {
 
 
   // AANO Drop Modal Listeners
+  const dropPeerBadge = document.getElementById("dropPeerBadge");
+  if (dropPeerBadge) dropPeerBadge.addEventListener("click", openDropModal);
+
   const btnAanoDrop = document.getElementById("btnAanoDrop");
   if (btnAanoDrop) btnAanoDrop.addEventListener("click", openDropModal);
   const btnCloseAanoDrop = document.getElementById("btnCloseAanoDrop");
   if (btnCloseAanoDrop) btnCloseAanoDrop.addEventListener("click", closeDropModal);
   const btnDoneAanoDrop = document.getElementById("btnDoneAanoDrop");
   if (btnDoneAanoDrop) btnDoneAanoDrop.addEventListener("click", closeDropModal);
+
+  const btnUnpairPeer = document.getElementById("btnUnpairPeer");
+  if (btnUnpairPeer) {
+    btnUnpairPeer.addEventListener("click", async () => {
+      const api = getApi();
+      if (api && api.unpair_peer) {
+        await api.unpair_peer();
+        await checkDropPeerStatus();
+      }
+    });
+  }
+
+  const btnScanRadar = document.getElementById("btnScanRadar");
+  const radarResults = document.getElementById("radarResultsContainer");
+  const radarLabel = document.getElementById("radarScanLabel");
+  if (btnScanRadar) {
+    btnScanRadar.addEventListener("click", async () => {
+      const api = getApi();
+      if (!api || !api.scan_nearby_devices) return;
+      if (radarLabel) radarLabel.innerText = "🔍 Scanning Wi-Fi Radar...";
+      if (radarResults) {
+        radarResults.style.display = "block";
+        radarResults.innerHTML = '<div style="color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;">Scanning subnet for active AANO devices...</div>';
+      }
+      try {
+        const found = await api.scan_nearby_devices();
+        if (radarResults) {
+          if (!found || found.length === 0) {
+            radarResults.innerHTML = '<div style="color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;">No nearby AANO devices detected on Wi-Fi.</div>';
+          } else {
+            radarResults.innerHTML = "";
+            found.forEach(dev => {
+              const row = document.createElement("div");
+              row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05);";
+              row.innerHTML = `
+                <div>
+                  <div style="font-weight: 600; font-size: 12px; color: #f1f5f9;">${escapeHtml(dev.name || "Device")}</div>
+                  <div style="font-size: 11px; color: #64748b;">${dev.ip}:${dev.port}</div>
+                </div>
+                <button class="btn-connect-dev" style="background: var(--brand); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600;">Connect &amp; Pair</button>
+              `;
+              const connBtn = row.querySelector(".btn-connect-dev");
+              connBtn.addEventListener("click", async () => {
+                connBtn.innerText = "Pairing...";
+                const res = await api.pair_with_device(dev.ip, dev.port);
+                if (res && res.success) {
+                  await checkDropPeerStatus();
+                  closeDropModal();
+                  showNativeAlert({ title: "Connected", message: `Paired successfully with ${dev.name}!` });
+                } else {
+                  showNativeAlert({ title: "Pairing Failed", message: res?.error || "Could not pair with device." });
+                }
+                connBtn.innerText = "Connect & Pair";
+              });
+              radarResults.appendChild(row);
+            });
+          }
+        }
+      } catch (err) {
+        if (radarResults) {
+          radarResults.innerHTML = `<div style="color: #ef4444; font-size: 11px; padding: 6px;">Scan error: ${escapeHtml(String(err))}</div>`;
+        }
+      } finally {
+        if (radarLabel) radarLabel.innerText = "🔍 Radar Scan";
+      }
+    });
+  }
+
+  // Copy PC Drop URI
+  const btnCopyDropUri = document.getElementById("btnCopyDropUri");
+  if (btnCopyDropUri) {
+    btnCopyDropUri.addEventListener("click", () => {
+      const ip = document.getElementById("dropServerIp")?.innerText.replace("IP: ", "").trim() || "";
+      const pin = document.getElementById("dropServerPin")?.innerText.trim() || "";
+      const uri = `aano://drop?ip=${ip.split(":")[0]}&port=${ip.split(":")[1] || "8765"}&pin=${pin}`;
+      navigator.clipboard.writeText(uri).then(() => {
+        btnCopyDropUri.innerText = "✅";
+        setTimeout(() => { btnCopyDropUri.innerText = "📋"; }, 2000);
+      }).catch(() => {
+        prompt("Copy Drop URI:", uri);
+      });
+    });
+  }
+
+  // PC Camera QR Scanner Modal Logic
+  const scannerModal = document.getElementById("aanoScannerModal");
+  const scannerVideo = document.getElementById("qrScannerVideo");
+  const scannerStatus = document.getElementById("qrScannerStatus");
+  const btnOpenQrScanner = document.getElementById("btnOpenQrScanner");
+  const btnCloseScannerModal = document.getElementById("btnCloseScannerModal");
+  const btnUploadQrImage = document.getElementById("btnUploadQrImage");
+  const qrFileInput = document.getElementById("qrFileInput");
+  const btnPasteQrCode = document.getElementById("btnPasteQrCode");
+
+  function applyScannedDropResult(val) {
+    if (!val) return;
+    const parsed = window.AanoQrScanner ? window.AanoQrScanner.parseDropUri(val) : null;
+    const targetIp = document.getElementById("targetPhoneIp");
+    const targetPin = document.getElementById("targetPhonePin");
+
+    if (parsed && parsed.valid) {
+      if (targetIp) targetIp.value = parsed.port && parsed.port !== "8765" ? `${parsed.ip}:${parsed.port}` : parsed.ip;
+      if (targetPin) targetPin.value = parsed.pin || "";
+      closeScannerModal();
+      showNativeAlert({
+        title: "⚡ Phone Paired",
+        message: `Paired successfully with device at ${parsed.ip}! Choose note(s) below and click 'Send Selected Note(s)'.`
+      });
+    } else {
+      if (targetIp) targetIp.value = val.trim();
+      closeScannerModal();
+    }
+  }
+
+  function openScannerModal() {
+    if (!scannerModal || !scannerVideo) return;
+    scannerModal.classList.remove("hidden");
+    if (scannerStatus) scannerStatus.innerText = "Point camera at phone's AANO Drop QR code";
+    if (window.AanoQrScanner) {
+      window.AanoQrScanner.startCamera(scannerVideo, (val) => {
+        applyScannedDropResult(val);
+      }, (err) => {
+        if (scannerStatus) scannerStatus.innerText = "Camera not detected or permission denied. Use Screenshot or Paste below.";
+      });
+    }
+  }
+
+  function closeScannerModal() {
+    if (window.AanoQrScanner) window.AanoQrScanner.stopCamera();
+    if (scannerModal) scannerModal.classList.add("hidden");
+  }
+
+  if (btnOpenQrScanner) btnOpenQrScanner.addEventListener("click", openScannerModal);
+  if (btnCloseScannerModal) btnCloseScannerModal.addEventListener("click", closeScannerModal);
+
+  if (btnUploadQrImage && qrFileInput) {
+    btnUploadQrImage.addEventListener("click", () => qrFileInput.click());
+    qrFileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file && window.AanoQrScanner) {
+        if (scannerStatus) scannerStatus.innerText = "Analyzing image...";
+        window.AanoQrScanner.decodeImageFile(file, (val) => {
+          applyScannedDropResult(val);
+        }, (err) => {
+          if (scannerStatus) scannerStatus.innerText = `Could not decode QR: ${err.message || "Unknown error"}`;
+        });
+      }
+    });
+  }
+
+  if (btnPasteQrCode) {
+    btnPasteQrCode.addEventListener("click", async () => {
+      let text = "";
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (_) {}
+      if (!text) {
+        text = prompt("Paste Phone's AANO Drop URI or IP:PORT (e.g. aano://drop?ip=...):", "");
+      }
+      if (text && text.trim()) {
+        applyScannedDropResult(text.trim());
+      }
+    });
+  }
+
+  const btnBatchDrop = document.getElementById("btnBatchDrop");
+  if (btnBatchDrop) {
+    btnBatchDrop.addEventListener("click", async () => {
+      const selectedIds = Array.from(selectedNoteIds);
+      if (selectedIds.length === 0) {
+        showNativeAlert({ title: "No Notes Selected", message: "Please select at least one note to drop." });
+        return;
+      }
+      const api = getApi();
+      if (!api) return;
+
+      if (activePairedPeer && activePairedPeer.ip) {
+        const origHtml = btnBatchDrop.innerHTML;
+        btnBatchDrop.innerText = `Dropping ${selectedIds.length}...`;
+        try {
+          const res = await api.send_drop_to_device(activePairedPeer.ip, activePairedPeer.port || 8766, selectedIds);
+          if (res && res.success) {
+            showNativeAlert({ title: "Drop Complete", message: `Successfully transferred ${res.count || selectedIds.length} notes to ${activePairedPeer.name || "Phone"}!` });
+            exitSelectionMode();
+          } else {
+            showNativeAlert({ title: "Drop Failed", message: res?.error || "Could not reach paired device." });
+          }
+        } catch (e) {
+          showNativeAlert({ title: "Error", message: String(e) });
+        } finally {
+          btnBatchDrop.innerHTML = origHtml;
+        }
+      } else {
+        openDropModal();
+      }
+    });
+  }
 
   const btnSendDropToPhone = document.getElementById("btnSendDropToPhone");
   if (btnSendDropToPhone) {
@@ -737,6 +1137,7 @@ function setupEventListeners() {
       try {
         const res = await api.send_drop_to_device(targetIp, 8766, noteIdsToSend, targetPin);
         if (res && res.success) {
+          await checkDropPeerStatus();
           showNativeAlert({ title: "Drop Complete", message: `Successfully transferred ${res.count || 0} notes to phone!` });
           closeDropModal();
         } else {
@@ -750,10 +1151,108 @@ function setupEventListeners() {
     });
   }
 
-  // Export Buttons in Editor
-  const btnEditorExportMd = document.getElementById("btnEditorExportMd");
-  if (btnEditorExportMd) {
-    btnEditorExportMd.addEventListener("click", async () => {
+  // Unified Export Dropdown in Editor
+  const btnEditorExport = document.getElementById("btnEditorExport");
+  const exportMenu = document.getElementById("exportMenu");
+  if (btnEditorExport && exportMenu) {
+    btnEditorExport.addEventListener("click", (e) => {
+      e.stopPropagation();
+      exportMenu.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".export-dropdown-wrapper")) {
+        exportMenu.classList.add("hidden");
+      }
+    });
+  }
+
+  const btnExportAano = document.getElementById("btnExportAano");
+  if (btnExportAano) {
+    btnExportAano.addEventListener("click", async () => {
+      if (exportMenu) exportMenu.classList.add("hidden");
+      if (!editingNote || !editingNote.id) {
+        showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
+        return;
+      }
+      const api = getApi();
+      if (api && api.export_note_aano) {
+        const res = await api.export_note_aano(editingNote.id);
+        if (res && res.success && res.path) {
+          showNativeAlert({ title: "AANO Package Exported", message: `Direct-opening note package created: ${res.path}\n\nAnyone with AANO can open this package with all text, photos, and voice memos intact!` });
+        }
+      }
+    });
+  }
+
+  const btnImportAano = document.getElementById("btnImportAano");
+  if (btnImportAano) {
+    btnImportAano.addEventListener("click", async () => {
+      const api = getApi();
+      if (api && api.import_aano_package) {
+        const res = await api.import_aano_package();
+        if (res && res.success && res.note_id) {
+          await loadNotes();
+          openEditor(res.note_id);
+          showNativeAlert({ title: "Note Imported", message: `Successfully imported "${res.title}" with all attachments!` });
+        } else if (res && res.error) {
+          showNativeAlert({ title: "Import Failed", message: res.error });
+        }
+      }
+    });
+  }
+
+  window.importAanoOnStartup = async (filePath) => {
+    const api = getApi();
+    if (api && api.import_aano_package) {
+      const res = await api.import_aano_package(filePath);
+      if (res && res.success && res.note_id) {
+        await loadNotes();
+        openEditor(res.note_id);
+      }
+    }
+  };
+
+  const btnExportTxt = document.getElementById("btnExportTxt");
+  if (btnExportTxt) {
+    btnExportTxt.addEventListener("click", async () => {
+      if (exportMenu) exportMenu.classList.add("hidden");
+      if (!editingNote || !editingNote.id) {
+        showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
+        return;
+      }
+      const api = getApi();
+      if (api && api.export_note_text) {
+        const res = await api.export_note_text(editingNote.id);
+        if (res && res.success && res.path) {
+          showNativeAlert({ title: "Text File Exported", message: `File saved to: ${res.path}` });
+        }
+      }
+    });
+  }
+
+  const btnExportPdf = document.getElementById("btnExportPdf");
+  if (btnExportPdf) {
+    btnExportPdf.addEventListener("click", async () => {
+      if (exportMenu) exportMenu.classList.add("hidden");
+      if (!editingNote || !editingNote.id) {
+        showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
+        return;
+      }
+      const api = getApi();
+      if (api && api.export_note_html_pdf) {
+        const res = await api.export_note_html_pdf(editingNote.id);
+        if (res && res.success && res.path) {
+          showNativeAlert({ title: "PDF / Printable Exported", message: `Printable document saved to: ${res.path}. Open it in your browser to print or save as PDF.` });
+        }
+      }
+    });
+  }
+
+  const btnExportMd = document.getElementById("btnExportMd");
+  if (btnExportMd) {
+    btnExportMd.addEventListener("click", async () => {
+      if (exportMenu) exportMenu.classList.add("hidden");
       if (!editingNote || !editingNote.id) {
         showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
         return;
@@ -768,18 +1267,19 @@ function setupEventListeners() {
     });
   }
 
-  const btnEditorExportPdf = document.getElementById("btnEditorExportPdf");
-  if (btnEditorExportPdf) {
-    btnEditorExportPdf.addEventListener("click", async () => {
+  const btnExportZip = document.getElementById("btnExportZip");
+  if (btnExportZip) {
+    btnExportZip.addEventListener("click", async () => {
+      if (exportMenu) exportMenu.classList.add("hidden");
       if (!editingNote || !editingNote.id) {
         showNativeAlert({ title: "Notice", message: "Please save the note first before exporting." });
         return;
       }
       const api = getApi();
-      if (api && api.export_note_html_pdf) {
-        const res = await api.export_note_html_pdf(editingNote.id);
+      if (api && api.export_note_zip) {
+        const res = await api.export_note_zip(editingNote.id);
         if (res && res.success && res.path) {
-          showNativeAlert({ title: "Print / PDF Exported", message: `Printable document saved to: ${res.path}. Open it in your browser to print or save as PDF.` });
+          showNativeAlert({ title: "ZIP Archive Exported", message: `Complete bundle with notes, photos, and voice memos saved to: ${res.path}` });
         }
       }
     });
@@ -793,14 +1293,24 @@ function setupEventListeners() {
   }
 
   // Backup & Restore
-  document.getElementById("btnBackup").addEventListener("click", () => {
-    document.getElementById("backupModal").classList.remove("hidden");
-  });
-  document.getElementById("btnCloseBackup").addEventListener("click", () => {
-    document.getElementById("backupModal").classList.add("hidden");
-  });
-  document.getElementById("btnExportJSON").addEventListener("click", handleExportBackup);
-  document.getElementById("backupFileInput").addEventListener("change", handleImportBackup);
+  const btnBackup = document.getElementById("btnBackup");
+  if (btnBackup) {
+    btnBackup.addEventListener("click", () => {
+      const backupModal = document.getElementById("backupModal");
+      if (backupModal) backupModal.classList.remove("hidden");
+    });
+  }
+  const btnCloseBackup = document.getElementById("btnCloseBackup");
+  if (btnCloseBackup) {
+    btnCloseBackup.addEventListener("click", () => {
+      const backupModal = document.getElementById("backupModal");
+      if (backupModal) backupModal.classList.add("hidden");
+    });
+  }
+  const btnExportJSON = document.getElementById("btnExportJSON");
+  if (btnExportJSON) btnExportJSON.addEventListener("click", handleExportBackup);
+  const backupFileInput = document.getElementById("backupFileInput");
+  if (backupFileInput) backupFileInput.addEventListener("change", handleImportBackup);
 
   // Global Keyboard Shortcuts (Ctrl+N, Ctrl+F, Escape)
   document.addEventListener("keydown", (e) => {
@@ -951,7 +1461,11 @@ function renderNotes() {
   const emptyState = document.getElementById("emptyState");
   container.replaceChildren();
 
+  const nonLocalNotes = allNotes.filter(n => !n.isLocal);
+  const localNotes = allNotes.filter(n => n.isLocal);
   document.getElementById("allCount").innerText = allNotes.length;
+  const localCountEl = document.getElementById("localCount");
+  if (localCountEl) localCountEl.innerText = localNotes.length;
   const archivedCountEl = document.getElementById("archivedCount");
   if (archivedCountEl) archivedCountEl.innerText = archivedNotes.length;
   const trashCountEl = document.getElementById("trashCount");
@@ -970,8 +1484,13 @@ function renderNotes() {
 
   let filtered = sourceNotes.filter(n => {
     // Nav / Folder filter
-    if (currentFilter === "pinned" && !n.pinned) return false;
-    if (currentFilter.startsWith("folder:")) {
+    if (currentFilter === "local") {
+      if (!n.isLocal) return false;
+    } else if (currentFilter === "all") {
+      // Unified feed: show all notes (cloud and on-device)
+    } else if (currentFilter === "pinned") {
+      if (!n.pinned) return false;
+    } else if (currentFilter.startsWith("folder:")) {
       const fName = currentFilter.replace("folder:", "");
       if (n.folder !== fName) return false;
     }
@@ -1067,6 +1586,14 @@ function renderNotes() {
         });
       }
     } else {
+      const imageCount = (note.images && Array.isArray(note.images)) ? note.images.length : 0;
+      const hasAudio = !!note.audioUri;
+      const mediaBadges = `
+        ${imageCount > 0 ? `<span class="media-pill">📷 ${imageCount}</span>` : ''}
+        ${hasAudio ? `<span class="media-pill">🎙️ Audio</span>` : ''}
+      `;
+      const localBadge = note.isLocal ? `<span class="badge" style="background: rgba(56, 189, 248, 0.18); color: #0284c7; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px;">⚡ On-Device</span>` : '';
+
       card.innerHTML = `
         ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
         ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
@@ -1074,6 +1601,10 @@ function renderNotes() {
         <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
         <div class="note-card-footer">
           <span class="folder-badge">${cardFolderSvg} ${escapeHtml(note.folder || "General")}</span>
+          <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+            ${mediaBadges}
+            ${localBadge}
+          </div>
           <span>${dateStr}</span>
         </div>
       `;
@@ -1104,7 +1635,8 @@ function renderNotes() {
 function renderColorPalette() {
   const container = document.getElementById("paletteDots");
   container.replaceChildren();
-  PASTEL_COLORS.forEach((color, idx) => {
+  const palette = isCurrentThemeDark() ? PALETTE_DARK : PALETTE_LIGHT;
+  palette.forEach((color, idx) => {
     const dot = document.createElement("div");
     const isMatched = (typeof editingColor === "number" && editingColor === idx);
     dot.className = "color-dot" + (isMatched ? " active" : "");
@@ -1215,6 +1747,8 @@ function setEditorMode(isViewMode) {
 
 function openEditor(note = null, defaultFolder = null) {
   editingNote = note;
+  editingIsLocal = note ? Boolean(note.isLocal) : (currentFilter === "local");
+  updateEditorSyncButton();
   const modal = document.getElementById("editorModal");
   const card = document.getElementById("editorCard");
   const titleInput = document.getElementById("editorTitle");
@@ -1289,6 +1823,7 @@ async function closeAndSaveEditor() {
   const title = document.getElementById("editorTitle").value.trim();
   const content = document.getElementById("editorContent").innerHTML.trim();
   const folder = document.getElementById("editorFolderSelect").value;
+  const isLocalNote = Boolean(editingIsLocal);
   const noteToSave = {
     id: editingNote ? editingNote.id : null,
     title: title || "Untitled Note",
@@ -1296,6 +1831,7 @@ async function closeAndSaveEditor() {
     folder: folder,
     color: editingColor,
     pinned: editingPinned,
+    isLocal: isLocalNote,
     images: currentAttachedImages.map(img => img.filename)
   };
 
@@ -1311,7 +1847,9 @@ async function closeAndSaveEditor() {
       try {
         await api.save_note(noteToSave);
         await refreshData();
-        api.sync_now().then(() => checkCloudStatus()).catch(() => {});
+        if (!isLocalNote) {
+          api.sync_now().then(() => checkCloudStatus()).catch(() => {});
+        }
       } catch (err) {
         console.warn("Save note failed:", err);
       }
@@ -1719,4 +2257,317 @@ function showNativeAlert({ title = "Notice", message = "", okText = "OK" } = {})
     modal.classList.remove("hidden");
     btnOk.focus();
   });
+}
+
+// --------------------- Media Vault & Image Processing ---------------------
+async function loadAttachedImages(imageFilenames) {
+  currentAttachedImages = [];
+  const api = getApi();
+  if (!api || !imageFilenames || !imageFilenames.length) {
+    renderAttachedImages();
+    return;
+  }
+  for (const fn of imageFilenames) {
+    try {
+      const cleanFn = fn.split("/").pop().split("\\").pop();
+      const res = await api.get_image_data_url(cleanFn);
+      if (res && res.success && res.dataUrl) {
+        currentAttachedImages.push({ filename: cleanFn, dataUrl: res.dataUrl });
+      }
+    } catch (e) {
+      console.warn("Failed to load image data URL:", fn, e);
+    }
+  }
+  renderAttachedImages();
+}
+
+function renderAttachedImages() {
+  const container = document.getElementById("editorImagesContainer");
+  if (!container) return;
+  if (!currentAttachedImages || currentAttachedImages.length === 0) {
+    container.classList.add("hidden");
+    container.replaceChildren();
+    return;
+  }
+  container.classList.remove("hidden");
+  container.replaceChildren();
+
+  currentAttachedImages.forEach((img, idx) => {
+    const thumb = document.createElement("div");
+    thumb.className = "editor-image-thumb";
+    thumb.title = img.filename || "Attached Image";
+
+    const imgEl = document.createElement("img");
+    imgEl.src = img.dataUrl;
+    imgEl.alt = "Attachment";
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "thumb-del-btn";
+    delBtn.title = "Remove";
+    delBtn.innerText = "✕";
+    delBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      currentAttachedImages.splice(idx, 1);
+      renderAttachedImages();
+    });
+
+    thumb.appendChild(imgEl);
+    thumb.appendChild(delBtn);
+    thumb.addEventListener("click", () => {
+      openImagePreview(idx);
+    });
+    container.appendChild(thumb);
+  });
+}
+
+async function handleAttachImage() {
+  const api = getApi();
+  if (!api || !api.attach_images) return;
+  try {
+    const res = await api.attach_images(isHdAttachmentQuality);
+    if (res && res.success && res.images && res.images.length) {
+      for (const item of res.images) {
+        currentAttachedImages.push({
+          filename: item.filename,
+          dataUrl: item.dataUrl
+        });
+      }
+      renderAttachedImages();
+    }
+  } catch (err) {
+    console.warn("Attach image failed:", err);
+  }
+}
+
+function openImagePreview(index) {
+  if (index < 0 || index >= currentAttachedImages.length) return;
+  currentPreviewIndex = index;
+  const modal = document.getElementById("imagePreviewModal");
+  const imgEl = document.getElementById("previewModalImg");
+  const nameEl = document.getElementById("previewImageName");
+  if (!modal || !imgEl) return;
+
+  const item = currentAttachedImages[index];
+  imgEl.src = item.dataUrl;
+  if (nameEl) nameEl.innerText = item.filename || "Image Preview";
+  modal.classList.remove("hidden");
+}
+
+function closeImagePreview() {
+  const modal = document.getElementById("imagePreviewModal");
+  if (modal) modal.classList.add("hidden");
+  currentPreviewIndex = -1;
+}
+
+function openCropModal() {
+  if (currentPreviewIndex < 0 || currentPreviewIndex >= currentAttachedImages.length) return;
+  const item = currentAttachedImages[currentPreviewIndex];
+  closeImagePreview();
+
+  const modal = document.getElementById("imageCropModal");
+  const canvas = document.getElementById("cropCanvas");
+  if (!modal || !canvas) return;
+
+  cropRotation = 0;
+  cropAspectRatio = "free";
+  document.querySelectorAll(".btn-ratio").forEach(b => {
+    b.classList.toggle("active", b.dataset.ratio === "free");
+  });
+
+  cropImageObj = new Image();
+  cropImageObj.onload = () => {
+    initCropCanvas();
+    modal.classList.remove("hidden");
+  };
+  cropImageObj.src = item.dataUrl;
+}
+
+function closeCropModal() {
+  const modal = document.getElementById("imageCropModal");
+  if (modal) modal.classList.add("hidden");
+  cropImageObj = null;
+}
+
+function initCropCanvas() {
+  const canvas = document.getElementById("cropCanvas");
+  if (!canvas || !cropImageObj) return;
+
+  const isRotated90or270 = (cropRotation % 180 !== 0);
+  const srcW = isRotated90or270 ? cropImageObj.height : cropImageObj.width;
+  const srcH = isRotated90or270 ? cropImageObj.width : cropImageObj.height;
+
+  const maxW = Math.min(window.innerWidth * 0.7, 700);
+  const maxH = Math.min(window.innerHeight * 0.55, 480);
+  let scale = 1;
+  if (srcW > maxW || srcH > maxH) {
+    scale = Math.min(maxW / srcW, maxH / srcH);
+  }
+  canvas.width = Math.max(100, Math.round(srcW * scale));
+  canvas.height = Math.max(100, Math.round(srcH * scale));
+
+  const insetX = canvas.width * 0.08;
+  const insetY = canvas.height * 0.08;
+  cropBox = {
+    x: insetX,
+    y: insetY,
+    w: canvas.width - (insetX * 2),
+    h: canvas.height - (insetY * 2)
+  };
+  applyAspectRatioToCropBox();
+  drawCropCanvas();
+}
+
+function applyAspectRatioToCropBox() {
+  if (!cropBox || cropAspectRatio === "free") return;
+  const canvas = document.getElementById("cropCanvas");
+  if (!canvas) return;
+
+  let targetRatio = 1;
+  if (cropAspectRatio === "1:1") targetRatio = 1;
+  else if (cropAspectRatio === "4:3") targetRatio = 4 / 3;
+  else if (cropAspectRatio === "16:9") targetRatio = 16 / 9;
+
+  let newH = cropBox.w / targetRatio;
+  if (newH > canvas.height - cropBox.y) {
+    newH = canvas.height - cropBox.y;
+    cropBox.w = newH * targetRatio;
+  }
+  cropBox.h = newH;
+}
+
+function drawCropCanvas() {
+  const canvas = document.getElementById("cropCanvas");
+  if (!canvas || !cropImageObj || !cropBox) return;
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate((cropRotation * Math.PI) / 180);
+  const isRotated90or270 = (cropRotation % 180 !== 0);
+  const drawW = isRotated90or270 ? canvas.height : canvas.width;
+  const drawH = isRotated90or270 ? canvas.width : canvas.height;
+  ctx.drawImage(cropImageObj, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.restore();
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+  ctx.fillRect(0, 0, canvas.width, cropBox.y);
+  ctx.fillRect(0, cropBox.y + cropBox.h, canvas.width, canvas.height - (cropBox.y + cropBox.h));
+  ctx.fillRect(0, cropBox.y, cropBox.x, cropBox.h);
+  ctx.fillRect(cropBox.x + cropBox.w, cropBox.y, canvas.width - (cropBox.x + cropBox.w), cropBox.h);
+
+  ctx.strokeStyle = "#00897B";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cropBox.x, cropBox.y, cropBox.w, cropBox.h);
+
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cropBox.x + cropBox.w / 3, cropBox.y);
+  ctx.lineTo(cropBox.x + cropBox.w / 3, cropBox.y + cropBox.h);
+  ctx.moveTo(cropBox.x + (cropBox.w * 2) / 3, cropBox.y);
+  ctx.lineTo(cropBox.x + (cropBox.w * 2) / 3, cropBox.y + cropBox.h);
+  ctx.moveTo(cropBox.x, cropBox.y + cropBox.h / 3);
+  ctx.lineTo(cropBox.x + cropBox.w, cropBox.y + cropBox.h / 3);
+  ctx.moveTo(cropBox.x, cropBox.y + (cropBox.h * 2) / 3);
+  ctx.lineTo(cropBox.x + cropBox.w, cropBox.y + (cropBox.h * 2) / 3);
+  ctx.stroke();
+
+  const handleSize = 8;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(cropBox.x - handleSize / 2, cropBox.y - handleSize / 2, handleSize, handleSize);
+  ctx.fillRect(cropBox.x + cropBox.w - handleSize / 2, cropBox.y - handleSize / 2, handleSize, handleSize);
+  ctx.fillRect(cropBox.x - handleSize / 2, cropBox.y + cropBox.h - handleSize / 2, handleSize, handleSize);
+  ctx.fillRect(cropBox.x + cropBox.w - handleSize / 2, cropBox.y + cropBox.h - handleSize / 2, handleSize, handleSize);
+}
+
+function setupCropCanvasEvents() {
+  const canvas = document.getElementById("cropCanvas");
+  if (!canvas) return;
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (!cropBox) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    isDraggingCrop = true;
+    cropDragStart = { x: mx, y: my };
+
+    if (mx >= cropBox.x && mx <= cropBox.x + cropBox.w && my >= cropBox.y && my <= cropBox.y + cropBox.h) {
+      cropDragMode = "move";
+    } else {
+      cropDragMode = "new";
+      cropBox.x = mx;
+      cropBox.y = my;
+      cropBox.w = 10;
+      cropBox.h = 10;
+    }
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isDraggingCrop || !cropBox) return;
+    const canvas = document.getElementById("cropCanvas");
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = Math.max(0, Math.min(canvas.width, e.clientX - rect.left));
+    const my = Math.max(0, Math.min(canvas.height, e.clientY - rect.top));
+
+    const dx = mx - cropDragStart.x;
+    const dy = my - cropDragStart.y;
+    cropDragStart = { x: mx, y: my };
+
+    if (cropDragMode === "move") {
+      cropBox.x = Math.max(0, Math.min(canvas.width - cropBox.w, cropBox.x + dx));
+      cropBox.y = Math.max(0, Math.min(canvas.height - cropBox.h, cropBox.y + dy));
+    } else {
+      cropBox.w = Math.max(30, mx - cropBox.x);
+      cropBox.h = Math.max(30, my - cropBox.y);
+      applyAspectRatioToCropBox();
+    }
+    drawCropCanvas();
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDraggingCrop = false;
+  });
+}
+
+async function handleApplyCrop() {
+  if (currentPreviewIndex < 0 || !cropImageObj || !cropBox) return;
+  const canvas = document.getElementById("cropCanvas");
+  if (!canvas) return;
+
+  const isRotated90or270 = (cropRotation % 180 !== 0);
+  const srcW = isRotated90or270 ? cropImageObj.height : cropImageObj.width;
+  const srcH = isRotated90or270 ? cropImageObj.width : cropImageObj.height;
+
+  const scaleX = srcW / canvas.width;
+  const scaleY = srcH / canvas.height;
+
+  const cropX = Math.round(cropBox.x * scaleX);
+  const cropY = Math.round(cropBox.y * scaleY);
+  const cropW = Math.round(cropBox.w * scaleX);
+  const cropH = Math.round(cropBox.h * scaleY);
+
+  const api = getApi();
+  if (!api || !api.crop_image) return;
+
+  const item = currentAttachedImages[currentPreviewIndex];
+  try {
+    const res = await api.crop_image(item.filename, [cropX, cropY, cropX + cropW, cropY + cropH], cropRotation, isHdAttachmentQuality);
+    if (res && res.success) {
+      currentAttachedImages[currentPreviewIndex] = {
+        filename: res.filename,
+        dataUrl: res.dataUrl
+      };
+      renderAttachedImages();
+      closeCropModal();
+      openImagePreview(currentPreviewIndex);
+    }
+  } catch (e) {
+    console.warn("Apply crop failed:", e);
+  }
 }

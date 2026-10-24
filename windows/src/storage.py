@@ -180,16 +180,35 @@ def sync_with_cloud():
                     sn_updated = sn.get("updatedAt", 0)
                     ex_updated = existing.get("updatedAt", 0)
 
+                    is_purged = bool(sn.get("purged", False) or (existing and existing.get("purged", False)))
+                    if is_purged:
+                        del_at = max(existing.get("deletedAt", 0) if existing else 0, sn.get("deletedAt", 0), sn_updated, ex_updated)
+                        up_at = max(sn_updated, ex_updated)
+                        base = dict(existing if existing else sn)
+                        base["title"] = ""
+                        base["content"] = ""
+                        base["images"] = []
+                        base["audioUri"] = None
+                        base["deleted"] = True
+                        base["purged"] = True
+                        base["deletedAt"] = del_at
+                        base["updatedAt"] = up_at
+                        base["isLocal"] = False
+                        local_map[sn["id"]] = base
+                        continue
+
                     if sn_updated >= ex_updated:
                         merged_note = dict(sn)
                         merged_note["deleted"] = is_deleted
                         merged_note["archived"] = is_archived
+                        merged_note["purged"] = False
                         if is_deleted:
                             merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
                         local_map[sn["id"]] = merged_note
                     else:
                         existing["deleted"] = is_deleted
                         existing["archived"] = is_archived
+                        existing["purged"] = False
                         if is_deleted:
                             existing["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), ex_updated)
                         local_map[sn["id"]] = existing

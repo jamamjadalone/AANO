@@ -2,6 +2,16 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_search"
+        android:title="@string/search"
+        android:icon="@drawable/ic_search"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_drop"
+        android:title="⚡ AANO Drop"
+        android:icon="@drawable/ic_aano_drop"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/action_view_mode"
         android:title="View Mode"
         android:icon="@drawable/ic_view_list"
@@ -26,6 +36,14 @@
         android:title="@string/sync_now"
         app:showAsAction="ifRoom"
         android:icon="@drawable/ic_sync" />
+    <item
+        android:id="@+id/action_export_vault"
+        android:title="📦 Export Media Vault (.zip)"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_restore_vault"
+        android:title="📥 Restore Media Vault (.zip)"
+        app:showAsAction="never" />
     <item
         android:id="@+id/action_settings"
         android:title="@string/settings"

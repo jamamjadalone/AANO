@@ -118,6 +118,14 @@ class LocalFragment : Fragment() {
             binding.fabAddLocal.show()
         }
 
+        binding.btnDisconnectPeer.setOnClickListener {
+            prefs.lastDropIp = ""
+            prefs.lastDropPeerName = ""
+            prefs.lastDropPin = ""
+            updatePeerStatus()
+            Toast.makeText(requireContext(), "Disconnected from peer", Toast.LENGTH_SHORT).show()
+        }
+
         binding.btnDropSelected.setOnClickListener {
             val selectedIds = adapter.getSelectedIds()
             if (selectedIds.isEmpty()) return@setOnClickListener
@@ -128,12 +136,13 @@ class LocalFragment : Fragment() {
                     if (target.isBlank()) {
                         showDropHubDialog(notesToDrop = notes)
                     } else {
-                        performBatchDrop(target, "", notes)
+                        performBatchDrop(target, prefs.lastDropPin, notes)
                     }
                 }
             }
         }
 
+        updatePeerStatus()
         loadLocalNotes()
     }
 
@@ -153,6 +162,26 @@ class LocalFragment : Fragment() {
         super.onResume()
         applyLayoutManager()
         loadLocalNotes()
+        updatePeerStatus()
+        AanoDropManager.getInstance(requireContext()).onNotesReceivedListener = { _, _ ->
+            lifecycleScope.launch {
+                loadLocalNotes()
+                updatePeerStatus()
+            }
+        }
+    }
+
+    private fun updatePeerStatus() {
+        if (_binding == null) return
+        val peerIp = prefs.lastDropIp
+        val peerName = prefs.lastDropPeerName.ifBlank { "Desktop PC" }
+        if (peerIp.isNotBlank()) {
+            binding.cardDropPeer.visibility = View.VISIBLE
+            binding.tvPeerName.text = "Connected: $peerName"
+            binding.tvPeerEndpoint.text = peerIp
+        } else {
+            binding.cardDropPeer.visibility = View.GONE
+        }
     }
 
     private fun loadLocalNotes() {
@@ -328,24 +357,32 @@ class LocalFragment : Fragment() {
         val myPin = dropMgr.pin
         val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
 
+        val dm = resources.displayMetrics
+        val density = dm.density
+        val padH = (20 * density).toInt()
+        val padV = (12 * density).toInt()
+
         val inputLayout = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 16, 40, 10)
+            setPadding(padH, padV, padH, padV)
             gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
 
+        // Responsive QR size: ~170dp, capped at 50% screen width to guarantee fit on compact Vivo/720p screens
+        val qrTargetPx = (170 * density).toInt().coerceAtMost((dm.widthPixels * 0.50).toInt())
         val qrBmp = try {
-            QrCode.encodeText(myUri, QrCode.Ecc.MEDIUM).toBitmap(360)
+            QrCode.encodeText(myUri, QrCode.Ecc.MEDIUM).toBitmap(qrTargetPx)
         } catch (_: Exception) { null }
 
         if (qrBmp != null) {
             val ivQr = ImageView(requireContext()).apply {
                 setImageBitmap(qrBmp)
-                layoutParams = LinearLayout.LayoutParams(360, 360).apply {
-                    setMargins(0, 0, 0, 12)
+                layoutParams = LinearLayout.LayoutParams(qrTargetPx, qrTargetPx).apply {
+                    setMargins(0, 0, 0, (10 * density).toInt())
                 }
                 setBackgroundColor(android.graphics.Color.WHITE)
-                setPadding(12, 12, 12, 12)
+                val padQr = (8 * density).toInt()
+                setPadding(padQr, padQr, padQr, padQr)
             }
             inputLayout.addView(ivQr)
         }
@@ -374,6 +411,46 @@ class LocalFragment : Fragment() {
             }
         }
 
+        val btnRadar = com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+            setOnClickListener {
+                text = "Scanning Subnet..."
+                isEnabled = false
+                lifecycleScope.launch {
+                    val peers = dropMgr.discoverNearbyPeers()
+                    isEnabled = true
+                    text = "🔍 Wi-Fi Radar (Auto-Find PC)"
+                    if (peers.isEmpty()) {
+                        Toast.makeText(requireContext(), "No nearby AANO devices detected on Wi-Fi", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val peerItems = peers.map { "${it.name} (${it.ip}:${it.port})" }.toTypedArray()
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Select Nearby Device")
+                            .setItems(peerItems) { _, which ->
+                                val selectedPeer = peers[which]
+                                lifecycleScope.launch {
+                                    val pairRes = dropMgr.pairWithPeer(selectedPeer.ip, selectedPeer.port)
+                                    pairRes.onSuccess {
+                                        prefs.lastDropIp = if (selectedPeer.port == 8765) selectedPeer.ip else "${selectedPeer.ip}:${selectedPeer.port}"
+                                        prefs.lastDropPeerName = selectedPeer.name
+                                        updatePeerStatus()
+                                        Toast.makeText(requireContext(), "Paired with ${selectedPeer.name}!", Toast.LENGTH_SHORT).show()
+                                        if (notesToDrop != null) {
+                                            performBatchDrop(selectedPeer.ip, "", notesToDrop)
+                                        }
+                                    }.onFailure {
+                                        prefs.lastDropIp = selectedPeer.ip
+                                        updatePeerStatus()
+                                        Toast.makeText(requireContext(), "Selected ${selectedPeer.ip}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            .show()
+                    }
+                }
+            }
+        }
+
         val etIp = EditText(requireContext()).apply {
             hint = "Target IP (e.g. 192.168.1.100 or :8765)"
             setText(prefs.lastDropIp)
@@ -393,6 +470,7 @@ class LocalFragment : Fragment() {
         }
 
         inputLayout.addView(tvInfo)
+        inputLayout.addView(btnRadar)
         inputLayout.addView(btnScanCamera)
         inputLayout.addView(etIp)
         inputLayout.addView(etPin)
@@ -400,15 +478,23 @@ class LocalFragment : Fragment() {
         val dialogTitle = if (notesToDrop != null) "⚡ Drop ${notesToDrop.size} Note(s)" else "⚡ AANO Drop & Wi-Fi Pairing"
         val positiveBtnText = if (notesToDrop != null) "Send Now" else "Save & Connect"
 
+        val scrollView = android.widget.ScrollView(requireContext()).apply {
+            isFillViewport = true
+            overScrollMode = android.view.View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            addView(inputLayout)
+        }
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(dialogTitle)
             .setMessage("Direct Wi-Fi P2P connection (Zero internet data).")
-            .setView(inputLayout)
+            .setView(scrollView)
             .setPositiveButton(positiveBtnText) { _, _ ->
                 val ip = etIp.text.toString().trim()
                 val pin = etPin.text.toString().trim()
                 if (ip.isNotBlank()) {
                     prefs.lastDropIp = ip
+                    prefs.lastDropPin = pin
+                    updatePeerStatus()
                     if (notesToDrop != null) {
                         performBatchDrop(ip, pin, notesToDrop)
                     } else {
@@ -433,6 +519,7 @@ class LocalFragment : Fragment() {
             )
             res.onSuccess {
                 Toast.makeText(requireContext(), "⚡ Dropped ${notesToSend.size} note(s) successfully!", Toast.LENGTH_LONG).show()
+                updatePeerStatus()
                 adapter.clearSelection()
                 binding.cardSelectionBar.visibility = View.GONE
                 binding.fabAddLocal.show()

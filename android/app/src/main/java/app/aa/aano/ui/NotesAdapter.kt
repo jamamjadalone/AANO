@@ -131,7 +131,7 @@ class NotesAdapter(
         } else {
             holder.badgeImageLayout?.visibility = View.GONE
         }
-        holder.badgeLocal?.visibility = if (note.isLocal) View.VISIBLE else View.GONE
+        holder.badgeLocal?.visibility = View.GONE
 
         // Folder pill badge
         if (note.folder.isNotBlank()) {

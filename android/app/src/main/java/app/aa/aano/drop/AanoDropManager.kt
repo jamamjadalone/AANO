@@ -370,11 +370,11 @@ class AanoDropManager(private val context: Context) {
             listOf(targetPort, if (targetPort == 8765) 8766 else 8765)
         }
 
-        // Pack notes
+        // Pack notes (clean plaintext JSON for P2P transfer)
         val notesArr = JSONArray()
         val requiredImages = mutableSetOf<String>()
         for (note in notes) {
-            notesArr.put(repository.serialize(note))
+            notesArr.put(note.toJson())
             for (img in note.images) {
                 val fn = File(img).name
                 if (fn.isNotEmpty()) requiredImages.add(fn)

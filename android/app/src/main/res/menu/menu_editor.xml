@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item
-        android:id="@+id/action_toggle_local"
-        android:title="Local Note"
-        android:icon="@drawable/ic_local"
-        app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/action_remind"
         android:title="@string/set_reminder"
@@ -26,8 +22,8 @@
         android:title="⚡ Drop via Wi-Fi"
         app:showAsAction="never" />
     <item
-        android:id="@+id/action_export_pdf"
-        android:title="📄 Export PDF"
+        android:id="@+id/action_export_note"
+        android:title="⤓ Export Note"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_delete"

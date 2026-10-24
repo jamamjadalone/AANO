@@ -9,9 +9,9 @@
         android:icon="@drawable/ic_folder"
         android:title="Folders" />
     <item
-        android:id="@+id/nav_local"
-        android:icon="@drawable/ic_local"
-        android:title="Local" />
+        android:id="@+id/nav_tasks"
+        android:icon="@drawable/ic_task"
+        android:title="To-Do" />
     <item
         android:id="@+id/nav_more"
         android:icon="@drawable/ic_more"
