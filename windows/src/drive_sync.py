@@ -5,7 +5,6 @@
 import os
 import json
 import time
-import socket
 import webbrowser
 import urllib.request
 import urllib.parse

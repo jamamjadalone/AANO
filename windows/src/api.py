@@ -329,16 +329,6 @@ class DesktopApi:
         self._async_auto_sync()
         return {"success": True}
 
-    def get_cloud_status(self):
-        cfg = storage.load_config()
-        return {
-            "is_logged_in": bool(cfg.get("cloud_token")),
-            "email": cfg.get("cloud_email"),
-            "last_sync_time": cfg.get("last_sync_time", 0),
-            "auto_sync": cfg.get("auto_sync", True),
-            "session_expired": bool(cfg.get("session_expired", False))
-        }
-
     def toggle_auto_sync(self):
         cfg = storage.load_config()
         current = cfg.get("auto_sync", True)
@@ -1118,7 +1108,7 @@ class DesktopApi:
                     "audioDuration": note_json_data.get("audioDuration", 0)
                 }
             elif fallback_md:
-                lines = [l for l in fallback_md.splitlines() if l.strip()]
+                lines = [line for line in fallback_md.splitlines() if line.strip()]
                 first_line = lines[0] if lines else "Imported Note"
                 clean_title = first_line.lstrip("#").strip()[:50]
                 imported_note = {

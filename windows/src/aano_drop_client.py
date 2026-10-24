@@ -150,7 +150,6 @@ def scan_nearby_devices():
     Scans the local subnet for active AANO Drop instances (ports 8765 & 8766).
     Returns list of discovered devices: [{ name, ip, port }].
     """
-    import socket
     import aano_drop_server
     from concurrent.futures import ThreadPoolExecutor
 
