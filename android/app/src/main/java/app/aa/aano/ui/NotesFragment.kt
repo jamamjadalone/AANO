@@ -714,7 +714,9 @@ class NotesFragment : Fragment() {
                     try {
                         val parsed = android.graphics.Color.parseColor(text)
                         updatePreview(parsed)
-                    } catch (_: Exception) {}
+                    } catch (e: IllegalArgumentException) {
+                        android.util.Log.d("NotesFragment", "Incomplete or invalid hex color: ${e.message}")
+                    }
                 }
             }
             override fun afterTextChanged(s: android.text.Editable?) {}

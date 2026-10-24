@@ -66,7 +66,9 @@ class SettingsActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         driveSyncManager.sync()
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.w("SettingsActivity", "Initial Google Drive sync notice: ${e.message}")
+                    }
                 }
             }
         } catch (e: Exception) {

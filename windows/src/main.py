@@ -2,6 +2,8 @@ import os
 import sys
 import ctypes
 
+import logging
+
 # Enable Windows Per-Monitor DPI Awareness (V2) to prevent blurry window scaling
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
@@ -10,6 +12,8 @@ except (AttributeError, OSError):
         ctypes.windll.user32.SetProcessDPIAware()
     except (AttributeError, OSError):
         pass
+
+logger = logging.getLogger("AANO.Main")
 
 import webview
 from api import DesktopApi
@@ -45,8 +49,8 @@ def main():
             window.show()
             window.restore()
             window.evaluate_js("window.openQuickScratchpad && window.openQuickScratchpad()")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to invoke scratchpad on hotkey: %s", e)
 
     hotkey = HotkeyDaemon(on_scratchpad_hotkey)
     hotkey.start()
@@ -58,8 +62,8 @@ def main():
                 import json
                 try:
                     window.evaluate_js(f"window.importAanoOnStartup && window.importAanoOnStartup({json.dumps(os.path.abspath(arg_path))});")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to invoke importAanoOnStartup: %s", e)
 
     window.events.loaded += on_loaded
 

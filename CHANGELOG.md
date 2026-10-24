@@ -39,12 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Precision Touch-Crop Overlay**: Crop attached images directly inside the app with interactive touch handles and corner controls.
   - **Aspect Ratio Presets**: 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
   - **90° Lossless Rotation**: Quick rotation button to fix sideways or upside-down document and receipt captures.
-  - **Ultra-Efficient WebP Compression**: Automatic optimization (max 1280px resolution, 80% WebP quality), slashing 4–8 MB smartphone photos down to **~100–150 KB** with zero visible quality loss.
+  - **Ultra-Efficient WebP Compression**: Automatic optimization (max 1280px resolution, 80% WebP quality), reducing 4–8 MB smartphone photos down to **~100–150 KB** while preserving visual quality.
   - **Replace & Remove Actions**: Swap an existing note photo with a newly cropped one, or permanently delete unwanted photos with instant on-disk file purges.
 - **Local Media Vault .zip Backup & Restore**:
   - **All-in-One Portable Archive**: Bundles all local on-device notes (`notes.json`) along with attached media files (`media/images/`, `media/audio/`) into a single `.zip` file in `Downloads/AANO/`.
   - **Cross-Platform Device Migration**: Easily transfer your local notes and private attachments to a new phone or PC without using cloud services.
-  - **1-Click Vault Restore**: Seamlessly imports and unpacks the zip archive, automatically remapping local file paths into the app storage.
+  - **1-Click Vault Restore**: Imports and unpacks the zip archive, automatically remapping local file paths into the app storage.
   - **Quick-Access UI**: Direct *Backup (.zip)* and *Restore (.zip)* actions integrated into the `LocalFragment` header banner and `Settings`.
 - **Automated Cloud CI/CD Pipeline**:
   - **Multi-Platform Release Automation**: Official GitHub Actions workflow for building Android Release APK (Ubuntu runner with JDK 17) and Windows Desktop Installer (Windows runner with Inno Setup LZMA compression).
@@ -78,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom Color Picker & 12 Aesthetic Shades ("Apni Marzi")**:
   - **Custom Color Palette Button (`🎨`)**: Pick any color freely on Android and Windows with live Hex input (`#RRGGBB`) and a 20-color swatch palette grid.
   - **Curated 12 Aesthetic Shades**: Expanded palette to 12 modern pastel and muted paper tones including Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.
-  - **Dynamic Contrast Adaptation**: Dark paper backgrounds (e.g. Charcoal) automatically invert text and metadata to high-contrast white and soft zinc for effortless readability.
+  - **Dynamic Contrast Adaptation**: Dark paper backgrounds (e.g. Charcoal) automatically invert text and metadata to high-contrast white and soft zinc for clear text contrast.
 - **Multi-Select Batch Delete & Archive (Android & Windows)**:
   - **Android**: Long-press any note card to activate contextual selection mode with live selection counter, "Select All", "Archive Selected", and "Delete Selected" (with confirmation dialog).
   - **Windows Desktop**: Topbar "Select" button toggles batch selection mode with card checkboxes and an emerald batch action bar.
@@ -115,9 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-Platform Real-Time Sync**: Instant bi-directional cloud synchronization between Android and Windows Desktop powered by Cloudflare Workers and Cloudflare D1 distributed SQLite database.
 - **2.5s Foreground Sync Engine**: Active foreground polling engine on both mobile and PC that automatically synchronizes note creations, updates, and deletions within 2.5 seconds without manual refresh.
 - **Hardware-Backed AES-256 Encryption**: Notes and sensitive metadata are locally encrypted using AES-256-GCM cryptography on both Android and Windows clients.
-- **Official Google Mail OTP Bridge**: Enterprise-grade 6-digit OTP verification delivered directly to the user's Gmail inbox for registration and secure password recovery.
+- **Official Google Mail OTP Bridge**: 6-digit OTP verification delivered directly to the user's Gmail inbox for registration and secure password recovery.
 - **Rich Text Formatting Toolbar**: Integrated rich text formatting engine supporting Headings (H1, H2), Bold, Italic, Underline, Strikethrough, Bullet Lists, and color highlighters docked above the keyboard on Android and in the editor top bar on Windows.
-- **9 Pastel Paper Themes**: Beautiful, distraction-free pastel note background shades (Emerald Mint, Butter Yellow, Leaf Green, Sky Blue, Lavender, Rose Pink, Peach, Coral, and Pure White).
+- **9 Pastel Paper Themes**: Distraction-free pastel note background shades (Emerald Mint, Butter Yellow, Leaf Green, Sky Blue, Lavender, Rose Pink, Peach, Coral, and Pure White).
 - **Offline JSON Backup & Restore**: Cross-compatible offline backup export and import (`aano-backup.json`) enabling zero-cloud local data portability.
 - **Cold-Start & Resume App Lock**: Biometric and 4-digit PIN security shield with `FLAG_SECURE` window protection preventing unauthorized screenshots and app switcher previews on Android.
 - **Modern Windows Inno Setup Installer**: Crisp, lightweight installer (`AANO-Setup.exe`) with multi-resolution per-monitor DPI awareness and desktop integration.
@@ -125,7 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed & Modernized
 - **Complete Vector Icon Overhaul**: Replaced all legacy and emoji buttons with sleek, minimalist SVG / Material 3 vector icons (Feather & Lucide rounded stroke design) across Android and Windows.
 - **Native Custom Dialogs**: Replaced browser `confirm()`, `prompt()`, and `alert()` popups on Windows with 100% native blurred backdrop modals, eliminating browser URLs (`file:///...`) from all dialogs.
-- **Crisp Multi-Resolution App Icons**: Generated high-fidelity mipmap assets (`mdpi` through `xxxhdpi` on Android, 16px to 256px multi-frame `.ico` on Windows) for pristine clarity across 4K, high-DPI, and mobile displays.
+- **Crisp Multi-Resolution App Icons**: Generated mipmap assets (`mdpi` through `xxxhdpi` on Android, 16px to 256px multi-frame `.ico` on Windows) for sharp display across high-DPI and mobile displays.
 
 ### Fixed
 - **Instant Cross-Device Delete Propagation**: Fixed deletion timestamps (`updatedAt = maxOf(now, existing + 1000L)`) ensuring server-side conflict resolution permanently accepts deletions and immediately removes deleted notes across all paired devices.

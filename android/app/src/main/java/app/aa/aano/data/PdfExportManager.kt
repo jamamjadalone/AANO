@@ -220,7 +220,9 @@ class PdfExportManager(private val context: Context) {
                         canvas.drawBitmap(scaled, margin, currentY, null)
                         currentY += drawH + 16f
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    android.util.Log.w("PdfExportManager", "Failed to render attached image to PDF: ${e.message}")
+                }
             }
         }
 

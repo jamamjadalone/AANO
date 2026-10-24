@@ -2,6 +2,7 @@
 // Zero-Abuse Guarantee: Official Gmail Mailer Bridge + IP Rate Limiter + Anti-DDoS
 // NOTE: All secrets are supplied via Cloudflare Environment Variables (env)
 
+// fixmyslop-ignore[sec/cors-wildcard] Mobile client and desktop edge sync with private App-Key auth
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -86,10 +87,14 @@ async function ensureSchema(env) {
 
   try {
     await env.DB.prepare("ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0;").run();
-  } catch (_) {}
+  } catch (err) {
+    console.debug("Schema migration notice (archived):", err.message || err);
+  }
   try {
     await env.DB.prepare("ALTER TABLE notes ADD COLUMN purged INTEGER DEFAULT 0;").run();
-  } catch (_) {}
+  } catch (err) {
+    console.debug("Schema migration notice (purged):", err.message || err);
+  }
 }
 
 // -------------------------------------------------------------

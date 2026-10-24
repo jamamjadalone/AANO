@@ -170,7 +170,6 @@ class GoogleDriveSync:
         refresh_token = token_data.get("refresh_token")
         expires_in = token_data.get("expires_in", 3600)
 
-        # Fetch user profile info
         user_info = self._fetch_user_info(access_token)
         email = user_info.get("email", "")
         name = user_info.get("name", "")

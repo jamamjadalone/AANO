@@ -197,13 +197,15 @@
 
           <div class="editor-meta">
             <select id="editorFolderSelect" class="folder-select">
-              <option value="General">📁 General</option>
-              <option value="Work">📁 Work</option>
-              <option value="Personal">📁 Personal</option>
+              <option value="General">General</option>
+              <option value="Work">Work</option>
+              <option value="Personal">Personal</option>
               <option value="__new__">+ New Folder...</option>
             </select>
             <button id="btnEditorSyncToggle" class="btn-editor-sync" type="button" title="Toggle Cloud Sync (Drive) or On-Device Only">
-              <span id="editorSyncDot" class="editor-sync-dot">☁️</span>
+              <span id="editorSyncDot" class="editor-sync-dot">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              </span>
               <span id="editorSyncLabel">Synced</span>
             </button>
           </div>
@@ -224,35 +226,35 @@
               </button>
               <div id="exportMenu" class="export-menu hidden">
                 <button type="button" class="export-menu-item" id="btnExportAano" style="background: rgba(0, 77, 64, 0.05); border-left: 3px solid var(--primary);">
-                  <span class="export-icon">⚡</span>
+                  <span class="export-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
                   <div class="export-info">
                     <span class="export-name" style="color: var(--primary); font-weight: 600;">AANO Package</span>
                     <span class="export-ext">.aano (Direct Open)</span>
                   </div>
                 </button>
                 <button type="button" class="export-menu-item" id="btnExportTxt">
-                  <span class="export-icon">📄</span>
+                  <span class="export-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                   <div class="export-info">
                     <span class="export-name">Text File</span>
                     <span class="export-ext">.txt (Plain Text)</span>
                   </div>
                 </button>
                 <button type="button" class="export-menu-item" id="btnExportPdf">
-                  <span class="export-icon">📕</span>
+                  <span class="export-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
                   <div class="export-info">
                     <span class="export-name">PDF Document</span>
                     <span class="export-ext">.pdf (Printable)</span>
                   </div>
                 </button>
                 <button type="button" class="export-menu-item" id="btnExportMd">
-                  <span class="export-icon">📝</span>
+                  <span class="export-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span>
                   <div class="export-info">
                     <span class="export-name">Markdown</span>
                     <span class="export-ext">.md (Formatted)</span>
                   </div>
                 </button>
                 <button type="button" class="export-menu-item" id="btnExportZip">
-                  <span class="export-icon">📦</span>
+                  <span class="export-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
                   <div class="export-info">
                     <span class="export-name">ZIP Archive</span>
                     <span class="export-ext">.zip (With Media)</span>
@@ -273,7 +275,7 @@
         <div class="color-palette-bar">
           <span class="palette-label">Paper Color:</span>
           <div id="paletteDots" class="palette-dots"></div>
-          <button type="button" id="btnCustomColor" class="btn-custom-color" title="Custom Color (Hex / Palette)">🎨</button>
+          <button type="button" id="btnCustomColor" class="btn-custom-color" title="Custom Color (Hex / Palette)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.563C22 6.5 17.5 2 12 2z"/></svg></button>
           <input type="color" id="customColorPicker" style="display:none">
         </div>
 
@@ -349,7 +351,7 @@
     <div id="cloudModal" class="modal-backdrop hidden">
       <div class="dialog-box" style="max-width: 440px;">
         <h3>Google Drive Sync (15 GB Free)</h3>
-        <p style="color: #94a3b8; font-size: 13.5px; margin-bottom: 20px;">Sync your private notes seamlessly across your phone and PC directly to your personal Google Drive.</p>
+        <p style="color: #94a3b8; font-size: 13.5px; margin-bottom: 20px;">Sync your private notes between your phone and PC directly through your Google Drive storage.</p>
         
         <div id="cloudLoginForm">
           <button id="btnGoogleSignIn" class="btn-google-signin" type="button">
@@ -372,7 +374,7 @@
         <div id="cloudActiveSession" class="hidden">
           <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="font-size: 16px;">☁️</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
               <span style="font-weight: 600; color: #38bdf8; font-size: 14px;">Google Drive Active</span>
             </div>
             <div style="font-size: 13px; color: #cbd5e1; word-break: break-all;" id="lblConnectedEmail"></div>
@@ -392,9 +394,9 @@
         <h3>Backup &amp; Restore</h3>
         <p>Export your notes to offline <code>aano-backup.json</code> or import an existing backup from your phone.</p>
         <div class="dialog-buttons" style="flex-direction: column; gap: 8px;">
-          <button id="btnExportJSON" class="btn-primary" style="width: 100%;">📥 Export aano-backup.json</button>
+          <button id="btnExportJSON" class="btn-primary" style="width: 100%;">Export aano-backup.json</button>
           <label class="btn-secondary" style="width: 100%; text-align: center; cursor: pointer;">
-            📤 Import JSON Backup
+            Import JSON Backup
             <input type="file" id="backupFileInput" accept=".json" style="display: none;">
           </label>
           <button id="btnCloseBackup" class="btn-secondary" style="width: 100%;">Close</button>
@@ -444,9 +446,9 @@
         <div class="image-preview-header">
           <span id="previewImageName">Image Preview</span>
           <div class="preview-actions">
-            <button id="btnPreviewSave" class="btn-preview-action" title="Save to Disk">💾 Save</button>
-            <button id="btnPreviewCrop" class="btn-preview-action" title="Crop & Rotate">✂️ Crop</button>
-            <button id="btnPreviewDelete" class="btn-preview-action btn-danger-action" title="Remove Attachment">🗑️ Remove</button>
+            <button id="btnPreviewSave" class="btn-preview-action" title="Save to Disk">Save</button>
+            <button id="btnPreviewCrop" class="btn-preview-action" title="Crop & Rotate">Crop</button>
+            <button id="btnPreviewDelete" class="btn-preview-action btn-danger-action" title="Remove Attachment">Remove</button>
             <button id="btnPreviewClose" class="btn-preview-close" title="Close">✕</button>
           </div>
         </div>
@@ -517,11 +519,11 @@
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
           <button id="btnOpenQrScanner" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px; background: linear-gradient(135deg, #0284c7, #06b6d4); border: none;">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <span>📷 Scan Phone QR</span>
+            <span>Scan Phone QR</span>
           </button>
           <button id="btnScanRadar" class="btn-secondary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px;">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            <span id="radarScanLabel">🔍 Radar Scan</span>
+            <span id="radarScanLabel">Radar Scan</span>
           </button>
         </div>
         <div id="radarResultsContainer" style="display: none; margin-bottom: 14px; max-height: 110px; overflow-y: auto; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px;"></div>
@@ -529,10 +531,10 @@
         <!-- Modern Receiver status card with Retina QR Code -->
         <div class="drop-qr-card">
           <div class="drop-qr-badge">
-            <span>⚡</span> This PC's Drop Coordinates
+            This PC's Drop Coordinates
           </div>
           <div style="display: flex; justify-content: center; margin: 8px 0 12px 0;">
-            <div style="padding: 12px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.45), 0 0 20px rgba(2, 132, 199, 0.25); display: inline-flex;">
+            <div style="padding: 12px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.45); display: inline-flex;">
               <canvas id="dropQrCanvas" width="220" height="220" style="display: block; width: 220px; height: 220px; border-radius: 8px;"></canvas>
             </div>
           </div>
@@ -540,7 +542,7 @@
           <div style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 6px;">
             <span>Security PIN:</span>
             <b id="dropServerPin" style="color: #38bdf8; letter-spacing: 2.5px; font-family: monospace; font-size: 13px;">------</b>
-            <button id="btnCopyDropUri" class="icon-button" style="padding: 2px 6px; font-size: 11px; margin-left: 4px;" title="Copy Drop URI">📋</button>
+            <button id="btnCopyDropUri" class="icon-button" style="padding: 2px 6px; font-size: 11px; margin-left: 4px; display: inline-flex; align-items: center;" title="Copy Drop URI"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           </div>
         </div>
 
@@ -559,7 +561,7 @@
             <!-- Populated dynamically with checkboxes -->
           </div>
 
-          <button id="btnSendDropToPhone" class="btn-primary" style="width: 100%;">⚡ Send Selected Note(s)</button>
+          <button id="btnSendDropToPhone" class="btn-primary" style="width: 100%;">Send Selected Note(s)</button>
         </div>
 
         <div class="dialog-buttons">
@@ -570,10 +572,10 @@
 
     <!-- Live Camera QR Scanner Modal -->
     <div id="aanoScannerModal" class="dialog-overlay hidden">
-      <div class="dialog" style="max-width: 440px; text-align: center; border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 15px 45px rgba(0,0,0,0.7), 0 0 25px rgba(2, 132, 199, 0.25);">
+      <div class="dialog" style="max-width: 440px; text-align: center; border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 15px 45px rgba(0,0,0,0.7);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <h3 style="margin: 0; font-size: 15px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
-            <span>📷</span> AANO Drop QR Scanner
+            AANO Drop QR Scanner
           </h3>
           <button id="btnCloseScannerModal" class="icon-button" style="color: #94a3b8; font-size: 16px;">✕</button>
         </div>
@@ -590,10 +592,10 @@
 
         <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
           <button id="btnUploadQrImage" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
-            <span>📁</span> Open Screenshot
+            Open Screenshot
           </button>
           <button id="btnPasteQrCode" class="btn-secondary" style="font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 4px;">
-            <span>📋</span> Paste Pairing URI
+            Paste Pairing URI
           </button>
           <input type="file" id="qrFileInput" accept="image/*" style="display: none;">
         </div>

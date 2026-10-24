@@ -63,11 +63,14 @@ async function openDropModal() {
   const pickerContainer = document.getElementById("dropNotesPickerContainer");
   const countEl = document.getElementById("dropSelectionCount");
   if (pickerContainer) {
-    pickerContainer.innerHTML = "";
+    pickerContainer.replaceChildren();
     const activeNotes = (allNotes || []).filter(n => !n.deleted && !n.archived);
 
     if (activeNotes.length === 0) {
-      pickerContainer.innerHTML = '<div style="color: #64748b; font-size: 11px; padding: 4px;">No notes available</div>';
+      const emptyDiv = document.createElement("div");
+      emptyDiv.style.cssText = "color: #64748b; font-size: 11px; padding: 4px;";
+      emptyDiv.textContent = "No notes available";
+      pickerContainer.appendChild(emptyDiv);
     } else {
       activeNotes.forEach(n => {
         const item = document.createElement("label");
@@ -353,7 +356,9 @@ async function initApp() {
       if (status.is_logged_in && status.auto_sync !== false) {
         await triggerManualSync();
       }
-    } catch (_) {}
+    } catch (err) {
+      console.debug("Initial cloud sync check notice:", err);
+    }
   }
 
   // Smart background auto-sync heartbeat (15s for instant multi-device responsiveness)
@@ -526,7 +531,7 @@ function setupEventListeners() {
       } else {
         await api.batch_archive_notes(ids);
       }
-      try { await api.sync_now(); } catch (_) {}
+      try { await api.sync_now(); } catch (err) { console.warn("Background sync after batch archive deferred:", err); }
       exitSelectionMode();
       await refreshData();
       await checkCloudStatus();
@@ -564,7 +569,7 @@ function setupEventListeners() {
         if (api) {
           await api.batch_delete_notes(Array.from(selectedNoteIds));
           if (!allLocal) {
-            try { await api.sync_now(); } catch (_) {}
+            try { await api.sync_now(); } catch (err) { console.warn("Background sync after batch delete deferred:", err); }
           }
           exitSelectionMode();
           await refreshData();
@@ -621,7 +626,6 @@ function setupEventListeners() {
     });
   }
 
-  // Add Folder
   document.getElementById("btnAddFolder").addEventListener("click", async () => {
     const folderName = await showNativePrompt({
       title: "New Folder",
@@ -663,7 +667,7 @@ function setupEventListeners() {
       if (api) {
         await api.delete_note(editingNote.id);
         if (!isLocal) {
-          try { await api.sync_now(); } catch (_) {}
+          try { await api.sync_now(); } catch (err) { console.warn("Background sync after delete deferred:", err); }
         }
         closeEditorWithoutSaving();
         await refreshData();
@@ -689,7 +693,7 @@ function setupEventListeners() {
         } else {
           await api.archive_note(editingNote.id);
         }
-        try { await api.sync_now(); } catch (_) {}
+        try { await api.sync_now(); } catch (err) { console.warn("Background sync after archive deferred:", err); }
         closeEditorWithoutSaving();
         await refreshData();
         await checkCloudStatus();
@@ -859,7 +863,7 @@ function setupEventListeners() {
         closeImagePreview();
         const api = getApi();
         if (api && api.delete_image_file) {
-          api.delete_image_file(item.filename).catch(() => {});
+          api.delete_image_file(item.filename).catch(err => console.debug("Image file deletion notice:", err));
         }
       }
     });
@@ -930,31 +934,44 @@ function setupEventListeners() {
     btnScanRadar.addEventListener("click", async () => {
       const api = getApi();
       if (!api || !api.scan_nearby_devices) return;
-      if (radarLabel) radarLabel.innerText = "🔍 Scanning Wi-Fi Radar...";
+      if (radarLabel) radarLabel.textContent = "Scanning Wi-Fi Radar...";
       if (radarResults) {
         radarResults.style.display = "block";
-        radarResults.innerHTML = '<div style="color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;">Scanning subnet for active AANO devices...</div>';
+        const scanMsg = document.createElement("div");
+        scanMsg.style.cssText = "color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;";
+        scanMsg.textContent = "Scanning subnet for active AANO devices...";
+        radarResults.replaceChildren(scanMsg);
       }
       try {
         const found = await api.scan_nearby_devices();
         if (radarResults) {
           if (!found || found.length === 0) {
-            radarResults.innerHTML = '<div style="color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;">No nearby AANO devices detected on Wi-Fi.</div>';
+            const noDev = document.createElement("div");
+            noDev.style.cssText = "color: #94a3b8; font-size: 11px; padding: 6px; text-align: center;";
+            noDev.textContent = "No nearby AANO devices detected on Wi-Fi.";
+            radarResults.replaceChildren(noDev);
           } else {
-            radarResults.innerHTML = "";
+            radarResults.replaceChildren();
             found.forEach(dev => {
               const row = document.createElement("div");
               row.style.cssText = "display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.05);";
-              row.innerHTML = `
-                <div>
-                  <div style="font-weight: 600; font-size: 12px; color: #f1f5f9;">${escapeHtml(dev.name || "Device")}</div>
-                  <div style="font-size: 11px; color: #64748b;">${dev.ip}:${dev.port}</div>
-                </div>
-                <button class="btn-connect-dev" style="background: var(--brand); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600;">Connect &amp; Pair</button>
-              `;
-              const connBtn = row.querySelector(".btn-connect-dev");
+
+              const infoCol = document.createElement("div");
+              const nameDiv = document.createElement("div");
+              nameDiv.style.cssText = "font-weight: 600; font-size: 12px; color: #f1f5f9;";
+              nameDiv.textContent = dev.name || "Device";
+              const epDiv = document.createElement("div");
+              epDiv.style.cssText = "font-size: 11px; color: #64748b;";
+              epDiv.textContent = `${dev.ip}:${dev.port}`;
+              infoCol.appendChild(nameDiv);
+              infoCol.appendChild(epDiv);
+
+              const connBtn = document.createElement("button");
+              connBtn.className = "btn-connect-dev";
+              connBtn.style.cssText = "background: var(--brand); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-weight: 600;";
+              connBtn.textContent = "Connect & Pair";
               connBtn.addEventListener("click", async () => {
-                connBtn.innerText = "Pairing...";
+                connBtn.textContent = "Pairing...";
                 const res = await api.pair_with_device(dev.ip, dev.port);
                 if (res && res.success) {
                   await checkDropPeerStatus();
@@ -963,18 +980,24 @@ function setupEventListeners() {
                 } else {
                   showNativeAlert({ title: "Pairing Failed", message: res?.error || "Could not pair with device." });
                 }
-                connBtn.innerText = "Connect & Pair";
+                connBtn.textContent = "Connect & Pair";
               });
+
+              row.appendChild(infoCol);
+              row.appendChild(connBtn);
               radarResults.appendChild(row);
             });
           }
         }
       } catch (err) {
         if (radarResults) {
-          radarResults.innerHTML = `<div style="color: #ef4444; font-size: 11px; padding: 6px;">Scan error: ${escapeHtml(String(err))}</div>`;
+          const errMsg = document.createElement("div");
+          errMsg.style.cssText = "color: #ef4444; font-size: 11px; padding: 6px;";
+          errMsg.textContent = `Scan error: ${String(err)}`;
+          radarResults.replaceChildren(errMsg);
         }
       } finally {
-        if (radarLabel) radarLabel.innerText = "🔍 Radar Scan";
+        if (radarLabel) radarLabel.textContent = "Radar Scan";
       }
     });
   }
@@ -1066,7 +1089,9 @@ function setupEventListeners() {
       let text = "";
       try {
         text = await navigator.clipboard.readText();
-      } catch (_) {}
+      } catch (err) {
+        console.debug("Clipboard read notice:", err);
+      }
       if (!text) {
         text = prompt("Paste Phone's AANO Drop URI or IP:PORT (e.g. aano://drop?ip=...):", "");
       }
@@ -1088,8 +1113,8 @@ function setupEventListeners() {
       if (!api) return;
 
       if (activePairedPeer && activePairedPeer.ip) {
-        const origHtml = btnBatchDrop.innerHTML;
-        btnBatchDrop.innerText = `Dropping ${selectedIds.length}...`;
+        const origText = btnBatchDrop.textContent;
+        btnBatchDrop.textContent = `Dropping ${selectedIds.length}...`;
         try {
           const res = await api.send_drop_to_device(activePairedPeer.ip, activePairedPeer.port || 8766, selectedIds);
           if (res && res.success) {
@@ -1101,7 +1126,7 @@ function setupEventListeners() {
         } catch (e) {
           showNativeAlert({ title: "Error", message: String(e) });
         } finally {
-          btnBatchDrop.innerHTML = origHtml;
+          btnBatchDrop.textContent = origText;
         }
       } else {
         openDropModal();
@@ -1429,12 +1454,12 @@ function renderFolders(folders) {
   sorted.forEach(f => {
     const opt = document.createElement("option");
     opt.value = f;
-    opt.innerText = "📁 " + f;
+    opt.textContent = f;
     select.appendChild(opt);
   });
   const newOpt = document.createElement("option");
   newOpt.value = "__new__";
-  newOpt.innerText = "+ New Folder...";
+  newOpt.textContent = "+ New Folder...";
   select.appendChild(newOpt);
 
   sorted.forEach(folder => {
@@ -1442,6 +1467,7 @@ function renderFolders(folders) {
     const item = document.createElement("div");
     item.className = "folder-item" + (currentFilter === "folder:" + folder ? " active" : "");
     const folderSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    // fixmyslop-ignore[sec/raw-html] Safe static SVG with escaped folder name and numeric count
     item.innerHTML = `<span>${folderSvg}${escapeHtml(folder)}</span><span class="badge">${count}</span>`;
     item.addEventListener("click", async () => {
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
@@ -1537,6 +1563,7 @@ function renderNotes() {
     const dateStr = formatDate(note.updatedAt || note.createdAt || Date.now());
 
     if (currentFilter === "trash") {
+      // fixmyslop-ignore[sec/raw-html] Dynamic fields sanitized via escapeHtml and formatLinksInHtml
       card.innerHTML = `
         <div class="note-card-title">${escapeHtml(note.title || "Untitled")}</div>
         <div class="note-card-preview">${formatLinksInHtml(escapeHtml(plain || "No content"))}</div>
@@ -1594,6 +1621,7 @@ function renderNotes() {
       `;
       const localBadge = note.isLocal ? `<span class="badge" style="background: rgba(56, 189, 248, 0.18); color: #0284c7; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px;">⚡ On-Device</span>` : '';
 
+      // fixmyslop-ignore[sec/raw-html] Dynamic fields sanitized via escapeHtml and formatLinksInHtml
       card.innerHTML = `
         ${isSelectionMode ? `<input type="checkbox" class="card-select-checkbox" ${isSelected ? 'checked' : ''}>` : ''}
         ${note.pinned ? `<span class="pin-icon" title="Pinned">${pinSvg}</span>` : ''}
@@ -1766,6 +1794,7 @@ function openEditor(note = null, defaultFolder = null) {
 
   if (note) {
     titleInput.value = note.title || "";
+    // fixmyslop-ignore[sec/raw-html] Contenteditable rich-text editor loading user note HTML
     contentArea.innerHTML = note.content || "";
     editingColor = note.color !== undefined ? note.color : 0;
     editingPinned = !!note.pinned;
@@ -1848,7 +1877,7 @@ async function closeAndSaveEditor() {
         await api.save_note(noteToSave);
         await refreshData();
         if (!isLocalNote) {
-          api.sync_now().then(() => checkCloudStatus()).catch(() => {});
+          api.sync_now().then(() => checkCloudStatus()).catch(err => console.debug("Post-save background sync deferred:", err));
         }
       } catch (err) {
         console.warn("Save note failed:", err);
@@ -2004,6 +2033,7 @@ async function handleGoogleSignIn() {
 
   if (btn) {
     btn.disabled = false;
+    // fixmyslop-ignore[sec/raw-html] Static SVG logo template without dynamic inputs
     btn.innerHTML = `
       <svg viewBox="0 0 24 24" width="20" height="20" style="margin-right: 12px;">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -2106,9 +2136,9 @@ async function handleImportBackup(e) {
 
 // --------------------- Utility Helpers ---------------------
 function stripHtml(html) {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.textContent || tmp.innerText || "";
+  if (!html) return "";
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
 }
 
 function escapeHtml(text) {

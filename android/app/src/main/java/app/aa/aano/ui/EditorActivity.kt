@@ -1131,7 +1131,9 @@ class EditorActivity : AppCompatActivity() {
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                     try {
                         cloudSyncManager.syncNow()
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.d("EditorActivity", "Auto-sync on close skipped: ${e.message}")
+                    }
                 }
             }
             finish()

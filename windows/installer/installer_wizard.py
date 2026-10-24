@@ -47,8 +47,8 @@ def register_uninstaller(install_dir, exe_path, icon_path):
             winreg.SetValueEx(key, "InstallLocation", 0, winreg.REG_SZ, install_dir)
             uninstall_cmd = f'powershell -NoProfile -Command "Remove-Item -Recurse -Force \'{install_dir}\'; Remove-Item -Force \'$([Environment]::GetFolderPath(\'Desktop\'))\\AANO Notes.lnk\' -ErrorAction SilentlyContinue; Remove-Item -Recurse -Force \'$([Environment]::GetFolderPath(\'StartMenu\'))\\Programs\\AANO Notes\' -ErrorAction SilentlyContinue; Remove-Item -Path \'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\AANO Notes\' -Force"'
             winreg.SetValueEx(key, "UninstallString", 0, winreg.REG_SZ, uninstall_cmd)
-    except Exception as e:
-        print("Registry registration error:", e)
+    except OSError as e:
+        sys.stderr.write(f"Registry registration error: {e}\n")
 
 class SetupApp:
     def __init__(self, root):
@@ -63,8 +63,8 @@ class SetupApp:
         if os.path.exists(icon_file):
             try:
                 self.root.iconbitmap(icon_file)
-            except Exception:
-                pass
+            except tk.TclError as e:
+                sys.stderr.write(f"Notice: Icon could not be set: {e}\n")
 
         self.install_dir = get_install_dir()
 
@@ -183,8 +183,8 @@ class SetupApp:
         if self.var_launch.get() and os.path.exists(exe_path):
             try:
                 subprocess.Popen([exe_path], cwd=os.path.dirname(exe_path))
-            except Exception as e:
-                print("Launch error:", e)
+            except OSError as e:
+                messagebox.showwarning("Launch Notice", f"Installed successfully, but could not automatically launch:\n{e}")
 
         messagebox.showinfo("Success", "AANO Notes has been successfully installed!")
         self.root.destroy()

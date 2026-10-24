@@ -19,50 +19,50 @@
 
 ---
 
-## 🌟 Overview
+## Overview
 
 **AANO** is engineered for individuals who demand uncompromising privacy and productivity without subscriptions or corporate data harvesting. Your notes and tasks never touch external analytics servers, your keystore keys never leave your physical device hardware, and cloud backups are encrypted and saved solely into your private Google Drive appdata folder.
 
 ### Core Principles
-- 🛡️ **Zero Telemetry / No Tracking**: No Google Analytics, no Firebase Crashlytics, no ad networks, no tracking pixels.
-- 🔒 **At-Rest Hardware Encryption**: Every note body and task is encrypted via authenticated **AES-256-GCM** using keys generated in the **Android Keystore**.
-- ✈️ **100% Offline-First**: Every feature operates flawlessly without an internet connection.
-- 👤 **No Account Required**: Immediate use out of the box with zero sign-up friction.
+- **Zero Telemetry / No Tracking**: No Google Analytics, no Firebase Crashlytics, no ad networks, no tracking pixels.
+- **At-Rest Hardware Encryption**: Every note body and task is encrypted via authenticated **AES-256-GCM** using keys generated in the **Android Keystore**.
+- **100% Offline-First**: Every feature operates flawlessly without an internet connection.
+- **No Account Required**: Immediate use out of the box with zero sign-up friction.
 
 ---
 
-## ✨ Features
+## Features
 
-### 📝 Encrypted Notes
+### Encrypted Notes
 - **Hardware-Encrypted Storage**: Plain-text notes are encrypted via AES-256-GCM before writing to flash storage.
 - **Organization**: Custom folders, comma-separated searchable tags, and color-coded categorizations.
 - **Smart Management**: Pinned notes, live search filtering, auto-saving while typing, and a 7-day recoverable Trash bin.
 - **Export & Share**: Clean plain-text sharing and JSON backup exports directly to device storage.
 
-### ✅ Tasks & Subtasks
+### Tasks & Subtasks
 - **Prioritization**: High, Medium, and Low priority classification with visual tags.
 - **Due Dates & Recurrence**: One-time reminders or automated recurring intervals (Daily, Weekly, Monthly) via `AlarmManager`.
 - **Subtask Breakdown**: Multi-tier subtasks with real-time completion progress tracking.
 - **Focus Integration**: Option to hide specific tasks from the Focus dashboard to eliminate cognitive overload.
 
-### ⏱️ Focus Timer (Pomodoro Engine)
+### Focus Timer (Pomodoro Engine)
 - **Built-in Productivity Clock**: 25-minute and 50-minute interval presets with session counters.
 - **Smart Task Queue**: Automatically pulls the next uncompleted task into focus.
 - **Non-Intrusive Notifications**: Alerts when focus sessions complete without requiring background services when idle.
 
-### 🔐 Security & Lock Screen
+### Security & Lock Screen
 - **PBKDF2-Hashed App PIN**: Secure 4-digit PIN salted per-device using `PBKDF2WithHmacSHA256`.
 - **Biometric Authentication**: Official Android `BiometricPrompt` supporting fingerprint and face unlock.
 - **Configurable Auto-Lock**: Automatically locks the app immediately or after 1, 5, or 15 minutes of background inactivity.
 - **Screenshot Protection**: Uses Android `FLAG_SECURE` to prevent screen grabbing or task-switcher previews while locked.
 
-### ☁️ Private Google Drive Cloud Sync
+### Private Google Drive Cloud Sync
 - **Hidden `appdata` Scope**: Backups are written to an isolated, non-user-facing application directory (`aano-notes.json` and `aano-tasks.json`).
 - **Offline Queue**: Edits made while offline queue up automatically and sync upon reconnection.
 
 ---
 
-## 🏗️ Architecture & Security Model
+## Architecture & Security Model
 
 ```
 AANO Application Architecture
@@ -92,7 +92,7 @@ AANO Application Architecture
 
 ---
 
-## 🛠️ Building From Source
+## Building From Source
 
 ### Prerequisites
 - **JDK**: Java Development Kit 17 or higher
@@ -119,7 +119,7 @@ To test or enable the Google Drive sync functionality in your custom build:
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 AANO/
@@ -145,7 +145,7 @@ AANO/
 
 ---
 
-## 📄 License
+## License
 
 AANO is free and open-source software licensed under the **GNU General Public License v3.0 or later** ([GPL-3.0-or-later](LICENSE)).
 

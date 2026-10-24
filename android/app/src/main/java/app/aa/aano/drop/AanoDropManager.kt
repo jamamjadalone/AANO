@@ -268,7 +268,11 @@ class AanoDropManager(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling drop client: ${e.message}", e)
             } finally {
-                try { client.close() } catch (_: Exception) {}
+                try {
+                    client.close()
+                } catch (e: Exception) {
+                    Log.d(TAG, "Socket client close notice: ${e.message}")
+                }
             }
         }
     }
@@ -346,7 +350,9 @@ class AanoDropManager(private val context: Context) {
                     }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not resolve local network IP: ${e.message}")
+        }
         return "127.0.0.1"
     }
 
@@ -515,7 +521,10 @@ class AanoDropManager(private val context: Context) {
                                     }
                                 }
                             }
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            Log.d(TAG, "Radar probe timeout/skip for $host:$port: ${e.message}")
+                        }
+                        Unit
                     }
                     jobs.add(d)
                 }

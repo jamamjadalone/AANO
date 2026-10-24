@@ -584,7 +584,11 @@
       }
       if (this._stream) {
         this._stream.getTracks().forEach(function(t) {
-          try { t.stop(); } catch (_) {}
+          try {
+            t.stop();
+          } catch (e) {
+            console.debug("Camera track stop notice:", e);
+          }
         });
         this._stream = null;
       }

@@ -252,7 +252,9 @@ class CloudSyncManager(
                 context,
                 com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN
             ).signOut()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("CloudSyncManager", "Google sign out notice: ${e.message}")
+        }
     }
 
     private fun postJson(urlStr: String, body: JSONObject, token: String?): JSONObject {

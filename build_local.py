@@ -46,8 +46,8 @@ def clean_intermediates():
                 shutil.rmtree(d, ignore_errors=True)
                 cleaned_count += 1
                 print(f"   [CLEANED] {os.path.relpath(d, REPO_ROOT)}")
-            except Exception as e:
-                print(f"   [SKIP] Could not purge {os.path.relpath(d, REPO_ROOT)}: {e}")
+            except OSError as e:
+                sys.stderr.write(f"   [SKIP] Could not purge {os.path.relpath(d, REPO_ROOT)}: {e}\n")
     print(f"[OK] Purged {cleaned_count} temporary build directories. Workspace is pristine.")
 
 def build_windows(version, releases_dir):

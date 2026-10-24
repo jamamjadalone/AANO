@@ -636,8 +636,8 @@ class DesktopApi:
         try:
             import winsound
             winsound.MessageBeep(winsound.MB_ICONASTERISK)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Sound notification skipped: %s", e)
         try:
             import webview
             if webview.windows:

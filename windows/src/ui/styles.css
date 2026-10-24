@@ -1,4 +1,5 @@
 :root {
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --brand: #0D9488;
   --brand-dark: #0F766E;
   --brand-light: #F0FDFA;
@@ -10,6 +11,15 @@
   --on-surface: #0F172A;
   --text-secondary: #475569;
   --text-muted: #94A3B8;
+  --text-light: #CBD5E1;
+  --danger: #DC2626;
+  --danger-hover: #B91C1C;
+  --success: #10B981;
+  --warning: #D97706;
+  --link: #1A73E8;
+  --link-hover: #1557B0;
+  --link-dark: #80D8FF;
+  --link-dark-hover: #B3E5FC;
   --divider: rgba(0, 0, 0, 0.06);
   --card-border: rgba(0, 0, 0, 0.06);
   --border-radius: 12px;
@@ -29,6 +39,13 @@
   --on-surface: #F9FAFB;
   --text-secondary: #9CA3AF;
   --text-muted: #6B7280;
+  --text-light: #CBD5E1;
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --success: #34D399;
+  --warning: #F59E0B;
+  --link: #80D8FF;
+  --link-hover: #B3E5FC;
   --divider: rgba(255, 255, 255, 0.07);
   --card-border: rgba(255, 255, 255, 0.08);
   --shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -65,7 +82,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   background: var(--background);
   color: var(--on-surface);
   overflow: hidden;
@@ -185,7 +202,7 @@ body {
 }
 
 .btn-danger {
-  color: #DC2626 !important;
+  color: var(--danger);
 }
 
 .nav-menu {
@@ -1115,7 +1132,7 @@ body {
 }
 
 .error-msg {
-  color: #DC2626;
+  color: var(--danger);
   font-size: 12px;
   margin-bottom: 8px;
 }
@@ -1125,8 +1142,8 @@ body {
 }
 
 .btn-danger-filled {
-  background: #DC2626;
-  color: #FFFFFF !important;
+  background: var(--danger);
+  color: #FFFFFF;
   border: none;
   border-radius: 8px;
   padding: 7px 14px;
@@ -1137,7 +1154,7 @@ body {
 }
 
 .btn-danger-filled:hover {
-  background: #B91C1C;
+  background: var(--danger-hover);
 }
 
 @keyframes fadeIn {
@@ -1270,30 +1287,30 @@ body {
 
 /* Clickable Links in Notes & Cards */
 .note-link, a.note-link, .note-card-preview a {
-  color: #1a73e8 !important;
-  text-decoration: underline !important;
-  cursor: pointer !important;
-  pointer-events: auto !important;
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+  pointer-events: auto;
   font-weight: 500;
   transition: color 0.15s ease;
 }
 
 .note-link:hover, .note-card-preview a:hover {
-  color: #1557b0 !important;
-  text-decoration: underline !important;
+  color: var(--link-hover);
+  text-decoration: underline;
 }
 
 .dark-card .note-link, .dark-card .note-card-preview a {
-  color: #80d8ff !important;
+  color: var(--link-dark);
 }
 
 .dark-card .note-link:hover, .dark-card .note-card-preview a:hover {
-  color: #b3e5fc !important;
+  color: var(--link-dark-hover);
 }
 
 #editorContent[contenteditable="true"] .note-link,
 #editorContent[contenteditable="true"] a {
-  cursor: text !important;
+  cursor: text;
 }
 
 /* Google Sign-in Button */
@@ -1612,7 +1629,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   border: 2px solid #0284c7;
-  box-shadow: 0 0 20px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   margin-bottom: 12px;
 }
 
@@ -1623,7 +1640,7 @@ body {
   width: 90%;
   height: 2px;
   background: linear-gradient(90deg, transparent, #38bdf8, #06b6d4, transparent);
-  box-shadow: 0 0 12px #38bdf8, 0 0 20px #06b6d4;
+  box-shadow: 0 1px 4px rgba(56, 189, 248, 0.2);
   animation: qrLaserScan 2s ease-in-out infinite alternate;
   pointer-events: none;
 }

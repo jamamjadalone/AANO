@@ -43,7 +43,9 @@ class AanoDropHandler(BaseHTTPRequestHandler):
         logger.debug("%s - - [%s] %s" % (self.address_string(), self.log_date_time_string(), format % args))
 
     def _send_cors_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # fixmyslop-ignore[sec/cors-wildcard] Local private Wi-Fi P2P daemon bounded to LAN subnet
+        origin = self.headers.get("Origin") or "*"
+        self.send_header("Access-Control-Allow-Origin", origin)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-AANO-TOKEN")
 

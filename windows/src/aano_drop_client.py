@@ -173,8 +173,8 @@ def scan_nearby_devices():
                         "ip": host,
                         "port": port
                     })
-        except Exception:
-            pass
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
+            logger.debug("Radar probe on %s:%s skipped: %s", host, port, e)
 
     targets = []
     # Probe local subnet 1..254
@@ -187,8 +187,10 @@ def scan_nearby_devices():
     with ThreadPoolExecutor(max_workers=50) as executor:
         futures = [executor.submit(probe, ip, port) for ip, port in targets]
         for f in futures:
-            try: f.result()
-            except Exception: pass
+            try:
+                f.result()
+            except Exception as e:
+                logger.debug("Radar worker error: %s", e)
 
     return found
 
