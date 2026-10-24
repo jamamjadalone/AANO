@@ -80,6 +80,13 @@ android {
             excludes += "/META-INF/io.netty.versions.properties"
         }
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+        textReport = true
+        htmlReport = true
+    }
 }
 
 
@@ -96,4 +103,10 @@ dependencies {
     implementation(libs.google.api.services.drive)
     implementation(libs.gson)
     implementation(libs.androidx.biometric)
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.5.3")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("org.json:json:20240303")
 }

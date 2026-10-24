@@ -18,7 +18,10 @@ import android.util.Log
 import app.aa.aano.data.Note
 import app.aa.aano.data.NoteRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -53,6 +56,7 @@ class AanoDropManager(private val context: Context) {
     }
 
     private val repository = NoteRepository(context)
+    private val prefs = app.aa.aano.data.Prefs(context)
     private var serverSocket: ServerSocket? = null
     private var isRunning = false
     val pin = String.format("%06d", Random.nextInt(100000, 999999))
@@ -141,6 +145,37 @@ class AanoDropManager(private val context: Context) {
                     return@launch
                 }
 
+                if (path.startsWith("/aano/pair") && method.equals("POST", ignoreCase = true)) {
+                    val bodyChars = CharArray(contentLength)
+                    var totalRead = 0
+                    while (totalRead < contentLength) {
+                        val read = reader.read(bodyChars, totalRead, contentLength - totalRead)
+                        if (read == -1) break
+                        totalRead += read
+                    }
+                    val bodyString = String(bodyChars, 0, totalRead)
+                    val payload = JSONObject(bodyString)
+                    val senderName = payload.optString("name", "Desktop PC")
+                    val senderIp = payload.optString("ip").ifEmpty { client.inetAddress?.hostAddress ?: "" }
+                    val senderPort = payload.optInt("port", 8765)
+                    val incomingPin = payload.optString("pin")
+                    if (pin.isNotEmpty() && incomingPin.isNotEmpty() && pin != incomingPin) {
+                        sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Invalid PIN\"}")
+                        return@launch
+                    }
+                    prefs.lastDropIp = if (senderPort == 8765) senderIp else "$senderIp:$senderPort"
+                    prefs.lastDropPeerName = senderName
+                    prefs.lastDropPin = incomingPin
+                    val respJson = JSONObject().apply {
+                        put("success", true)
+                        put("name", "Android Phone")
+                        put("ip", getLocalWifiIp())
+                        put("port", DROP_PORT)
+                    }
+                    sendHttpResponse(output, 200, "OK", "application/json", respJson.toString())
+                    return@launch
+                }
+
                 if (path.startsWith("/aano/drop") && method.equals("POST", ignoreCase = true)) {
                     if (contentLength <= 0 || contentLength > 100 * 1024 * 1024) {
                         sendHttpResponse(output, 400, "Bad Request", "application/json", "{\"success\":false,\"error\":\"Invalid content length\"}")
@@ -157,6 +192,15 @@ class AanoDropManager(private val context: Context) {
                     }
                     val bodyString = String(bodyChars, 0, totalRead)
                     val payload = JSONObject(bodyString)
+
+                    // Auto-record sender peer
+                    val senderName = payload.optString("sender_name", "Desktop PC")
+                    val senderIp = payload.optString("sender_ip").ifEmpty { client.inetAddress?.hostAddress ?: "" }
+                    val senderPort = payload.optInt("sender_port", 8765)
+                    if (senderIp.isNotEmpty()) {
+                        prefs.lastDropIp = if (senderPort == 8765) senderIp else "$senderIp:$senderPort"
+                        prefs.lastDropPeerName = senderName
+                    }
 
                     // Validate PIN or Token
                     val reqToken = payload.optString("token").ifEmpty { payload.optString("pin", incomingToken) }
@@ -245,7 +289,13 @@ class AanoDropManager(private val context: Context) {
 
     private fun triggerHapticChime() {
         try {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vibratorManager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
             if (vibrator != null && vibrator.hasVibrator()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(VibrationEffect.createOneShot(180, VibrationEffect.DEFAULT_AMPLITUDE))
@@ -254,7 +304,9 @@ class AanoDropManager(private val context: Context) {
                     vibrator.vibrate(180)
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            android.util.Log.w("AanoDrop", "Haptic chime suppressed: ${e.message}")
+        }
     }
 
     private fun lockProcessToWifi() {
@@ -343,10 +395,15 @@ class AanoDropManager(private val context: Context) {
             }
         }
 
+        val effectivePin = if (!targetPin.isNullOrBlank()) targetPin else prefs.lastDropPin
+
         val payload = JSONObject().apply {
             put("protocol", PROTOCOL_VERSION)
-            put("pin", targetPin ?: "")
-            put("token", targetPin ?: "")
+            put("pin", effectivePin)
+            put("token", effectivePin)
+            put("sender_name", "Android Phone")
+            put("sender_ip", getLocalWifiIp())
+            put("sender_port", DROP_PORT)
             put("notes", notesArr)
             put("images", imagesArr)
         }
@@ -363,8 +420,8 @@ class AanoDropManager(private val context: Context) {
                     readTimeout = 20000
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json")
-                    if (!targetPin.isNullOrBlank()) {
-                        setRequestProperty("X-AANO-TOKEN", targetPin)
+                    if (effectivePin.isNotBlank()) {
+                        setRequestProperty("X-AANO-TOKEN", effectivePin)
                     }
                 }
 
@@ -376,6 +433,10 @@ class AanoDropManager(private val context: Context) {
                 val code = conn.responseCode
                 if (code in 200..299) {
                     val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                    // Auto-record peer on success
+                    prefs.lastDropIp = if (port == 8765) host else "$host:$port"
+                    if (effectivePin.isNotBlank()) prefs.lastDropPin = effectivePin
+                    if (prefs.lastDropPeerName.isBlank()) prefs.lastDropPeerName = "Desktop PC"
                     return@withContext Result.success(resp)
                 } else {
                     val err = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $code"
@@ -388,5 +449,79 @@ class AanoDropManager(private val context: Context) {
         }
         Log.e(TAG, "sendDropToDevice all attempts failed: ${lastException?.message}")
         Result.failure(lastException ?: Exception("Could not connect to $host on ports $portsToTry"))
+    }
+
+    data class DiscoveredPeer(val name: String, val ip: String, val port: Int)
+
+    suspend fun pairWithPeer(targetIp: String, targetPort: Int = 8765, pin: String? = null): Result<DiscoveredPeer> = withContext(Dispatchers.IO) {
+        val cleanIp = if (targetIp.contains(":")) targetIp.split(":")[0].trim() else targetIp.trim()
+        val port = if (targetIp.contains(":")) targetIp.split(":")[1].trim().toIntOrNull() ?: targetPort else targetPort
+        val url = URL("http://$cleanIp:$port/aano/pair")
+        try {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 4000
+                readTimeout = 6000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json")
+            }
+            val payload = JSONObject().apply {
+                put("name", "Android Phone")
+                put("ip", getLocalWifiIp())
+                put("port", DROP_PORT)
+                put("pin", pin ?: "")
+            }
+            conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+            if (conn.responseCode in 200..299) {
+                val resp = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val peerName = resp.optString("name", "Desktop PC")
+                prefs.lastDropIp = if (port == 8765) cleanIp else "$cleanIp:$port"
+                prefs.lastDropPeerName = peerName
+                prefs.lastDropPin = pin ?: ""
+                Result.success(DiscoveredPeer(peerName, cleanIp, port))
+            } else {
+                Result.failure(Exception("Peer rejected pair: HTTP ${conn.responseCode}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun discoverNearbyPeers(): List<DiscoveredPeer> = withContext(Dispatchers.IO) {
+        val myIp = getLocalWifiIp()
+        if (myIp == "127.0.0.1") return@withContext emptyList()
+        val prefix = myIp.substringBeforeLast(".") + "."
+        val found = mutableListOf<DiscoveredPeer>()
+
+        coroutineScope {
+            val jobs = mutableListOf<Deferred<Unit>>()
+            for (i in 1..254) {
+                val host = "$prefix$i"
+                if (host == myIp) continue
+                for (port in listOf(8765, 8766)) {
+                    val d = async {
+                        try {
+                            val conn = (URL("http://$host:$port/aano/info").openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 450
+                                readTimeout = 600
+                            }
+                            if (conn.responseCode in 200..299) {
+                                val text = conn.inputStream.bufferedReader().use { it.readText() }
+                                val json = JSONObject(text)
+                                if (json.optString("protocol") == PROTOCOL_VERSION) {
+                                    val name = json.optString("device", json.optString("hostname", "Device"))
+                                    synchronized(found) {
+                                        found.add(DiscoveredPeer(name, host, port))
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                    jobs.add(d)
+                }
+            }
+            jobs.forEach { it.await() }
+        }
+        found
     }
 }

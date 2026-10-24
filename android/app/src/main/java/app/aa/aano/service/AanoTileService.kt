@@ -12,6 +12,7 @@ import app.aa.aano.ui.QuickNoteActivity
 
 class AanoTileService : TileService() {
 
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
         val intent = Intent(this, QuickNoteActivity::class.java).apply {
