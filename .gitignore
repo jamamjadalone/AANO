@@ -54,3 +54,8 @@ desktop.ini
 *.swp
 *.bak
 *~
+
+# 7. INTERNAL PLANS & SCRATCH SCRIPTS (Local only)
+*plan*.md
+*TODO*.md
+scratch/

@@ -368,7 +368,7 @@ class LocalFragment : Fragment() {
             gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
 
-        // Responsive QR size: ~170dp, capped at 50% screen width to guarantee fit on compact Vivo/720p screens
+        // Responsive QR size: ~170dp, capped at 50% screen width to guarantee fit on compact/720p screens
         val qrTargetPx = (170 * density).toInt().coerceAtMost((dm.widthPixels * 0.50).toInt())
         val qrBmp = try {
             QrCode.encodeText(myUri, QrCode.Ecc.MEDIUM).toBitmap(qrTargetPx)
