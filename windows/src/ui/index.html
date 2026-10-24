@@ -18,21 +18,21 @@
             <rect width="108" height="108" rx="24" fill="url(#bgGrad)"/>
             <defs>
               <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#004D40"/>
-                <stop offset="50%" stop-color="#00695C"/>
-                <stop offset="100%" stop-color="#00897B"/>
+                <stop offset="0%" stop-color="var(--brand-dark)"/>
+                <stop offset="50%" stop-color="var(--brand)"/>
+                <stop offset="100%" stop-color="var(--brand-accent)"/>
               </linearGradient>
             </defs>
             <circle cx="54" cy="54" r="34" fill="rgba(255,255,255,0.08)"/>
             <!-- Monogram Left A -->
-            <polygon points="44,30 29,74 37.5,74 41.2,61.5 52.8,61.5 55.5,70.5 63.5,66.8 53,30" fill="#FFFFFF"/>
-            <polygon points="44.6,40.5 49.2,54.5 43.2,54.5" fill="#005548"/>
+            <polygon points="44,30 29,74 37.5,74 41.2,61.5 52.8,61.5 55.5,70.5 63.5,66.8 53,30" fill="var(--surface)"/>
+            <polygon points="44.6,40.5 49.2,54.5 43.2,54.5" fill="var(--brand-dark)"/>
             <!-- Monogram Right A -->
-            <polygon points="64,30 51.8,53.8 56.5,67.2 66.8,61.5 70.5,74 79,74 64,30" fill="#E0F2F1"/>
-            <polygon points="63.4,40.5 68.2,54.5 58.8,54.5" fill="#005F50"/>
+            <polygon points="64,30 51.8,53.8 56.5,67.2 66.8,61.5 70.5,74 79,74 64,30" fill="var(--brand-light)"/>
+            <polygon points="63.4,40.5 68.2,54.5 58.8,54.5" fill="var(--brand-dark)"/>
             <polygon points="44,30 54,30 49,46" fill="rgba(255,255,255,0.7)"/>
             <polygon points="64,30 54,30 59,46" fill="rgba(178,223,219,0.7)"/>
-            <polygon points="54,49 58.5,55 54,61 49.5,55" fill="#004D40"/>
+            <polygon points="54,49 58.5,55 54,61 49.5,55" fill="var(--brand-dark)"/>
           </svg>
         </div>
         <div class="brand-text">
@@ -78,7 +78,7 @@
 
       <div class="sidebar-footer">
         <div id="dropPeerBadge" class="cloud-status" style="margin-bottom: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px;" title="AANO Drop Persistent Peer Status">
-          <div id="dropPeerDot" class="status-dot" style="background: #64748b;"></div>
+          <div id="dropPeerDot" class="status-dot" style="background: var(--text-muted);"></div>
           <span id="dropPeerText" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Drop: Standby</span>
         </div>
         <div id="cloudStatusBadge" class="cloud-status">
@@ -306,11 +306,11 @@
               <span>Highlight</span> ▾
             </button>
             <div class="dropdown-content">
-              <button type="button" class="dropdown-item" data-highlight="#FFF59D"><span class="color-dot-sm" style="background:#FFF59D"></span> Yellow</button>
-              <button type="button" class="dropdown-item" data-highlight="#C8E6C9"><span class="color-dot-sm" style="background:#C8E6C9"></span> Mint Green</button>
-              <button type="button" class="dropdown-item" data-highlight="#F8BBD0"><span class="color-dot-sm" style="background:#F8BBD0"></span> Soft Pink</button>
-              <button type="button" class="dropdown-item" data-highlight="#B3E5FC"><span class="color-dot-sm" style="background:#B3E5FC"></span> Sky Blue</button>
-              <button type="button" class="dropdown-item" data-highlight="#FFE0B2"><span class="color-dot-sm" style="background:#FFE0B2"></span> Peach</button>
+              <button type="button" class="dropdown-item" data-highlight="var(--hl-yellow)"><span class="color-dot-sm" style="background:var(--hl-yellow)"></span> Yellow</button>
+              <button type="button" class="dropdown-item" data-highlight="var(--hl-green)"><span class="color-dot-sm" style="background:var(--hl-green)"></span> Mint Green</button>
+              <button type="button" class="dropdown-item" data-highlight="var(--hl-pink)"><span class="color-dot-sm" style="background:var(--hl-pink)"></span> Soft Pink</button>
+              <button type="button" class="dropdown-item" data-highlight="var(--hl-blue)"><span class="color-dot-sm" style="background:var(--hl-blue)"></span> Sky Blue</button>
+              <button type="button" class="dropdown-item" data-highlight="var(--hl-orange)"><span class="color-dot-sm" style="background:var(--hl-orange)"></span> Peach</button>
               <button type="button" class="dropdown-item" data-highlight="transparent"><span class="color-dot-sm clear"></span> Clear</button>
             </div>
           </div>
@@ -321,11 +321,11 @@
               <span>Color</span> ▾
             </button>
             <div class="dropdown-content">
-              <button type="button" class="dropdown-item" data-forecolor="#212121"><span class="color-dot-sm" style="background:#212121"></span> Default</button>
-              <button type="button" class="dropdown-item" data-forecolor="#00796B"><span class="color-dot-sm" style="background:#00796B"></span> Emerald</button>
-              <button type="button" class="dropdown-item" data-forecolor="#1565C0"><span class="color-dot-sm" style="background:#1565C0"></span> Blue</button>
-              <button type="button" class="dropdown-item" data-forecolor="#C62828"><span class="color-dot-sm" style="background:#C62828"></span> Crimson</button>
-              <button type="button" class="dropdown-item" data-forecolor="#6A1B9A"><span class="color-dot-sm" style="background:#6A1B9A"></span> Purple</button>
+              <button type="button" class="dropdown-item" data-forecolor="var(--fc-dark)"><span class="color-dot-sm" style="background:var(--fc-dark)"></span> Default</button>
+              <button type="button" class="dropdown-item" data-forecolor="var(--fc-teal)"><span class="color-dot-sm" style="background:var(--fc-teal)"></span> Emerald</button>
+              <button type="button" class="dropdown-item" data-forecolor="var(--fc-blue)"><span class="color-dot-sm" style="background:var(--fc-blue)"></span> Blue</button>
+              <button type="button" class="dropdown-item" data-forecolor="var(--fc-red)"><span class="color-dot-sm" style="background:var(--fc-red)"></span> Crimson</button>
+              <button type="button" class="dropdown-item" data-forecolor="var(--fc-purple)"><span class="color-dot-sm" style="background:var(--fc-purple)"></span> Purple</button>
             </div>
           </div>
           <div class="divider"></div>
@@ -351,33 +351,33 @@
     <div id="cloudModal" class="modal-backdrop hidden">
       <div class="dialog-box" style="max-width: 440px;">
         <h3>Google Drive Sync (15 GB Free)</h3>
-        <p style="color: #94a3b8; font-size: 13.5px; margin-bottom: 20px;">Sync your private notes between your phone and PC directly through your Google Drive storage.</p>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 20px;">Sync your private notes between your phone and PC directly through your Google Drive storage.</p>
         
         <div id="cloudLoginForm">
           <button id="btnGoogleSignIn" class="btn-google-signin" type="button">
             <svg viewBox="0 0 24 24" width="20" height="20" style="margin-right: 12px;">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              <path fill="var(--google-blue)" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="var(--google-green)" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="var(--google-yellow)" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="var(--google-red)" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
             Sign in with Google
           </button>
           
           <div id="cloudError" class="error-msg hidden" style="margin-top: 12px;"></div>
           
-          <div style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 14px; text-align: center;">
+          <div style="margin-top: 20px; border-top: 1px solid var(--border-light); padding-top: 14px; text-align: center;">
             <button id="btnCancelCloud" class="btn-secondary" style="width: 100%;">Close</button>
           </div>
         </div>
 
         <div id="cloudActiveSession" class="hidden">
-          <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
+          <div style="background: var(--brand-light); border: 1px solid var(--border-light); border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: left;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
-              <span style="font-weight: 600; color: #38bdf8; font-size: 14px;">Google Drive Active</span>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              <span style="font-weight: 600; color: var(--brand); font-size: 14px;">Google Drive Active</span>
             </div>
-            <div style="font-size: 13px; color: #cbd5e1; word-break: break-all;" id="lblConnectedEmail"></div>
+            <div style="font-size: 13px; color: var(--text-light); word-break: break-all;" id="lblConnectedEmail"></div>
           </div>
           <div class="dialog-buttons">
             <button id="btnLogoutCloud" class="btn-danger">Disconnect</button>
@@ -497,27 +497,27 @@
           </h3>
           <button id="btnCloseAanoDrop" class="btn-preview-close">✕</button>
         </div>
-        <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin-bottom: 16px;">
+        <p style="color: var(--text-muted); font-size: 13px; line-height: 1.5; margin-bottom: 16px;">
           Transfer notes &amp; photos directly over local Wi-Fi without internet consumption (Layer 2 routing).
         </p>
 
         <!-- Active Paired Peer status -->
-        <div id="activePeerCard" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 14px;">
+        <div id="activePeerCard" style="display: none; background: var(--brand-light); border: 1px solid var(--border-light); border-radius: 10px; padding: 12px; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <div style="width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></div>
+              <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success);"></div>
               <div>
-                <div id="activePeerName" style="font-weight: 700; color: #f1f5f9; font-size: 13px;">Connected Peer</div>
-                <div id="activePeerEndpoint" style="color: #94a3b8; font-size: 11px;">192.168.x.x:8766</div>
+                <div id="activePeerName" style="font-weight: 700; color: var(--on-surface); font-size: 13px;">Connected Peer</div>
+                <div id="activePeerEndpoint" style="color: var(--text-muted); font-size: 11px;">192.168.x.x:8766</div>
               </div>
             </div>
-            <button id="btnUnpairPeer" class="btn-clear" style="font-size: 11px; color: #ef4444; text-decoration: underline; cursor: pointer; border: none; background: transparent;">Disconnect</button>
+            <button id="btnUnpairPeer" class="btn-clear" style="font-size: 11px; color: var(--danger); text-decoration: underline; cursor: pointer; border: none; background: transparent;">Disconnect</button>
           </div>
         </div>
 
         <!-- Actions: Camera QR Scanner + Wi-Fi Radar Scan -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-          <button id="btnOpenQrScanner" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px; background: linear-gradient(135deg, #0284c7, #06b6d4); border: none;">
+          <button id="btnOpenQrScanner" class="btn-primary" style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; padding: 8px; background: var(--brand-dark); border: none;">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             <span>Scan Phone QR</span>
           </button>
@@ -534,25 +534,25 @@
             This PC's Drop Coordinates
           </div>
           <div style="display: flex; justify-content: center; margin: 8px 0 12px 0;">
-            <div style="padding: 12px; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.45); display: inline-flex;">
+            <div style="padding: 12px; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.45); display: inline-flex;">
               <canvas id="dropQrCanvas" width="220" height="220" style="display: block; width: 220px; height: 220px; border-radius: 8px;"></canvas>
             </div>
           </div>
-          <div style="font-size: 13px; color: #f1f5f9; font-weight: 700; margin-bottom: 3px;" id="dropServerIp">IP: 192.168.x.x:8765</div>
-          <div style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <div style="font-size: 13px; color: var(--on-surface); font-weight: 700; margin-bottom: 3px;" id="dropServerIp">IP: 192.168.x.x:8765</div>
+          <div style="font-size: 12px; color: var(--text-light); display: flex; align-items: center; justify-content: center; gap: 6px;">
             <span>Security PIN:</span>
-            <b id="dropServerPin" style="color: #38bdf8; letter-spacing: 2.5px; font-family: monospace; font-size: 13px;">------</b>
+            <b id="dropServerPin" style="color: var(--brand); letter-spacing: 2.5px; font-family: monospace; font-size: 13px;">------</b>
             <button id="btnCopyDropUri" class="icon-button" style="padding: 2px 6px; font-size: 11px; margin-left: 4px; display: inline-flex; align-items: center;" title="Copy Drop URI"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
           </div>
         </div>
 
         <!-- Sender card with Selective Notes Selection -->
         <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
-          <div style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Manual IP / Target Endpoint:</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 6px;">Manual IP / Target Endpoint:</div>
           <input type="text" id="targetPhoneIp" class="dialog-input" placeholder="Target IP (e.g. 192.168.1.105:8766)" style="margin-bottom: 6px;">
           <input type="text" id="targetPhonePin" class="dialog-input" placeholder="Target 6-Digit PIN (optional)" style="margin-bottom: 8px;">
 
-          <div style="font-size: 11px; font-weight: 600; color: #94a3b8; margin-bottom: 4px; display: flex; justify-content: space-between;">
+          <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between;">
             <span>Choose Notes to Drop:</span>
             <span id="dropSelectionCount" style="color: var(--brand);">0 selected</span>
           </div>
@@ -572,12 +572,12 @@
 
     <!-- Live Camera QR Scanner Modal -->
     <div id="aanoScannerModal" class="dialog-overlay hidden">
-      <div class="dialog" style="max-width: 440px; text-align: center; border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 15px 45px rgba(0,0,0,0.7);">
+      <div class="dialog" style="max-width: 440px; text-align: center; border: 1px solid var(--border-light); box-shadow: 0 15px 45px rgba(0,0,0,0.7);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 15px; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; font-size: 15px; color: var(--brand); display: flex; align-items: center; gap: 8px;">
             AANO Drop QR Scanner
           </h3>
-          <button id="btnCloseScannerModal" class="icon-button" style="color: #94a3b8; font-size: 16px;">✕</button>
+          <button id="btnCloseScannerModal" class="icon-button" style="color: var(--text-muted); font-size: 16px;">✕</button>
         </div>
 
         <div class="qr-scanner-frame" id="qrScannerFrame">
@@ -586,7 +586,7 @@
           <div class="qr-scanner-reticle"></div>
         </div>
 
-        <div id="qrScannerStatus" style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
+        <div id="qrScannerStatus" style="font-size: 12px; color: var(--text-light); margin-bottom: 12px;">
           Point camera at phone's AANO Drop QR code
         </div>
 

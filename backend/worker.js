@@ -2,17 +2,31 @@
 // Zero-Abuse Guarantee: Official Gmail Mailer Bridge + IP Rate Limiter + Anti-DDoS
 // NOTE: All secrets are supplied via Cloudflare Environment Variables (env)
 
-// fixmyslop-ignore[sec/cors-wildcard] Mobile client and desktop edge sync with private App-Key auth
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-AANO-KEY",
-};
+const ALLOWED_ORIGIN = "https://jamamjadalone.github.io";
+
+function getCorsHeaders(request, env) {
+  const reqOrigin = request ? request.headers.get("Origin") : null;
+  const configuredOrigin = (env && env.ALLOWED_ORIGIN) ? env.ALLOWED_ORIGIN : ALLOWED_ORIGIN;
+  const isAllowed = reqOrigin && (
+    reqOrigin === configuredOrigin ||
+    reqOrigin.startsWith("http://localhost") ||
+    reqOrigin.startsWith("http://127.0.0.1") ||
+    reqOrigin.startsWith("android-app://")
+  );
+  return {
+    // fixmyslop-ignore[sec/cors-wildcard] Validated origin reflection for trusted client frontends
+    "Access-Control-Allow-Origin": isAllowed ? reqOrigin : configuredOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-AANO-KEY",
+  };
+}
+
+const CORS_HEADERS = getCorsHeaders(null, null);
 
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
-      return new Response(null, { headers: CORS_HEADERS });
+      return new Response(null, { headers: getCorsHeaders(request, env) });
     }
 
     const url = new URL(request.url);

@@ -1909,7 +1909,10 @@ function setupFormattingToolbar() {
   document.querySelectorAll("[data-highlight]").forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const color = link.dataset.highlight;
+      const rawColor = link.dataset.highlight;
+      const color = rawColor && rawColor.startsWith("var(")
+        ? getComputedStyle(document.documentElement).getPropertyValue(rawColor.slice(4, -1).trim()).trim()
+        : rawColor;
       document.execCommand("hiliteColor", false, color);
       document.getElementById("editorContent").focus();
     });
@@ -1919,7 +1922,10 @@ function setupFormattingToolbar() {
   document.querySelectorAll("[data-forecolor]").forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const color = link.dataset.forecolor;
+      const rawColor = link.dataset.forecolor;
+      const color = rawColor && rawColor.startsWith("var(")
+        ? getComputedStyle(document.documentElement).getPropertyValue(rawColor.slice(4, -1).trim()).trim()
+        : rawColor;
       document.execCommand("foreColor", false, color);
       document.getElementById("editorContent").focus();
     });

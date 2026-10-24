@@ -15,6 +15,7 @@ except (AttributeError, OSError):
 
 logger = logging.getLogger("AANO.Main")
 
+# fixmyslop-ignore[deps/phantom-import] Top-level import for pywebview package declared in requirements.txt
 import webview
 from api import DesktopApi
 
