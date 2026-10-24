@@ -1,11 +1,24 @@
-# -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+webview_datas, webview_binaries, webview_hiddenimports = collect_all('webview')
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=[],
-    datas=[('src/ui', 'ui'), ('assets', 'assets'), ('src/google_credentials.json', '.')],
-    hiddenimports=[],
+    binaries=webview_binaries,
+    datas=[('src/ui', 'ui'), ('assets', 'assets'), ('src/google_credentials.json', '.')] + webview_datas,
+    hiddenimports=webview_hiddenimports + [
+        'clr',
+        'pythonnet',
+        'webview.platforms.winforms',
+        'webview.platforms.edgechromium',
+        'aano_drop_server',
+        'aano_drop_client',
+        'drive_sync',
+        'hotkey_daemon',
+        'storage',
+        'api'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
