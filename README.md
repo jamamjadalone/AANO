@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Installer)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
   <img src="https://img.shields.io/badge/P2P-AANO%20Drop%20(Local%20LAN)-0D9488?style=flat-square&logo=airplayvideo&logoColor=white" alt="AANO Drop">
-  <img src="https://img.shields.io/badge/Sync-Google%20Drive%20%7C%20Cloudflare-F59E0B?style=flat-square&logo=googledrive&logoColor=white" alt="Sync">
+  <img src="https://img.shields.io/badge/Sync-Google%20Drive-F59E0B?style=flat-square&logo=googledrive&logoColor=white" alt="Sync">
   <img src="https://img.shields.io/badge/Trackers-0%20(Zero%20Telemetry)-10B981?style=flat-square" alt="Zero Trackers">
 </p>
 
