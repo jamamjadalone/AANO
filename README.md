@@ -103,18 +103,31 @@
 
 Download pre-built, production-ready binaries directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
 
-| Platform | Download File | Description |
+| Platform | Download | System Requirements |
 | :--- | :--- | :--- |
-| **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Compatible with Android 8.0+ (API 26–35) |
-| **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Standalone Inno Setup installer for Windows 10 & 11 |
-### Windows Installation Instructions
-1. Download and run `AANO-Setup-v1.2.0-beta.1.exe`.
-2. If Windows SmartScreen displays *"Windows protected your PC"*, click **More info** and then **Run anyway**. AANO is 100% open-source (GPL-3.0) and completely safe.
+| **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit PC / Laptop) |
+| **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (Phones & Tablets) |
 
-### Android Sideloading Instructions
-1. Download `AANO-v1.2.0-beta.1.apk` on your Android device.
-2. If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
-3. If Google Play Protect shows *"Unrecognized app"*, tap **More details** and then **Install anyway**. AANO is 100% open source, tracker-free, and contains zero advertising or telemetry code.
+### First-Time Installation Guide
+
+Because AANO is a free, community-driven open-source project without expensive corporate enterprise certificates, Windows and Android may show a standard safety prompt on the very first install. AANO is 100% clean, open source (GPL-3.0), and contains zero trackers or advertisements.
+
+#### Windows PC / Laptop
+
+1. Download and double-click `AANO-Setup-v1.2.0-beta.1.exe`.
+2. When the blue **"Windows protected your PC"** screen appears:
+   - Click **"More info"** (link under the text).
+   - Click the **"Run anyway"** button at the bottom.
+3. Follow the setup wizard. Once installed, AANO opens directly from your Desktop or Start Menu with no further prompts.
+
+#### Android Phone / Tablet
+
+1. Download `AANO-v1.2.0-beta.1.apk` on your device and tap to open it.
+2. If prompted *"For your security, your phone is not allowed to install unknown apps"*:
+   - Tap **Settings** and enable **"Allow from this source"**.
+3. If Google Play Protect displays *"Unrecognized app"*:
+   - Tap **"More details"** and then select **"Install anyway"**.
+4. Launch AANO to start writing private, offline-first notes.
 
 ---
 
