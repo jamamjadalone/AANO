@@ -44,6 +44,22 @@
 
 ---
 
+## Why Choose AANO?
+
+If you are searching for a privacy-focused, zero-telemetry alternative to **Google Keep**, **Standard Notes**, **Simplenote**, or **Obsidian**, AANO delivers complete data sovereignty with zero monthly subscriptions:
+
+| Feature | AANO Notes | Google Keep | Standard Notes (Free) | Simplenote |
+| :--- | :---: | :---: | :---: | :---: |
+| **Price & Licensing** | **100% Free & Open Source (GPL-3.0)** | Proprietary | Freemium (Paid features) | Free (Proprietary cloud) |
+| **Telemetry & Trackers** | **Zero (0 Trackers)** | Google Ad & Analytics | Minimal | Automattic Telemetry |
+| **Hardware Encryption** | **AES-256-GCM Hardware-Backed** | No | Text only | No |
+| **Offline-First Storage** | **100% Offline Capable** | Limited web cache | Yes | Limited |
+| **Direct Wi-Fi Beam (P2P)** | **Built-in (AANO Drop)** | No | No | No |
+| **Cloud Sync Ownership** | **User-Owned Google Drive** | Proprietary cloud | Standard Notes cloud | Automattic cloud |
+| **Cross-Platform** | **Android + Windows Desktop** | Web / Mobile | Mobile / Desktop / Web | Mobile / Desktop / Web |
+
+---
+
 ## Key Features Across Platforms
 
 ### AANO Drop (Peer-to-Peer Local Network Sharing)
@@ -220,6 +236,13 @@ AANO/
 We warmly welcome contributions from everyone! Whether you want to fix a bug, suggest an idea, design a theme, or write code:
 - Please read our [Contributing Guide](CONTRIBUTING.md) for a simple, step-by-step walkthrough.
 - Check out existing issues or open a new one on [GitHub Issues](https://github.com/jamamjadalone/AANO/issues).
+
+---
+
+## Acknowledgments
+
+- Built and engineered with pair-programming assistance from **Google Antigravity** (Advanced Agentic AI Coding Assistant).
+- Grateful to the open-source community for the foundational libraries and tools that power AANO across Android and Windows.
 
 ---
 
