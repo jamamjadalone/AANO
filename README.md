@@ -108,6 +108,8 @@ Download pre-built, production-ready binaries directly from [GitHub Releases](ht
 | **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Compatible with Android 8.0+ (API 26–35) |
 | **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Standalone Inno Setup installer for Windows 10 & 11 |
 
+*Free code signing provided by [SignPath.io](https://signpath.org/), certificate by [SignPath Foundation](https://signpath.org/).*
+
 ### Android Sideloading Instructions
 1. Download `AANO-v1.2.0-beta.1.apk` on your Android device.
 2. If prompted *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings** and toggle **Allow from this source**.
