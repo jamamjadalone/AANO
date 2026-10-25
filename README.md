@@ -44,6 +44,38 @@
 
 ---
 
+## Download Official Releases
+
+Download pre-built, production-ready releases directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
+
+| Platform | Download Package | Requirements | Setup Guide |
+| :--- | :--- | :--- | :--- |
+| **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
+| **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+
+### First-Time Installation Guide
+
+Because AANO is a free, independent open-source project without expensive corporate enterprise certificates, Windows and Android may show a standard safety prompt on the very first install. AANO is 100% clean, open source (GPL-3.0), and contains zero trackers or advertisements.
+
+#### Windows PC / Laptop
+
+1. Download and run `AANO-Setup-v1.2.0-beta.1.exe`.
+2. When the blue **"Windows protected your PC"** screen appears:
+   - Click **"More info"** (link under the text).
+   - Click the **"Run anyway"** button at the bottom.
+3. Follow the setup wizard. Once installed, AANO opens directly from your Desktop or Start Menu with no further prompts.
+
+#### Android Phone / Tablet
+
+1. Download `AANO-v1.2.0-beta.1.apk` on your device and tap to open it.
+2. If prompted *"For your security, your phone is not allowed to install unknown apps"*:
+   - Tap **Settings** and enable **"Allow from this source"**.
+3. If Google Play Protect displays *"Unrecognized app"*:
+   - Tap **"More details"** and then select **"Install anyway"**.
+4. Launch AANO to start writing private, offline-first notes.
+
+---
+
 ## Why Choose AANO?
 
 If you are searching for a privacy-focused, zero-telemetry alternative to **Google Keep**, **Standard Notes**, **Simplenote**, or **Obsidian**, AANO delivers complete data sovereignty with zero monthly subscriptions:
@@ -112,38 +144,6 @@ If you are searching for a privacy-focused, zero-telemetry alternative to **Goog
 ### AppLock & Privacy Shield
 - Salted PBKDF2 PIN lock + Biometric authentication (Fingerprint / Face Unlock).
 - Android `FLAG_SECURE` prevents screenshots and hides previews in recent apps.
-
----
-
-## Download Official Releases
-
-Download pre-built, production-ready binaries directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
-
-| Platform | Download | System Requirements |
-| :--- | :--- | :--- |
-| **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit PC / Laptop) |
-| **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (Phones & Tablets) |
-
-### First-Time Installation Guide
-
-Because AANO is a free, community-driven open-source project without expensive corporate enterprise certificates, Windows and Android may show a standard safety prompt on the very first install. AANO is 100% clean, open source (GPL-3.0), and contains zero trackers or advertisements.
-
-#### Windows PC / Laptop
-
-1. Download and double-click `AANO-Setup-v1.2.0-beta.1.exe`.
-2. When the blue **"Windows protected your PC"** screen appears:
-   - Click **"More info"** (link under the text).
-   - Click the **"Run anyway"** button at the bottom.
-3. Follow the setup wizard. Once installed, AANO opens directly from your Desktop or Start Menu with no further prompts.
-
-#### Android Phone / Tablet
-
-1. Download `AANO-v1.2.0-beta.1.apk` on your device and tap to open it.
-2. If prompted *"For your security, your phone is not allowed to install unknown apps"*:
-   - Tap **Settings** and enable **"Allow from this source"**.
-3. If Google Play Protect displays *"Unrecognized app"*:
-   - Tap **"More details"** and then select **"Install anyway"**.
-4. Launch AANO to start writing private, offline-first notes.
 
 ---
 
