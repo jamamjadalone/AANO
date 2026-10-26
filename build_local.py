@@ -52,7 +52,7 @@ def clean_intermediates():
 
 def build_windows(version, releases_dir):
     print("\n" + "-" * 50)
-    print(f"[*] STEP: Building Windows Desktop Setup (Inno Setup / PyInstaller)...")
+    print("[*] STEP: Building Windows Desktop Setup (Inno Setup / PyInstaller)...")
     print("-" * 50)
 
     win_dir = os.path.join(REPO_ROOT, "windows")
@@ -88,12 +88,12 @@ def build_windows(version, releases_dir):
             size_mb = os.path.getsize(expected_exe) / (1024 * 1024)
             print(f"[OK] Windows Installer READY: {expected_exe} ({size_mb:.2f} MB)")
             return True
-        print(f"[ERROR] Could not locate compiled Windows installer.")
+        print("[ERROR] Could not locate compiled Windows installer.")
         return False
 
 def build_android(version, releases_dir):
     print("\n" + "-" * 50)
-    print(f"[*] STEP: Building Android Release APK (Signed Offline Gradle)...")
+    print("[*] STEP: Building Android Release APK (Signed Offline Gradle)...")
     print("-" * 50)
 
     android_dir = os.path.join(REPO_ROOT, "android")

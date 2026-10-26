@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import argparse
 import platform
+import importlib.util
 from pathlib import Path
 
 # Fix Windows console UTF-8 output encoding
@@ -188,10 +189,9 @@ def check_python(fix=False):
         print("  [SKIP] Ruff executable not located.")
 
     # 3. Pytest
-    try:
-        import pytest
+    if importlib.util.find_spec("pytest") is not None:
         print("  [PASS] Pytest is installed and ready for test suites.")
-    except ImportError:
+    else:
         print("  [INFO] Pytest test runner not loaded.")
 
     return passed
@@ -318,14 +318,14 @@ def main():
             a_ok = check_android(skip_build=True)
         all_passed = all([p_ok, w_ok, s_ok, a_ok])
     else:
-        if args.python:
-            if not check_python(fix=args.fix): all_passed = False
-        if args.web:
-            if not check_web(fix=args.fix): all_passed = False
-        if args.security:
-            if not check_security(): all_passed = False
-        if args.android:
-            if not check_android(skip_build=False): all_passed = False
+        if args.python and not check_python(fix=args.fix):
+            all_passed = False
+        if args.web and not check_web(fix=args.fix):
+            all_passed = False
+        if args.security and not check_security():
+            all_passed = False
+        if args.android and not check_android(skip_build=False):
+            all_passed = False
 
     print("\n" + "=" * 68)
     print(f"  QUALITY SYSTEM RESULT: {'[ALL CHECKS PASSED]' if all_passed else '[ACTION REQUIRED]'}")
