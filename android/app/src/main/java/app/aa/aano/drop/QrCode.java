@@ -116,8 +116,11 @@ public final class QrCode {
 
     public Bitmap toBitmap(int pixelSize) {
         Bitmap bmp = Bitmap.createBitmap(pixelSize, pixelSize, Bitmap.Config.ARGB_8888);
-        int scale = pixelSize / size;
-        int offset = (pixelSize - (scale * size)) / 2;
+        int marginModules = 4;
+        int totalModules = size + (marginModules * 2);
+        int scale = Math.max(1, pixelSize / totalModules);
+        int actualDrawSize = totalModules * scale;
+        int offset = (pixelSize - actualDrawSize) / 2;
 
         int[] pixels = new int[pixelSize * pixelSize];
         Arrays.fill(pixels, Color.WHITE);
@@ -125,13 +128,13 @@ public final class QrCode {
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
                 if (modules[y][x]) {
-                    int startX = offset + x * scale;
-                    int startY = offset + y * scale;
+                    int startX = offset + (x + marginModules) * scale;
+                    int startY = offset + (y + marginModules) * scale;
                     for (int dy = 0; dy < scale; dy++) {
                         for (int dx = 0; dx < scale; dx++) {
                             int px = startX + dx;
                             int py = startY + dy;
-                            if (px < pixelSize && py < pixelSize) {
+                            if (px >= 0 && px < pixelSize && py >= 0 && py < pixelSize) {
                                 pixels[py * pixelSize + px] = Color.BLACK;
                             }
                         }

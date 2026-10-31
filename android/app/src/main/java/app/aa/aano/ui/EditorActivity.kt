@@ -1733,11 +1733,12 @@ class EditorActivity : AppCompatActivity() {
 
     private fun launchBuiltInQrScanner() {
         val options = ScanOptions().apply {
-            setPrompt("Point camera at PC screen or phone QR Code")
+            setPrompt("⚡ Point camera at other Phone or PC QR Code")
             setBeepEnabled(true)
             setOrientationLocked(false)
             setBarcodeImageEnabled(false)
             setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setCameraId(0)
         }
         qrScannerLauncher.launch(options)
     }
@@ -1785,13 +1786,14 @@ class EditorActivity : AppCompatActivity() {
 
     private fun showDropDialog(prefilledIp: String? = null, prefilledPin: String? = null) {
         val dropMgr = AanoDropManager.getInstance(this)
-        val myIp = dropMgr.getLocalWifiIp()
+        val netState = dropMgr.getNetworkState()
+        val myIp = netState.ip
         val myPin = dropMgr.pin
         val myUri = "aano://drop?ip=$myIp&port=8766&pin=$myPin"
 
         val dm = resources.displayMetrics
         val density = dm.density
-        val padH = (20 * density).toInt()
+        val padH = (16 * density).toInt()
         val padV = (12 * density).toInt()
 
         val inputLayout = android.widget.LinearLayout(this).apply {
@@ -1822,41 +1824,141 @@ class EditorActivity : AppCompatActivity() {
             inputLayout.addView(btnDirectDrop)
         }
 
-        // Generate QR Code bitmap offline - responsive DP sizing capped at 50% screen width
-        val qrTargetPx = (170 * density).toInt().coerceAtMost((dm.widthPixels * 0.50).toInt())
-        val qrBmp = try {
-            app.aa.aano.drop.QrCode.encodeText(myUri, app.aa.aano.drop.QrCode.Ecc.MEDIUM).toBitmap(qrTargetPx)
-        } catch (_: Exception) { null }
-
-        if (qrBmp != null) {
-            val ivQr = android.widget.ImageView(this).apply {
-                setImageBitmap(qrBmp)
-                layoutParams = android.widget.LinearLayout.LayoutParams(qrTargetPx, qrTargetPx).apply {
-                    setMargins(0, 0, 0, (10 * density).toInt())
+        if (netState.mode == AanoDropManager.DropNetworkMode.OFFLINE) {
+            // Offline Direct Hotspot Card
+            val offlineCard = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setPadding((14 * density).toInt(), (14 * density).toInt(), (14 * density).toInt(), (14 * density).toInt())
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    setColor(android.graphics.Color.parseColor("#1E293B"))
+                    cornerRadius = 14 * density
+                    setStroke((1 * density).toInt(), android.graphics.Color.parseColor("#F59E0B"))
                 }
-                setBackgroundColor(android.graphics.Color.WHITE)
-                val padQr = (8 * density).toInt()
-                setPadding(padQr, padQr, padQr, padQr)
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, (12 * density).toInt()) }
             }
-            inputLayout.addView(ivQr)
-        }
 
-        val tvDeviceInfo = android.widget.TextView(this).apply {
-            text = "📷 Scan with another phone or PC\n📡 This Device: $myIp:8766 | PIN: $myPin"
-            textSize = 12f
-            gravity = android.view.Gravity.CENTER
-            setPadding(0, 0, 0, 12)
+            val tvOfflineTitle = android.widget.TextView(this).apply {
+                text = "📡 Wi-Fi Router Not Connected"
+                setTextColor(android.graphics.Color.parseColor("#F59E0B"))
+                textSize = 15f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                gravity = android.view.Gravity.CENTER
+            }
+            offlineCard.addView(tvOfflineTitle)
+
+            val tvOfflineDesc = android.widget.TextView(this).apply {
+                text = "Direct Hotspot Mode (Offline Transfer):\n1. Is phone ka Hotspot on karein.\n2. Doosra phone is Hotspot se connect karein.\n3. Note direct bina internet transfer karein!"
+                setTextColor(android.graphics.Color.parseColor("#CBD5E1"))
+                textSize = 12f
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, (6 * density).toInt(), 0, (12 * density).toInt())
+            }
+            offlineCard.addView(tvOfflineDesc)
+
+            val btnStartHotspot = com.google.android.material.button.MaterialButton(this).apply {
+                text = "🔥 Turn On Hotspot (Offline Mode)"
+                setBackgroundColor(android.graphics.Color.parseColor("#D97706"))
+                setTextColor(android.graphics.Color.WHITE)
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, (8 * density).toInt()) }
+                setOnClickListener {
+                    dropMgr.openHotspotSettings(this@EditorActivity)
+                }
+            }
+            offlineCard.addView(btnStartHotspot)
+
+            val btnRefreshNet = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "🔄 Refresh Network Status"
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setOnClickListener {
+                    dialogRef?.dismiss()
+                    showDropDialog(prefilledIp, prefilledPin)
+                }
+            }
+            offlineCard.addView(btnRefreshNet)
+            inputLayout.addView(offlineCard)
+        } else {
+            // High-Contrast Direct QR Code
+            val qrTargetPx = (230 * density).toInt().coerceAtMost((dm.widthPixels * 0.72).toInt())
+            val qrBmp = dropMgr.generateQrBitmap(myUri, 512)
+
+            if (qrBmp != null) {
+                val qrCard = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.VERTICAL
+                    gravity = android.view.Gravity.CENTER
+                    background = android.graphics.drawable.GradientDrawable().apply {
+                        setColor(android.graphics.Color.WHITE)
+                        cornerRadius = 16 * density
+                        setStroke((2 * density).toInt(), android.graphics.Color.parseColor("#E2E8F0"))
+                    }
+                    val padBox = (12 * density).toInt()
+                    setPadding(padBox, padBox, padBox, padBox)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { setMargins(0, 0, 0, (10 * density).toInt()) }
+                }
+
+                val ivQr = android.widget.ImageView(this).apply {
+                    setImageBitmap(qrBmp)
+                    layoutParams = android.widget.LinearLayout.LayoutParams(qrTargetPx, qrTargetPx)
+                    scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                }
+                qrCard.addView(ivQr)
+                inputLayout.addView(qrCard)
+            }
+
+            val badgeText = if (netState.mode == AanoDropManager.DropNetworkMode.HOTSPOT_ACTIVE) {
+                "🔥 Direct Hotspot Active: $myIp:8766\nPIN: $myPin • Connect other device to this Hotspot"
+            } else {
+                "📡 Wi-Fi Connected: $myIp:8766\nPIN: $myPin • Scan with another phone or PC"
+            }
+
+            val tvDeviceInfo = android.widget.TextView(this).apply {
+                text = badgeText
+                textSize = 12f
+                gravity = android.view.Gravity.CENTER
+                setPadding(0, 0, 0, (8 * density).toInt())
+            }
+            inputLayout.addView(tvDeviceInfo)
         }
-        inputLayout.addView(tvDeviceInfo)
 
         val btnScanCamera = com.google.android.material.button.MaterialButton(this).apply {
             text = "📷 Scan PC / Phone QR (Built-in Scanner)"
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, (6 * density).toInt()) }
             setOnClickListener {
                 dialogRef?.dismiss()
                 launchBuiltInQrScanner()
             }
         }
         inputLayout.addView(btnScanCamera)
+
+        if (netState.mode == AanoDropManager.DropNetworkMode.WIFI_CONNECTED) {
+            val btnHotspotOption = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "🔥 Router Problem? Switch to Direct Hotspot"
+                textSize = 11f
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, (6 * density).toInt()) }
+                setOnClickListener {
+                    dropMgr.openHotspotSettings(this@EditorActivity)
+                }
+            }
+            inputLayout.addView(btnHotspotOption)
+        }
 
         val btnRadar = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "🔍 Wi-Fi Radar (Auto-Find PC)"
@@ -1970,7 +2072,18 @@ class EditorActivity : AppCompatActivity() {
             res.onSuccess {
                 Toast.makeText(this@EditorActivity, "⚡ Dropped successfully!", Toast.LENGTH_LONG).show()
             }.onFailure { e ->
-                Toast.makeText(this@EditorActivity, "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
+                val dropMgr = AanoDropManager.getInstance(this@EditorActivity)
+                val isLikelyHotspot = targetIp.contains("192.168.43.") || targetIp.contains("192.168.44.") || dropMgr.getNetworkState().mode == AanoDropManager.DropNetworkMode.OFFLINE
+                if (isLikelyHotspot) {
+                    androidx.appcompat.app.AlertDialog.Builder(this@EditorActivity)
+                        .setTitle("⚡ Direct Hotspot Connection")
+                        .setMessage("Target device ($targetIp) se connect nahi ho saka.\n\nAgar samne wale phone ka Hotspot on hai, toh pehle apne Wi-Fi Settings mein ja kar us Hotspot se connect karein, phir dobara Drop karein.")
+                        .setPositiveButton("📶 Open Wi-Fi Settings") { _, _ -> dropMgr.openWifiSettings(this@EditorActivity) }
+                        .setNegativeButton("Close", null)
+                        .show()
+                } else {
+                    Toast.makeText(this@EditorActivity, "Drop failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
