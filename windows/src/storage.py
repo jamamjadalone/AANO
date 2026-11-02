@@ -95,8 +95,15 @@ def save_notes(notes):
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, NOTES_FILE)
+        return True
     except OSError as e:
         logger.error("Failed to save notes: %s", e)
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+        return False
 
 def post_json(endpoint, payload, token=None):
     url = f"{BASE_URL}{endpoint}"

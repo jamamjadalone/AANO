@@ -33,49 +33,59 @@ export default {
     const path = url.pathname;
     const clientIp = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
 
+    const cors = getCorsHeaders(request, env);
+
     // Public healthcheck
     if (path === "/api/health" || path === "/") {
-      return jsonResponse({ status: "ok", service: "AANO Shielded Edge (Open Source Edition)" });
+      return jsonResponse({ status: "ok", service: "AANO Shielded Edge (Open Source Edition)" }, 200, cors);
     }
 
     // SECURITY GUARD: App-Key Handshake (Checked against env.SECRET_APP_KEY)
     const secretKey = env.SECRET_APP_KEY;
     const clientAppKey = request.headers.get("X-AANO-KEY");
     if (!secretKey || clientAppKey !== secretKey) {
-      return jsonResponse({ error: "Access Denied: Invalid Client Signature." }, 403);
+      return jsonResponse({ error: "Access Denied: Invalid Client Signature." }, 403, cors);
     }
 
     // Auto-create required security tables if not exists
     await ensureSchema(env);
 
     try {
+      let res;
       if (path === "/api/request-otp" && request.method === "POST") {
-        return await handleRequestOtp(request, env, clientIp);
-      }
-      if (path === "/api/verify-and-register" && request.method === "POST") {
-        return await handleVerifyAndRegister(request, env, clientIp);
-      }
-      if (path === "/api/reset-password" && request.method === "POST") {
-        return await handleResetPassword(request, env, clientIp);
-      }
-      if (path === "/api/login" && request.method === "POST") {
-        return await handleLogin(request, env, clientIp);
-      }
-      if (path === "/api/sync" && request.method === "POST") {
-        return await handleSync(request, env);
+        res = await handleRequestOtp(request, env, clientIp);
+      } else if (path === "/api/verify-and-register" && request.method === "POST") {
+        res = await handleVerifyAndRegister(request, env, clientIp);
+      } else if (path === "/api/reset-password" && request.method === "POST") {
+        res = await handleResetPassword(request, env, clientIp);
+      } else if (path === "/api/login" && request.method === "POST") {
+        res = await handleLogin(request, env, clientIp);
+      } else if (path === "/api/sync" && request.method === "POST") {
+        res = await handleSync(request, env);
+      } else {
+        return jsonResponse({ error: "Endpoint not found" }, 404, cors);
       }
 
-      return jsonResponse({ error: "Endpoint not found" }, 404);
+      // Ensure per-request dynamic CORS headers are reflected
+      const newHeaders = new Headers(res.headers);
+      for (const [key, value] of Object.entries(cors)) {
+        newHeaders.set(key, value);
+      }
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers: newHeaders,
+      });
     } catch (err) {
-      return jsonResponse({ error: err.message || "Secure request failed" }, 500);
+      return jsonResponse({ error: err.message || "Secure request failed" }, 500, cors);
     }
   },
 };
 
-function jsonResponse(data, status = 200) {
+function jsonResponse(data, status = 200, cors = null) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...(cors || CORS_HEADERS), "Content-Type": "application/json" },
   });
 }
 

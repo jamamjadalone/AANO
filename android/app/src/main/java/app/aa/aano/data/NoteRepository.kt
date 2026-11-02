@@ -725,15 +725,30 @@ class NoteRepository(private val context: Context) {
         )
     }
 
-    private fun writeNotes(notes: List<Note>) {
+    private fun writeNotes(notes: List<Note>): Boolean {
         synchronized(cacheLock) {
-            memoryCache = notes.toMutableList()
-            try {
+            val prevCache = memoryCache?.toMutableList()
+            return try {
                 val array = JSONArray()
                 notes.forEach { array.put(serializeNote(it)) }
-                notesFile.writeText(array.toString())
+                val tmpFile = File(notesFile.parentFile, "notes.json.tmp")
+                tmpFile.writeText(array.toString())
+                val renamed = if (tmpFile.renameTo(notesFile)) {
+                    true
+                } else {
+                    if (notesFile.exists()) notesFile.delete()
+                    tmpFile.renameTo(notesFile)
+                }
+                if (!renamed && tmpFile.exists()) {
+                    notesFile.writeText(array.toString())
+                    tmpFile.delete()
+                }
+                memoryCache = notes.toMutableList()
+                true
             } catch (e: Exception) {
-                Log.w("AANO", "Suppressed writeNotes exception: ${e.message}", e)
+                Log.e("AANO", "writeNotes failed: ${e.message}", e)
+                memoryCache = prevCache
+                false
             }
         }
     }

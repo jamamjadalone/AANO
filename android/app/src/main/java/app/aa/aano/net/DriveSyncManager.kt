@@ -1,4 +1,4 @@
-// Google Drive REST API sync for AANO (notes and tasks, appDataFolder).
+// Google Drive REST API sync for AANO (user-owned vault files in Google Drive via DRIVE_FILE scope).
 // Copyright (C) 2026 Jam Amjad Rasheed
 // Licensed under GPL-3.0-or-later.
 

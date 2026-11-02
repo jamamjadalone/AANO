@@ -302,10 +302,27 @@ class TaskRepository(private val context: Context) {
         )
     }
 
-    private fun writeTasks(tasks: List<Task>) {
-        val array = JSONArray()
-        tasks.forEach { array.put(serializeTask(it)) }
-        tasksFile.writeText(array.toString())
+    private fun writeTasks(tasks: List<Task>): Boolean {
+        return try {
+            val array = JSONArray()
+            tasks.forEach { array.put(serializeTask(it)) }
+            val tmpFile = File(tasksFile.parentFile, "tasks.json.tmp")
+            tmpFile.writeText(array.toString())
+            val renamed = if (tmpFile.renameTo(tasksFile)) {
+                true
+            } else {
+                if (tasksFile.exists()) tasksFile.delete()
+                tmpFile.renameTo(tasksFile)
+            }
+            if (!renamed && tmpFile.exists()) {
+                tasksFile.writeText(array.toString())
+                tmpFile.delete()
+            }
+            true
+        } catch (e: Exception) {
+            Log.e("AANO", "writeTasks failed: ${e.message}", e)
+            false
+        }
     }
 
     private fun serializeTask(task: Task): JSONObject = JSONObject().apply {

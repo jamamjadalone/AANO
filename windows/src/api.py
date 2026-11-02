@@ -206,7 +206,8 @@ class DesktopApi:
             }
             notes.insert(0, new_note)
 
-        storage.save_notes(notes)
+        if not storage.save_notes(notes):
+            return {"success": False, "error": "Disk write failed. Check storage permissions and disk space."}
         if not is_local:
             self._async_auto_sync()
         return {"success": True}
