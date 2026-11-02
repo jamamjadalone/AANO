@@ -62,6 +62,10 @@ export default {
         res = await handleLogin(request, env, clientIp);
       } else if (path === "/api/sync" && request.method === "POST") {
         res = await handleSync(request, env);
+      } else if (path === "/api/newsletter/subscribe" && request.method === "POST") {
+        res = await handleNewsletterSubscribe(request, env, clientIp);
+      } else if (path === "/api/newsletter/unsubscribe" && request.method === "POST") {
+        res = await handleNewsletterUnsubscribe(request, env);
       } else {
         return jsonResponse({ error: "Endpoint not found" }, 404, cors);
       }
@@ -108,6 +112,17 @@ async function ensureSchema(env) {
       PRIMARY KEY (ip, action)
     );
   `).run();
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      email TEXT PRIMARY KEY,
+      source TEXT DEFAULT 'app',
+      subscribed_at INTEGER,
+      confirmed INTEGER DEFAULT 1,
+      unsubscribed INTEGER DEFAULT 0
+    );
+  `).run();
+
 
   try {
     await env.DB.prepare("ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0;").run();
@@ -537,3 +552,54 @@ async function handleSync(request, env) {
     })),
   });
 }
+
+// -------------------------------------------------------------
+// NEWSLETTER & PRODUCT UPDATES ENGINE
+// -------------------------------------------------------------
+async function handleNewsletterSubscribe(request, env, clientIp) {
+  const rateLimit = await checkIpRateLimit(env, clientIp, "newsletter_sub", 5, 3600000);
+  if (!rateLimit.allowed) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const rawEmail = (body.email || "").trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!rawEmail || !emailRegex.test(rawEmail) || rawEmail.length > 254) {
+    return jsonResponse({ error: "Valid email address is required." }, 400);
+  }
+
+  const source = typeof body.source === "string" ? body.source.slice(0, 50) : "app";
+  const now = Date.now();
+
+  await env.DB.prepare(`
+    INSERT INTO newsletter_subscribers (email, source, subscribed_at, confirmed, unsubscribed)
+    VALUES (?, ?, ?, 1, 0)
+    ON CONFLICT(email) DO UPDATE SET
+      unsubscribed = 0,
+      subscribed_at = excluded.subscribed_at
+  `).bind(rawEmail, source, now).run();
+
+  return jsonResponse({
+    success: true,
+    message: "Thank you for subscribing to AANO product updates!",
+  });
+}
+
+async function handleNewsletterUnsubscribe(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const rawEmail = (body.email || "").trim().toLowerCase();
+  if (!rawEmail) {
+    return jsonResponse({ error: "Email address is required." }, 400);
+  }
+
+  await env.DB.prepare(
+    "UPDATE newsletter_subscribers SET unsubscribed = 1 WHERE email = ?"
+  ).bind(rawEmail).run();
+
+  return jsonResponse({
+    success: true,
+    message: "You have been unsubscribed from updates.",
+  });
+}
+

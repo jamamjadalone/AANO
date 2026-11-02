@@ -76,7 +76,7 @@ class NoteReminderReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarm.set(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+            alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
         }
 
         fun cancel(context: Context, noteId: String) {

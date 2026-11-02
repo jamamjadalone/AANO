@@ -143,11 +143,14 @@ class AanoDropManager(private val context: Context) {
                 // Read headers
                 var contentLength = 0
                 var incomingToken = ""
+                var incomingPinHeader = ""
                 for (hdr in lines) {
                     if (hdr.startsWith("Content-Length:", ignoreCase = true)) {
                         contentLength = hdr.substringAfter(":").trim().toIntOrNull() ?: 0
                     } else if (hdr.startsWith("X-AANO-TOKEN:", ignoreCase = true)) {
                         incomingToken = hdr.substringAfter(":").trim()
+                    } else if (hdr.startsWith("X-AANO-PIN:", ignoreCase = true)) {
+                        incomingPinHeader = hdr.substringAfter(":").trim()
                     }
                 }
 
@@ -204,9 +207,21 @@ class AanoDropManager(private val context: Context) {
                 }
 
                 if (path.startsWith("/aano/drop") && method.equals("POST", ignoreCase = true)) {
-                    if (contentLength <= 0 || contentLength > 100 * 1024 * 1024) {
+                    if (contentLength <= 0 || contentLength > 20 * 1024 * 1024) {
                         sendHttpResponse(output, 400, "Bad Request", "application/json", "{\"success\":false,\"error\":\"Invalid content length\"}")
                         return@launch
+                    }
+
+                    // Pre-Auth Check before memory allocation (prevents DoS heap exhaustion)
+                    val headerAuth = incomingToken.ifEmpty { incomingPinHeader }
+                    val clientIp = client.inetAddress?.hostAddress ?: ""
+                    val isPaired = prefs.lastDropIp.isNotEmpty() && prefs.lastDropIp.startsWith(clientIp)
+                    if (contentLength > 64 * 1024) {
+                        val authMatches = (headerAuth.isNotEmpty() && (headerAuth == pin || headerAuth == token)) || isPaired
+                        if (!authMatches) {
+                            sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Invalid or missing authentication headers for large payload\"}")
+                            return@launch
+                        }
                     }
 
                     // Read payload body as raw bytes (full UTF-8 & Unicode immunity)
@@ -230,29 +245,35 @@ class AanoDropManager(private val context: Context) {
                     }
 
                     // Validate PIN or Token
-                    val reqToken = payload.optString("token").ifEmpty { payload.optString("pin", incomingToken) }
-                    if (pin != reqToken && token != reqToken) {
+                    val reqToken = payload.optString("token").ifEmpty { payload.optString("pin", headerAuth) }
+                    if (pin != reqToken && token != reqToken && !isPaired) {
                         sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Invalid PIN or Token\"}")
                         return@launch
                     }
 
-                    // 1. Process images
+                    // 1. Process images with extension whitelist
+                    val allowedImageExts = setOf("png", "jpg", "jpeg", "webp", "gif")
                     val imagesArr = payload.optJSONArray("images")
                     var savedImages = 0
                     if (imagesArr != null) {
                         val mediaDir = File(context.filesDir, "media/images").apply { mkdirs() }
                         for (i in 0 until imagesArr.length()) {
                             val imgObj = imagesArr.getJSONObject(i)
-                            val name = File(imgObj.optString("name", "img_${System.currentTimeMillis()}.webp")).name
+                            val rawName = File(imgObj.optString("name", "img_${System.currentTimeMillis()}.webp")).name
+                            val ext = rawName.substringAfterLast('.', "").lowercase()
+                            if (ext !in allowedImageExts) {
+                                Log.w(TAG, "Rejected non-image drop upload: $rawName")
+                                continue
+                            }
                             val b64 = imgObj.optString("data_base64").ifEmpty { imgObj.optString("bytes_base64") }
-                            if (name.isNotEmpty() && b64.isNotEmpty()) {
+                            if (rawName.isNotEmpty() && b64.isNotEmpty()) {
                                 try {
                                     val cleanB64 = if (b64.contains(",")) b64.substringAfter(",") else b64
                                     val rawBytes = Base64.decode(cleanB64, Base64.DEFAULT)
-                                    File(mediaDir, name).writeBytes(rawBytes)
+                                    File(mediaDir, rawName).writeBytes(rawBytes)
                                     savedImages++
                                 } catch (e: Exception) {
-                                    Log.w(TAG, "Failed to write dropped image $name: ${e.message}")
+                                    Log.w(TAG, "Failed to write dropped image $rawName: ${e.message}")
                                 }
                             }
                         }

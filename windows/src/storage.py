@@ -21,89 +21,97 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 BASE_URL = "https://aano-api.jamamjadalone.workers.dev"
 APP_KEY = "aano_shield_key_2026_pk_sec"
 
+import threading
 import logging
 logger = logging.getLogger("AANO.Storage")
 
+_storage_lock = threading.RLock()
+_sync_lock = threading.Lock()
+
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            logger.warning("Failed to load config: %s", e)
-    return {
-        "cloud_token": None,
-        "cloud_email": None,
-        "cloud_user_id": None,
-        "last_sync_time": 0,
-        "auto_sync": True,
-        "view_mode": "grid"
-    }
+    with _storage_lock:
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning("Failed to load config: %s", e)
+        return {
+            "cloud_token": None,
+            "cloud_email": None,
+            "cloud_user_id": None,
+            "last_sync_time": 0,
+            "auto_sync": True,
+            "view_mode": "grid"
+        }
 
 def save_config(cfg):
-    tmp = CONFIG_FILE + ".tmp"
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, CONFIG_FILE)
-    except OSError as e:
-        logger.error("Failed to save config: %s", e)
+    with _storage_lock:
+        tmp = CONFIG_FILE + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, CONFIG_FILE)
+        except OSError as e:
+            logger.error("Failed to save config: %s", e)
 
 def load_notes():
-    if os.path.exists(NOTES_FILE):
-        try:
-            with open(NOTES_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            backup_path = f"{NOTES_FILE}.corrupt.{int(time.time())}.bak"
-            logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving corrupt file at %s", e, backup_path)
+    with _storage_lock:
+        if os.path.exists(NOTES_FILE):
             try:
-                import shutil
-                shutil.copy2(NOTES_FILE, backup_path)
-            except OSError as copy_err:
-                logger.error("Failed to create backup of corrupt notes: %s", copy_err)
-            # Never overwrite damaged notes with welcome templates; return empty to preserve on-disk backup
-            return []
+                with open(NOTES_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                backup_path = f"{NOTES_FILE}.corrupt.{int(time.time())}.bak"
+                logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving corrupt file at %s", e, backup_path)
+                try:
+                    import shutil
+                    shutil.copy2(NOTES_FILE, backup_path)
+                except OSError as copy_err:
+                    logger.error("Failed to create backup of corrupt notes: %s", copy_err)
+                # Never overwrite damaged notes with welcome templates; return empty to preserve on-disk backup
+                return []
 
-    # First-time clean launch only: initialize workspace with welcome note
-    now = int(time.time() * 1000)
-    welcome_notes = [
-        {
-            "id": str(uuid.uuid4()),
-            "title": "Welcome to AANO Notes",
-            "content": "<h2>Welcome to your private notes workspace!</h2><p>AANO Notes provides private, hardware-accelerated note taking with <b>rich text formatting</b>, folders, and seamless 2-way sync across phone and PC.</p><ul><li><b>Formatting:</b> Bold, Italic, Headings, Highlights & Colors.</li><li><b>Folders:</b> Organize your thoughts into Work, Personal or custom folders.</li><li><b>Sync:</b> Sign in with your Gmail to sync in real time.</li></ul>",
-            "createdAt": now,
-            "updatedAt": now,
-            "deleted": False,
-            "deletedAt": 0,
-            "pinned": True,
-            "color": 1,
-            "folder": "General",
-            "tags": ["Welcome", "Getting Started"]
-        }
-    ]
-    save_notes(welcome_notes)
-    return welcome_notes
+        # First-time clean launch only: initialize workspace with welcome note
+        now = int(time.time() * 1000)
+        welcome_notes = [
+            {
+                "id": str(uuid.uuid4()),
+                "title": "Welcome to AANO Notes",
+                "content": "<h2>Welcome to your private notes workspace!</h2><p>AANO Notes provides private, hardware-accelerated note taking with <b>rich text formatting</b>, folders, and seamless 2-way sync across phone and PC.</p><ul><li><b>Formatting:</b> Bold, Italic, Headings, Highlights & Colors.</li><li><b>Folders:</b> Organize your thoughts into Work, Personal or custom folders.</li><li><b>Sync:</b> Sign in with your Gmail to sync in real time.</li></ul>",
+                "createdAt": now,
+                "updatedAt": now,
+                "deleted": False,
+                "deletedAt": 0,
+                "pinned": True,
+                "color": 1,
+                "folder": "General",
+                "tags": ["Welcome", "Getting Started"]
+            }
+        ]
+        save_notes(welcome_notes)
+        return welcome_notes
 
 def save_notes(notes):
-    tmp = NOTES_FILE + ".tmp"
-    try:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(notes, f, indent=2, ensure_ascii=False)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, NOTES_FILE)
-        return True
-    except OSError as e:
-        logger.error("Failed to save notes: %s", e)
-        if os.path.exists(tmp):
-            try:
-                os.remove(tmp)
-            except OSError:
-                pass
-        return False
+    with _storage_lock:
+        tmp = NOTES_FILE + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(notes, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, NOTES_FILE)
+            return True
+        except OSError as e:
+            logger.error("Failed to save notes: %s", e)
+            if os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+            return False
 
 def post_json(endpoint, payload, token=None):
     url = f"{BASE_URL}{endpoint}"
@@ -150,100 +158,135 @@ def get_google_status():
     }
 
 def sync_with_cloud():
-    cfg = load_config()
-    
-    # Priority 1: Google Drive Sync (15GB Lifetime Free, zero 500MB DB ceiling)
-    if cfg.get("google_connected"):
+    if not _sync_lock.acquire(blocking=False):
+        logger.info("Sync already running in another thread, skipping concurrent execution.")
+        return {"success": False, "in_progress": True, "error": "Sync already in progress"}
+
+    try:
+        cfg = load_config()
+        
+        # Priority 1: Google Drive Sync (15GB Lifetime Free, zero 500MB DB ceiling)
+        if cfg.get("google_connected"):
+            notes = load_notes()
+            res = drive_sync_instance.sync_notes(notes)
+            if res.get("success"):
+                merged_notes = res.get("merged_notes", [])
+                with _storage_lock:
+                    fresh_local_notes = load_notes()
+                    fresh_map = {n.get("id"): n for n in fresh_local_notes}
+                    final_notes = []
+                    for mn in merged_notes:
+                        nid = mn.get("id")
+                        if nid in fresh_map:
+                            fl = fresh_map[nid]
+                            if fl.get("updatedAt", 0) > mn.get("updatedAt", 0):
+                                final_notes.append(fl)
+                            else:
+                                final_notes.append(mn)
+                        else:
+                            final_notes.append(mn)
+                    merged_ids = {n.get("id") for n in merged_notes}
+                    for fl in fresh_local_notes:
+                        if fl.get("id") not in merged_ids:
+                            final_notes.append(fl)
+
+                    save_notes(final_notes)
+                    cfg = load_config()
+                    cfg["last_sync_time"] = int(time.time() * 1000)
+                    cfg["session_expired"] = False
+                    save_config(cfg)
+                return {"success": True, "count": res.get("count", len(final_notes)), "mode": "google_drive"}
+            else:
+                if res.get("auth_expired"):
+                    with _storage_lock:
+                        cfg = load_config()
+                        cfg["google_connected"] = False
+                        cfg["session_expired"] = True
+                        save_config(cfg)
+                return res
+
+        # Priority 2: Legacy Cloudflare Worker Sync (Fallback)
+        token = cfg.get("cloud_token")
+        if not token:
+            return {"success": False, "error": "Not logged in"}
+
         notes = load_notes()
-        res = drive_sync_instance.sync_notes(notes)
+        payload = {
+            "notes": notes,
+            "tasks": [],
+            "lastSyncTime": cfg.get("last_sync_time", 0)
+        }
+
+        res = post_json("/api/sync", payload, token)
         if res.get("success"):
-            merged_notes = res.get("merged_notes", [])
-            save_notes(merged_notes)
-            cfg["last_sync_time"] = int(time.time() * 1000)
-            cfg["session_expired"] = False
-            save_config(cfg)
-            return {"success": True, "count": res.get("count", len(merged_notes)), "mode": "google_drive"}
-        else:
-            if res.get("auth_expired"):
-                cfg["google_connected"] = False
-                cfg["session_expired"] = True
+            server_notes = res.get("notes", [])
+            with _storage_lock:
+                live_local_notes = load_notes()
+                local_map = {n["id"]: n for n in live_local_notes}
+                if server_notes:
+                    for sn in server_notes:
+                        existing = local_map.get(sn["id"])
+                        if not existing:
+                            local_map[sn["id"]] = sn
+                        else:
+                            is_deleted = bool(existing.get("deleted", False) or sn.get("deleted", False))
+                            is_archived = bool(existing.get("archived", False) or sn.get("archived", False))
+                            sn_updated = sn.get("updatedAt", 0)
+                            ex_updated = existing.get("updatedAt", 0)
+
+                            is_purged = bool(sn.get("purged", False) or (existing and existing.get("purged", False)))
+                            if is_purged:
+                                del_at = max(existing.get("deletedAt", 0) if existing else 0, sn.get("deletedAt", 0), sn_updated, ex_updated)
+                                up_at = max(sn_updated, ex_updated)
+                                base = dict(existing if existing else sn)
+                                base["title"] = ""
+                                base["content"] = ""
+                                base["images"] = []
+                                base["audioUri"] = None
+                                base["deleted"] = True
+                                base["purged"] = True
+                                base["deletedAt"] = del_at
+                                base["updatedAt"] = up_at
+                                base["isLocal"] = False
+                                local_map[sn["id"]] = base
+                                continue
+
+                            if sn_updated >= ex_updated:
+                                merged_note = dict(sn)
+                                merged_note["deleted"] = is_deleted
+                                merged_note["archived"] = is_archived
+                                merged_note["purged"] = False
+                                if is_deleted:
+                                    merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
+                                local_map[sn["id"]] = merged_note
+                            else:
+                                existing["deleted"] = is_deleted
+                                existing["archived"] = is_archived
+                                existing["purged"] = False
+                                if is_deleted:
+                                    existing["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), ex_updated)
+                                local_map[sn["id"]] = existing
+                    live_local_notes = list(local_map.values())
+                    save_notes(live_local_notes)
+
+                cfg = load_config()
+                cfg["last_sync_time"] = res.get("serverTime", int(time.time() * 1000))
+                cfg["session_expired"] = False
                 save_config(cfg)
-            return res
+            return {"success": True, "count": len(server_notes), "mode": "cloudflare"}
+        else:
+            err_msg = res.get("error", "Sync failed")
+            if err_msg == "Unauthorized access token." or "401" in str(err_msg):
+                with _storage_lock:
+                    cfg = load_config()
+                    cfg["cloud_token"] = None
+                    cfg["session_expired"] = True
+                    save_config(cfg)
+                return {"success": False, "error": "Session expired. Please sign in again.", "auth_expired": True}
+            return {"success": False, "error": err_msg}
+    finally:
+        _sync_lock.release()
 
-    # Priority 2: Legacy Cloudflare Worker Sync (Fallback)
-    token = cfg.get("cloud_token")
-    if not token:
-        return {"success": False, "error": "Not logged in"}
-
-    notes = load_notes()
-    payload = {
-        "notes": notes,
-        "tasks": [],
-        "lastSyncTime": cfg.get("last_sync_time", 0)
-    }
-
-    res = post_json("/api/sync", payload, token)
-    if res.get("success"):
-        server_notes = res.get("notes", [])
-        if server_notes:
-            local_map = {n["id"]: n for n in notes}
-            for sn in server_notes:
-                existing = local_map.get(sn["id"])
-                if not existing:
-                    local_map[sn["id"]] = sn
-                else:
-                    is_deleted = bool(existing.get("deleted", False) or sn.get("deleted", False))
-                    is_archived = bool(existing.get("archived", False) or sn.get("archived", False))
-                    sn_updated = sn.get("updatedAt", 0)
-                    ex_updated = existing.get("updatedAt", 0)
-
-                    is_purged = bool(sn.get("purged", False) or (existing and existing.get("purged", False)))
-                    if is_purged:
-                        del_at = max(existing.get("deletedAt", 0) if existing else 0, sn.get("deletedAt", 0), sn_updated, ex_updated)
-                        up_at = max(sn_updated, ex_updated)
-                        base = dict(existing if existing else sn)
-                        base["title"] = ""
-                        base["content"] = ""
-                        base["images"] = []
-                        base["audioUri"] = None
-                        base["deleted"] = True
-                        base["purged"] = True
-                        base["deletedAt"] = del_at
-                        base["updatedAt"] = up_at
-                        base["isLocal"] = False
-                        local_map[sn["id"]] = base
-                        continue
-
-                    if sn_updated >= ex_updated:
-                        merged_note = dict(sn)
-                        merged_note["deleted"] = is_deleted
-                        merged_note["archived"] = is_archived
-                        merged_note["purged"] = False
-                        if is_deleted:
-                            merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
-                        local_map[sn["id"]] = merged_note
-                    else:
-                        existing["deleted"] = is_deleted
-                        existing["archived"] = is_archived
-                        existing["purged"] = False
-                        if is_deleted:
-                            existing["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), ex_updated)
-                        local_map[sn["id"]] = existing
-            notes = list(local_map.values())
-            save_notes(notes)
-
-        cfg["last_sync_time"] = res.get("serverTime", int(time.time() * 1000))
-        cfg["session_expired"] = False
-        save_config(cfg)
-        return {"success": True, "count": len(server_notes), "mode": "cloudflare"}
-    else:
-        err_msg = res.get("error", "Sync failed")
-        if err_msg == "Unauthorized access token." or "401" in str(err_msg):
-            cfg["cloud_token"] = None
-            cfg["session_expired"] = True
-            save_config(cfg)
-            return {"success": False, "error": "Session expired. Please sign in again.", "auth_expired": True}
-        return {"success": False, "error": err_msg}
 
 
 def process_and_save_image(src_path, quality_hd=False):

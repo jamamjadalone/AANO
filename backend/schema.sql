@@ -36,3 +36,12 @@ CREATE TABLE IF NOT EXISTS ip_rate_limits (
     window_start INTEGER,
     PRIMARY KEY (ip, action)
 );
+
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+    email TEXT PRIMARY KEY,
+    source TEXT DEFAULT 'app',
+    subscribed_at INTEGER,
+    confirmed INTEGER DEFAULT 1,
+    unsubscribed INTEGER DEFAULT 0
+);
+

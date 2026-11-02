@@ -19,6 +19,7 @@ logger = logging.getLogger("AANO.DropServer")
 
 DROP_PORT = 8765
 PROTOCOL_VERSION = "aano-drop-v1"
+ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -77,7 +78,7 @@ class AanoDropHandler(BaseHTTPRequestHandler):
         if self.path == "/aano/drop" or self.path == "/aano/drop/":
             try:
                 content_len = int(self.headers.get("Content-Length", 0))
-                if content_len == 0 or content_len > 100 * 1024 * 1024:  # 100 MB safety cap
+                if content_len == 0 or content_len > 25 * 1024 * 1024:  # 25 MB safety cap
                     self.send_response(400)
                     self._send_cors_headers()
                     self.end_headers()
@@ -91,7 +92,7 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 incoming_token = payload.get("token") or self.headers.get("X-AANO-TOKEN")
                 server = self.server.app_server
                 client_ip = self.client_address[0]
-                paired_peer = getattr(server, "paired_peer", None)
+                paired_peer = server.get_paired_peer()
                 is_paired_ip = bool(paired_peer and paired_peer.get("ip") == client_ip)
                 pin_matches = bool(
                     incoming_token and str(incoming_token).strip() in (str(server.pin).strip(), str(server.token).strip())
@@ -107,10 +108,14 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 incoming_notes = payload.get("notes", [])
                 incoming_images = payload.get("images", [])
 
-                # 1. Save incoming images to local images directory
+                # 1. Save incoming images to local images directory with extension whitelisting
                 saved_images = 0
                 for img in incoming_images:
                     name = os.path.basename(img.get("name", ""))
+                    ext = os.path.splitext(name)[1].lower()
+                    if ext not in ALLOWED_IMAGE_EXTS:
+                        logger.warning("Rejected non-image drop upload: %s", name)
+                        continue
                     b64_data = img.get("data_base64") or img.get("bytes_base64", "")
                     if name and b64_data:
                         try:
