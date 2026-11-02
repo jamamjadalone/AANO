@@ -5,6 +5,7 @@
 package app.aa.aano.net
 
 import android.content.Context
+import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.Scope
@@ -56,11 +57,13 @@ class DriveSyncManager(
         try {
             service.files().list()
                 .setQ("name = '$name' and trashed = false")
-                .setFields("files(id, name, modifiedTime)")
+                .setOrderBy("modifiedTime desc")
+                .setFields("files(id, name, modifiedTime, size)")
                 .execute()
                 .files
                 ?.firstOrNull()
         } catch (e: Exception) {
+            Log.w("AANO", "Drive findRemoteFile error for $name: ${e.message}")
             null
         }
 
@@ -68,18 +71,32 @@ class DriveSyncManager(
         val service = buildDriveService()
         var pulled = false
         findRemoteFile(service, REMOTE_NOTES_FILE)?.let { remote ->
-            val bytes = service.files().get(remote.id)
-                .executeMediaAsInputStream()
-                .use { it.readBytes() }
-            notesRepository.importJson(String(bytes, Charsets.UTF_8))
-            pulled = true
+            try {
+                val bytes = service.files().get(remote.id)
+                    .executeMediaAsInputStream()
+                    .use { it.readBytes() }
+                if (bytes.isNotEmpty()) {
+                    notesRepository.importJson(String(bytes, Charsets.UTF_8))
+                    pulled = true
+                }
+            } catch (e: Exception) {
+                Log.e("AANO", "Failed to pull notes from Drive: ${e.message}", e)
+            }
+            Unit
         }
         findRemoteFile(service, REMOTE_TASKS_FILE)?.let { remote ->
-            val bytes = service.files().get(remote.id)
-                .executeMediaAsInputStream()
-                .use { it.readBytes() }
-            tasksRepository.importJson(String(bytes, Charsets.UTF_8))
-            pulled = true
+            try {
+                val bytes = service.files().get(remote.id)
+                    .executeMediaAsInputStream()
+                    .use { it.readBytes() }
+                if (bytes.isNotEmpty()) {
+                    tasksRepository.importJson(String(bytes, Charsets.UTF_8))
+                    pulled = true
+                }
+            } catch (e: Exception) {
+                Log.e("AANO", "Failed to pull tasks from Drive: ${e.message}", e)
+            }
+            Unit
         }
         pulled
     }
@@ -97,17 +114,41 @@ class DriveSyncManager(
             pushToDrive()
             true
         } catch (e: Exception) {
+            Log.e("AANO", "Drive sync error: ${e.message}", e)
             false
         }
     }
 
     private fun push(service: Drive, name: String, json: String) {
+        if (json.isEmpty()) return
         val content = ByteArrayContent.fromString("application/json", json)
-        val remote = findRemoteFile(service, name)
-        if (remote != null) {
-            service.files().update(remote.id, null, content)
+        val files = try {
+            service.files().list()
+                .setQ("name = '$name' and trashed = false")
+                .setOrderBy("modifiedTime desc")
+                .setFields("files(id, name, modifiedTime)")
+                .execute()
+                .files ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (files.isNotEmpty()) {
+            val primary = files[0]
+            service.files().update(primary.id, null, content)
                 .setUploadType("media")
                 .execute()
+
+            // Trash stale duplicate files with identical names to keep user Drive clean
+            if (files.size > 1) {
+                for (i in 1 until files.size) {
+                    try {
+                        service.files().delete(files[i].id).execute()
+                    } catch (e: Exception) {
+                        Log.w("AANO", "Failed to trash stale duplicate file ${files[i].id}", e)
+                    }
+                }
+            }
         } else {
             val fileMetadata = File().apply {
                 this.name = name
