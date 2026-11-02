@@ -120,27 +120,35 @@ class ShareReceiverActivity : AppCompatActivity() {
                                 fallbackTxtStr = baos.toString("UTF-8")
                             } else if (name.startsWith("media/images/") || name.startsWith("images/")) {
                                 val fn = File(name).name
-                                val destFile = File(mediaImgDir, "pkg_${System.currentTimeMillis()}_$fn")
-                                destFile.outputStream().use { fos ->
-                                    var len: Int
-                                    while (zis.read(buffer).also { len = it } > 0) {
-                                        fos.write(buffer, 0, len)
+                                val ext = fn.substringAfterLast('.', "").lowercase()
+                                val allowedImageExts = setOf("png", "jpg", "jpeg", "webp", "gif")
+                                if (ext in allowedImageExts) {
+                                    val destFile = File(mediaImgDir, "pkg_${System.currentTimeMillis()}_$fn")
+                                    destFile.outputStream().use { fos ->
+                                        var len: Int
+                                        while (zis.read(buffer).also { len = it } > 0) {
+                                            fos.write(buffer, 0, len)
+                                        }
                                     }
-                                }
-                                if (destFile.length() > 0) {
-                                    savedImages.add(destFile.absolutePath)
+                                    if (destFile.length() > 0) {
+                                        savedImages.add(destFile.absolutePath)
+                                    }
                                 }
                             } else if (name.startsWith("media/audio/") || name.startsWith("audio/")) {
                                 val fn = File(name).name
-                                val destFile = File(mediaAudioDir, "pkg_${System.currentTimeMillis()}_$fn")
-                                destFile.outputStream().use { fos ->
-                                    var len: Int
-                                    while (zis.read(buffer).also { len = it } > 0) {
-                                        fos.write(buffer, 0, len)
+                                val ext = fn.substringAfterLast('.', "").lowercase()
+                                val allowedAudioExts = setOf("m4a", "aac", "wav", "mp3", "ogg")
+                                if (ext in allowedAudioExts) {
+                                    val destFile = File(mediaAudioDir, "pkg_${System.currentTimeMillis()}_$fn")
+                                    destFile.outputStream().use { fos ->
+                                        var len: Int
+                                        while (zis.read(buffer).also { len = it } > 0) {
+                                            fos.write(buffer, 0, len)
+                                        }
                                     }
-                                }
-                                if (destFile.length() > 0) {
-                                    savedAudioPath = destFile.absolutePath
+                                    if (destFile.length() > 0) {
+                                        savedAudioPath = destFile.absolutePath
+                                    }
                                 }
                             }
                             zis.closeEntry()
@@ -151,8 +159,9 @@ class ShareReceiverActivity : AppCompatActivity() {
 
                 val now = System.currentTimeMillis()
                 val targetNote: Note
-                if (!noteJsonStr.isNullOrBlank()) {
-                    val jsonObj = org.json.JSONObject(noteJsonStr)
+                val validJsonStr = noteJsonStr
+                if (!validJsonStr.isNullOrBlank()) {
+                    val jsonObj = org.json.JSONObject(validJsonStr)
                     val noteId = UUID.randomUUID().toString()
                     val title = jsonObj.optString("title", "Imported Note")
                     val content = jsonObj.optString("content", "")

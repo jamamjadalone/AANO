@@ -229,7 +229,6 @@ def sync_with_cloud():
                         if not existing:
                             local_map[sn["id"]] = sn
                         else:
-                            is_deleted = bool(existing.get("deleted", False) or sn.get("deleted", False))
                             is_archived = bool(existing.get("archived", False) or sn.get("archived", False))
                             sn_updated = sn.get("updatedAt", 0)
                             ex_updated = existing.get("updatedAt", 0)
@@ -252,6 +251,11 @@ def sync_with_cloud():
                                 continue
 
                             if sn_updated >= ex_updated:
+                                if sn.get("deleted", False):
+                                    is_deleted = True
+                                else:
+                                    is_deleted = bool(existing.get("deleted", False) and existing.get("deletedAt", 0) > sn_updated)
+
                                 merged_note = dict(sn)
                                 merged_note["deleted"] = is_deleted
                                 merged_note["archived"] = is_archived
@@ -260,6 +264,11 @@ def sync_with_cloud():
                                     merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
                                 local_map[sn["id"]] = merged_note
                             else:
+                                if existing.get("deleted", False):
+                                    is_deleted = True
+                                else:
+                                    is_deleted = bool(sn.get("deleted", False) and sn.get("deletedAt", 0) > ex_updated)
+
                                 existing["deleted"] = is_deleted
                                 existing["archived"] = is_archived
                                 existing["purged"] = False

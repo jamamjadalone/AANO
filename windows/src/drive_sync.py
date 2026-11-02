@@ -370,10 +370,14 @@ class GoogleDriveSync:
             if not existing:
                 local_map[rid] = rn
             else:
-                is_deleted = bool(existing.get("deleted", False) or rn.get("deleted", False))
                 is_archived = bool(existing.get("archived", False) or rn.get("archived", False))
 
                 if rn_updated >= ex_updated:
+                    if rn.get("deleted", False):
+                        is_deleted = True
+                    else:
+                        is_deleted = bool(existing.get("deleted", False) and existing.get("deletedAt", 0) > rn_updated)
+
                     merged = dict(rn)
                     merged["deleted"] = is_deleted
                     merged["archived"] = is_archived
@@ -381,6 +385,11 @@ class GoogleDriveSync:
                         merged["deletedAt"] = max(existing.get("deletedAt", 0), rn.get("deletedAt", 0), rn_updated)
                     local_map[rid] = merged
                 else:
+                    if existing.get("deleted", False):
+                        is_deleted = True
+                    else:
+                        is_deleted = bool(rn.get("deleted", False) and rn.get("deletedAt", 0) > ex_updated)
+
                     existing["deleted"] = is_deleted
                     existing["archived"] = is_archived
                     if is_deleted:

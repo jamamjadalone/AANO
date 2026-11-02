@@ -16,6 +16,9 @@ import aano_drop_client
 
 logger = logging.getLogger("AANO.API")
 
+ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+ALLOWED_AUDIO_EXTS = {".m4a", ".aac", ".wav", ".mp3", ".ogg"}
+
 def _parse_color(c):
     if isinstance(c, int):
         return c
@@ -457,7 +460,8 @@ class DesktopApi:
                         notes_json_str = zf.read(member).decode("utf-8")
                     elif member.startswith("media/images/") or member.startswith("images/"):
                         fn = os.path.basename(member)
-                        if fn:
+                        ext = os.path.splitext(fn)[1].lower()
+                        if fn and ext in ALLOWED_IMAGE_EXTS:
                             with open(os.path.join(images_dir, fn), "wb") as f:
                                 f.write(zf.read(member))
             if not notes_json_str:
@@ -1075,7 +1079,8 @@ class DesktopApi:
                         fallback_md = zf.read(member).decode("utf-8", errors="ignore")
                     elif member.startswith("media/images/") or member.startswith("images/"):
                         fn = os.path.basename(member)
-                        if fn:
+                        ext = os.path.splitext(fn)[1].lower()
+                        if fn and ext in ALLOWED_IMAGE_EXTS:
                             target_fn = f"pkg_{int(time.time()*1000)}_{fn}"
                             target_p = os.path.join(dest_images_dir, target_fn)
                             with open(target_p, "wb") as out_f:
@@ -1083,7 +1088,8 @@ class DesktopApi:
                             extracted_images.append(target_fn)
                     elif member.startswith("media/audio/") or member.startswith("audio/"):
                         fn = os.path.basename(member)
-                        if fn:
+                        ext = os.path.splitext(fn)[1].lower()
+                        if fn and ext in ALLOWED_AUDIO_EXTS:
                             target_fn = f"pkg_{int(time.time()*1000)}_{fn}"
                             target_p = os.path.join(dest_audio_dir, target_fn)
                             with open(target_p, "wb") as out_f:

@@ -13,6 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
+import app.aa.aano.net.TaskReminderReceiver
 
 class TaskRepository(private val context: Context) {
 
@@ -113,6 +114,9 @@ class TaskRepository(private val context: Context) {
             completed = !task.completed,
             updatedAt = System.currentTimeMillis()
         )
+        if (updated.completed) {
+            TaskReminderReceiver.cancel(context, id)
+        }
         tasks[index] = updated
         writeTasks(tasks)
         updated
@@ -146,13 +150,19 @@ class TaskRepository(private val context: Context) {
 
     suspend fun delete(id: String) {
         withContext(Dispatchers.IO) {
+            TaskReminderReceiver.cancel(context, id)
             writeTasks(readTasks().filterNot { it.id == id })
         }
     }
 
     suspend fun clearCompleted() {
         withContext(Dispatchers.IO) {
-            writeTasks(readTasks().filterNot { it.completed })
+            val all = readTasks()
+            val completed = all.filter { it.completed }
+            completed.forEach { task ->
+                TaskReminderReceiver.cancel(context, task.id)
+            }
+            writeTasks(all.filterNot { it.completed })
         }
     }
 

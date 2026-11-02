@@ -156,6 +156,9 @@ object LocalVaultManager {
         var imagesRestored = 0
         var audioRestored = 0
 
+        val allowedImageExts = setOf("png", "jpg", "jpeg", "webp", "gif")
+        val allowedAudioExts = setOf("m4a", "aac", "wav", "mp3", "ogg")
+
         ZipInputStream(BufferedInputStream(inputStream)).use { zis ->
             var entry: ZipEntry? = zis.nextEntry
             while (entry != null) {
@@ -164,18 +167,24 @@ object LocalVaultManager {
                     jsonContent = zis.readBytes().toString(Charsets.UTF_8)
                 } else if (name.startsWith("media/images/") || name.startsWith("images/")) {
                     val fileName = File(name).name
-                    val destFile = File(targetImagesDir, fileName)
-                    destFile.outputStream().use { fos ->
-                        zis.copyTo(fos)
+                    val ext = fileName.substringAfterLast('.', "").lowercase()
+                    if (ext in allowedImageExts) {
+                        val destFile = File(targetImagesDir, fileName)
+                        destFile.outputStream().use { fos ->
+                            zis.copyTo(fos)
+                        }
+                        imagesRestored++
                     }
-                    imagesRestored++
                 } else if (name.startsWith("media/audio/") || name.startsWith("audio/")) {
                     val fileName = File(name).name
-                    val destFile = File(targetAudioDir, fileName)
-                    destFile.outputStream().use { fos ->
-                        zis.copyTo(fos)
+                    val ext = fileName.substringAfterLast('.', "").lowercase()
+                    if (ext in allowedAudioExts) {
+                        val destFile = File(targetAudioDir, fileName)
+                        destFile.outputStream().use { fos ->
+                            zis.copyTo(fos)
+                        }
+                        audioRestored++
                     }
-                    audioRestored++
                 }
                 zis.closeEntry()
                 entry = zis.nextEntry
