@@ -88,10 +88,14 @@ quality.bat --check
 ## Code Guidelines & Standards
 
 To ensure AANO remains high quality, reliable, and private:
-1. **Zero Surveillance**: Never add trackers, analytics, telemetry SDKs, or third-party ads.
-2. **Clean & Modular**: Keep code simple, readable, and well-structured. Avoid unnecessary heavy dependencies.
-3. **Behavior-Preserving**: Make sure existing features (like Local Vault .zip backup, AANO Drop, and Google Drive Sync) continue working as expected.
-4. **Be Respectful**: Treat fellow contributors with kindness, empathy, and respect.
+1. **Strict Google Drive OAuth Scope Policy (Permanent)**:
+   - All Google Drive sync code is strictly restricted to `DriveScopes.DRIVE_FILE` (`https://www.googleapis.com/auth/drive.file`).
+   - **Strictly Prohibited for Human Contributors & AI Agents**: Never introduce, request, or commit broader or sensitive scopes (such as `DRIVE`, `DRIVE_APPDATA`, or full Drive access).
+   - *Why*: Sensitive or broad scopes trigger Google verification warning screens (*"Google hasn't verified this app"*), demand app verification reviews, and compromise user trust. `DRIVE_FILE` guarantees zero-knowledge isolation to app-created files only, providing frictionless and trusted Google Sign-In. Any PR violating this rule will be rejected.
+2. **Zero Surveillance**: Never add trackers, analytics, telemetry SDKs, or third-party ads.
+3. **Clean & Modular**: Keep code simple, readable, and well-structured. Avoid unnecessary heavy dependencies.
+4. **Behavior-Preserving**: Make sure existing features (like Local Vault .zip backup, AANO Drop, and Google Drive Sync) continue working as expected.
+5. **Be Respectful**: Treat fellow contributors with kindness, empathy, and respect.
 
 ---
 
