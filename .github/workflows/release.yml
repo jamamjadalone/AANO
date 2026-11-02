@@ -123,11 +123,17 @@ jobs:
           python3 -c "
           import re
           with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
-              text = f.read()
-          match = re.search(r'(## \[[^\]]+\].*?)(?=\n## \[|\Z)', text, re.DOTALL)
-          notes = match.group(1).strip() if match else 'Release ${{ github.ref_name }}'
+              text = f.read().replace('\r\n', '\n')
+          tag = '${{ github.ref_name }}'.strip()
+          version = tag.lstrip('v')
+          pattern = rf'(## \[{re.escape(version)}\].*?)(?=\n## \[|\Z)'
+          match = re.search(pattern, text, re.DOTALL)
+          if not match:
+              match = re.search(r'(## \[[^\]]+\].*?)(?=\n## \[|\Z)', text, re.DOTALL)
+          notes = match.group(1).strip() if match else f'Release {tag}'
+          footer = '\n\n---\n**Full Changelog**: https://github.com/jamamjadalone/AANO/blob/main/CHANGELOG.md'
           with open('RELEASE_NOTES.md', 'w', encoding='utf-8') as f:
-              f.write(notes)
+              f.write(notes + footer)
           "
 
       - name: Download Android Artifact

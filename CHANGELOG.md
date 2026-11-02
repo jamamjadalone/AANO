@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0-beta.2] - 2026-11-02
+
+### Added
+- **Direct Offline Hotspot Mode (AANO Drop)**:
+  - Smart interface subnet detection prioritizing Wi-Fi access point / hotspot interfaces (`ap0`, `wlan0`, `softap`) with automatic `192.168.43.1` fallback.
+  - Cellular carrier-grade NAT (CGNAT) IP filter preventing unintended binding to mobile data interfaces.
+  - Zero-configuration local transfers between devices without requiring an external Wi-Fi router.
+- **High-Contrast Barcode & QR Generation**:
+  - Embedded JourneyApps ZXing `BarcodeEncoder` generating crisp 512x512px QR codes with guaranteed 2–4 module Quiet Zone margins.
+  - Auto-scaled display card in modal layouts ensuring fast recognition from smartphone cameras in low light and off-angle perspectives.
+- **Unified Auto-Focus Camera Scanner**:
+  - Standardized real-time camera scanning across Notes List, Editor Activity, and Local Fragment.
+  - Fixed camera orientation and continuous auto-focus for pairing in milliseconds.
+- **Security & Legal Compliance**:
+  - Integrated Google Search Console verification meta tags.
+  - Added dedicated, accessible public Terms of Service (`terms.html`) for Google OAuth verification audit.
+
+### Changed & Improved
+- **Zero Third-Party Trademark Footprint**:
+  - Sanitized all UI labels, toasts, dialogs, and code comments to 100% original, professional technical terminology.
+- **FixMySlop Hardening & Reliability**:
+  - Replaced empty catch blocks in transfer and discovery daemons with structured, typed logging.
+  - Synchronized release artifacts across Android Gradle, Windows Inno Setup, and Web Docs.
+
 ## [1.2.0-beta.1] - 2026-10-24
 
 ### Added
@@ -139,5 +163,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.2.0-beta.2]: https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-beta.2
+[1.2.0-beta.1]: https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-beta.1
 [1.0.1-beta]: https://github.com/jamamjadalone/AANO/releases/tag/v1.0.1-beta
 [1.0.0]: https://github.com/jamamjadalone/AANO/releases/tag/v1.0.0

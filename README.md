@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--beta.1-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-beta.1"></a>
+  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--beta.2-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-beta.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-00796B.svg?style=flat-square" alt="License: GPL-3.0"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Installer)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
@@ -50,8 +50,8 @@ Download pre-built, production-ready releases directly from [GitHub Releases](ht
 
 | Platform | Download Package | Requirements | Setup Guide |
 | :--- | :--- | :--- | :--- |
-| **Windows** | [`AANO-Setup-v1.2.0-beta.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
-| **Android** | [`AANO-v1.2.0-beta.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+| **Windows** | [`AANO-Setup-v1.2.0-beta.2.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
+| **Android** | [`AANO-v1.2.0-beta.2.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
 
 ### First-Time Installation Guide
 
