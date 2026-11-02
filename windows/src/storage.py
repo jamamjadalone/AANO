@@ -57,7 +57,17 @@ def load_notes():
             with open(NOTES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning("Failed to load notes: %s", e)
+            backup_path = f"{NOTES_FILE}.corrupt.{int(time.time())}.bak"
+            logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving corrupt file at %s", e, backup_path)
+            try:
+                import shutil
+                shutil.copy2(NOTES_FILE, backup_path)
+            except OSError as copy_err:
+                logger.error("Failed to create backup of corrupt notes: %s", copy_err)
+            # Never overwrite damaged notes with welcome templates; return empty to preserve on-disk backup
+            return []
+
+    # First-time clean launch only: initialize workspace with welcome note
     now = int(time.time() * 1000)
     welcome_notes = [
         {

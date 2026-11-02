@@ -29,6 +29,14 @@ class NoteCipher {
     private val keyStore: KeyStore =
         KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
 
+    fun hasKey(): Boolean {
+        return try {
+            keyStore.containsAlias(KEY_ALIAS)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     private fun getOrCreateKey(): SecretKey {
         (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
 

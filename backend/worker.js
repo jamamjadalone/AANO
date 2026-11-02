@@ -461,10 +461,10 @@ async function handleSync(request, env) {
   const clientNotes = payload.notes || [];
   const lastSyncTime = Number(payload.lastSyncTime) || 0;
 
-  // Process Notes (Max 50KB limit per note, max 100 notes batch)
-  for (const n of clientNotes.slice(0, 100)) {
+  // Process Notes (Max 500KB limit per note, up to 500 notes per batch)
+  for (const n of clientNotes.slice(0, 500)) {
     const title = String(n.title || "").substring(0, 250);
-    const content = String(n.content || "").substring(0, 50000); // 50KB cap
+    const content = String(n.content || "").substring(0, 500000); // 500KB safe cap
     const folder = String(n.folder || "").substring(0, 50);
     const color = Number(n.color) || 0;
     const pinned = n.pinned ? 1 : 0;
@@ -476,9 +476,15 @@ async function handleSync(request, env) {
 
     if (!noteId) continue;
 
-    const existing = await env.DB.prepare("SELECT updated_at FROM notes WHERE id = ? AND user_id = ?")
-      .bind(noteId, userId)
+    // Security Check: Verify note ownership globally before upsert (IDOR prevention)
+    const existing = await env.DB.prepare("SELECT user_id, updated_at FROM notes WHERE id = ?")
+      .bind(noteId)
       .first();
+
+    if (existing && existing.user_id !== userId) {
+      // Reject cross-account collision; note belongs to another user
+      continue;
+    }
 
     if (!existing || updatedAt > existing.updated_at) {
       await env.DB.prepare(`
@@ -494,6 +500,7 @@ async function handleSync(request, env) {
           deleted = excluded.deleted,
           archived = excluded.archived,
           purged = excluded.purged
+        WHERE notes.user_id = excluded.user_id
       `).bind(noteId, userId, title, content, color, folder, pinned, updatedAt, deleted, archived, purged).run();
     }
   }

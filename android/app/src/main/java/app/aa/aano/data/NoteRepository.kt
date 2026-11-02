@@ -651,6 +651,13 @@ class NoteRepository(private val context: Context) {
                 }
                 fixed
             } catch (e: Exception) {
+                Log.e("AANO", "Failed to deserialize notes. Preserving corrupted backup file.", e)
+                try {
+                    val corruptBackup = File(notesFile.parentFile, "notes.json.corrupt.${System.currentTimeMillis()}.bak")
+                    notesFile.copyTo(corruptBackup, overwrite = true)
+                } catch (be: Exception) {
+                    Log.e("AANO", "Failed to create corrupt notes backup", be)
+                }
                 emptyList()
             }
         }
@@ -668,12 +675,13 @@ class NoteRepository(private val context: Context) {
     private fun deserializeNote(obj: JSONObject): Note {
         val encrypted = obj.optBoolean("enc", false)
         fun field(name: String): String {
-            val raw = obj.getString(name)
-            return if (encrypted) {
+            val raw = obj.optString(name, "")
+            return if (encrypted && raw.isNotEmpty()) {
                 try {
                     cipher.decrypt(raw)
                 } catch (e: Exception) {
-                    ""
+                    Log.e("AANO", "Failed to decrypt note field '$name': ${e.message}")
+                    raw
                 }
             } else raw
         }
@@ -697,7 +705,14 @@ class NoteRepository(private val context: Context) {
             tags = obj.optJSONArray("tags")?.let { arr ->
                 (0 until arr.length()).map { i ->
                     val raw = arr.getString(i)
-                    if (encrypted) try { cipher.decrypt(raw) } catch (e: Exception) { "" } else raw
+                    if (encrypted && raw.isNotEmpty()) {
+                        try {
+                            cipher.decrypt(raw)
+                        } catch (e: Exception) {
+                            Log.e("AANO", "Failed to decrypt tag: ${e.message}")
+                            raw
+                        }
+                    } else raw
                 }
             } ?: emptyList(),
             reminderAt = obj.optLong("reminderAt", 0),

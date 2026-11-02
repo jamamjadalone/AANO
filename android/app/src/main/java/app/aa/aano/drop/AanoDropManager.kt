@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStreamReader
 import java.io.OutputStream
@@ -114,11 +115,27 @@ class AanoDropManager(private val context: Context) {
             try {
                 client.tcpNoDelay = true
                 val input = client.getInputStream()
-                val reader = BufferedReader(InputStreamReader(input, Charsets.UTF_8))
                 val output = client.getOutputStream()
 
-                // Read request line
-                val requestLine = reader.readLine() ?: return@launch
+                // Read HTTP request headers byte-by-byte until \r\n\r\n
+                val headerBytes = ByteArrayOutputStream()
+                var p3 = -1
+                var p2 = -1
+                var p1 = -1
+                var b = input.read()
+                while (b != -1) {
+                    headerBytes.write(b)
+                    if (p3 == '\r'.code && p2 == '\n'.code && p1 == '\r'.code && b == '\n'.code) {
+                        break
+                    }
+                    p3 = p2
+                    p2 = p1
+                    p1 = b
+                }
+
+                val headerString = headerBytes.toString("UTF-8")
+                val lines = headerString.lines()
+                val requestLine = lines.firstOrNull() ?: return@launch
                 val parts = requestLine.split(" ")
                 val method = parts.getOrNull(0) ?: "GET"
                 val path = parts.getOrNull(1) ?: "/"
@@ -126,14 +143,11 @@ class AanoDropManager(private val context: Context) {
                 // Read headers
                 var contentLength = 0
                 var incomingToken = ""
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    if (line.isNullOrEmpty()) break
-                    val header = line!!
-                    if (header.startsWith("Content-Length:", ignoreCase = true)) {
-                        contentLength = header.substringAfter(":").trim().toIntOrNull() ?: 0
-                    } else if (header.startsWith("X-AANO-TOKEN:", ignoreCase = true)) {
-                        incomingToken = header.substringAfter(":").trim()
+                for (hdr in lines) {
+                    if (hdr.startsWith("Content-Length:", ignoreCase = true)) {
+                        contentLength = hdr.substringAfter(":").trim().toIntOrNull() ?: 0
+                    } else if (hdr.startsWith("X-AANO-TOKEN:", ignoreCase = true)) {
+                        incomingToken = hdr.substringAfter(":").trim()
                     }
                 }
 
@@ -155,21 +169,25 @@ class AanoDropManager(private val context: Context) {
                 }
 
                 if (path.startsWith("/aano/pair") && method.equals("POST", ignoreCase = true)) {
-                    val bodyChars = CharArray(contentLength)
+                    if (contentLength <= 0 || contentLength > 64 * 1024) {
+                        sendHttpResponse(output, 400, "Bad Request", "application/json", "{\"success\":false,\"error\":\"Invalid pair payload length\"}")
+                        return@launch
+                    }
+                    val bodyBytes = ByteArray(contentLength)
                     var totalRead = 0
                     while (totalRead < contentLength) {
-                        val read = reader.read(bodyChars, totalRead, contentLength - totalRead)
+                        val read = input.read(bodyBytes, totalRead, contentLength - totalRead)
                         if (read == -1) break
                         totalRead += read
                     }
-                    val bodyString = String(bodyChars, 0, totalRead)
+                    val bodyString = String(bodyBytes, 0, totalRead, Charsets.UTF_8)
                     val payload = JSONObject(bodyString)
                     val senderName = payload.optString("name", "Desktop PC")
                     val senderIp = payload.optString("ip").ifEmpty { client.inetAddress?.hostAddress ?: "" }
                     val senderPort = payload.optInt("port", 8765)
                     val incomingPin = payload.optString("pin")
-                    if (pin.isNotEmpty() && incomingPin.isNotEmpty() && pin != incomingPin) {
-                        sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Invalid PIN\"}")
+                    if (pin.isNotEmpty() && (incomingPin.isEmpty() || pin != incomingPin)) {
+                        sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Invalid or missing PIN\"}")
                         return@launch
                     }
                     prefs.lastDropIp = if (senderPort == 8765) senderIp else "$senderIp:$senderPort"
@@ -191,15 +209,15 @@ class AanoDropManager(private val context: Context) {
                         return@launch
                     }
 
-                    // Read payload body
-                    val bodyChars = CharArray(contentLength)
+                    // Read payload body as raw bytes (full UTF-8 & Unicode immunity)
+                    val bodyBytes = ByteArray(contentLength)
                     var totalRead = 0
                     while (totalRead < contentLength) {
-                        val read = reader.read(bodyChars, totalRead, contentLength - totalRead)
+                        val read = input.read(bodyBytes, totalRead, contentLength - totalRead)
                         if (read == -1) break
                         totalRead += read
                     }
-                    val bodyString = String(bodyChars, 0, totalRead)
+                    val bodyString = String(bodyBytes, 0, totalRead, Charsets.UTF_8)
                     val payload = JSONObject(bodyString)
 
                     // Auto-record sender peer

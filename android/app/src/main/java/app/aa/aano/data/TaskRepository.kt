@@ -6,6 +6,7 @@
 package app.aa.aano.data
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -224,6 +225,13 @@ class TaskRepository(private val context: Context) {
         return try {
             deserializeTasks(tasksFile.readText())
         } catch (e: Exception) {
+            Log.e("AANO", "Failed to deserialize tasks. Preserving corrupted backup file.", e)
+            try {
+                val corruptBackup = File(tasksFile.parentFile, "tasks.json.corrupt.${System.currentTimeMillis()}.bak")
+                tasksFile.copyTo(corruptBackup, overwrite = true)
+            } catch (be: Exception) {
+                Log.e("AANO", "Failed to create corrupt tasks backup", be)
+            }
             emptyList()
         }
     }
@@ -240,12 +248,13 @@ class TaskRepository(private val context: Context) {
     private fun deserializeTask(obj: JSONObject): Task {
         val encrypted = obj.optBoolean("enc", false)
         fun field(name: String): String {
-            val raw = obj.getString(name)
-            return if (encrypted) {
+            val raw = obj.optString(name, "")
+            return if (encrypted && raw.isNotEmpty()) {
                 try {
                     cipher.decrypt(raw)
                 } catch (e: Exception) {
-                    ""
+                    Log.e("AANO", "Failed to decrypt task field '$name': ${e.message}")
+                    raw
                 }
             } else raw
         }
@@ -254,11 +263,19 @@ class TaskRepository(private val context: Context) {
         val subtasks = mutableListOf<SubTask>()
         for (i in 0 until subs.length()) {
             val s = subs.getJSONObject(i)
-            val titleRaw = s.getString("title")
+            val titleRaw = s.optString("title", "")
+            val decTitle = if (encrypted && titleRaw.isNotEmpty()) {
+                try {
+                    cipher.decrypt(titleRaw)
+                } catch (e: Exception) {
+                    Log.e("AANO", "Failed to decrypt subtask title: ${e.message}")
+                    titleRaw
+                }
+            } else titleRaw
             subtasks.add(
                 SubTask(
                     id = s.getString("id"),
-                    title = if (encrypted) cipher.decrypt(titleRaw) else titleRaw,
+                    title = decTitle,
                     completed = s.optBoolean("completed", false)
                 )
             )

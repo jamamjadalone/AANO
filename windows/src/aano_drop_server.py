@@ -87,18 +87,21 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 raw_body = self.rfile.read(content_len)
                 payload = json.loads(raw_body.decode("utf-8"))
 
-                # Validate PIN or Token
+                # Validate PIN or Token strictly
                 incoming_token = payload.get("token") or self.headers.get("X-AANO-TOKEN")
                 server = self.server.app_server
                 client_ip = self.client_address[0]
                 paired_peer = getattr(server, "paired_peer", None)
                 is_paired_ip = bool(paired_peer and paired_peer.get("ip") == client_ip)
+                pin_matches = bool(
+                    incoming_token and str(incoming_token).strip() in (str(server.pin).strip(), str(server.token).strip())
+                )
 
-                if server.pin and not is_paired_ip and str(incoming_token).strip() != str(server.pin).strip() and str(incoming_token).strip() != str(server.token).strip():
+                if server.pin and not is_paired_ip and not pin_matches:
                     self.send_response(403)
                     self._send_cors_headers()
                     self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Invalid PIN or Token"}')
+                    self.wfile.write(b'{"success":false,"error":"Invalid or missing PIN or Token"}')
                     return
 
                 incoming_notes = payload.get("notes", [])
@@ -174,12 +177,13 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                 payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
                 server = self.server.app_server
                 incoming_pin = payload.get("pin")
-                if server.pin and incoming_pin and str(incoming_pin).strip() != str(server.pin).strip():
-                    self.send_response(403)
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Invalid PIN"}')
-                    return
+                if server.pin:
+                    if not incoming_pin or str(incoming_pin).strip() != str(server.pin).strip():
+                        self.send_response(403)
+                        self._send_cors_headers()
+                        self.end_headers()
+                        self.wfile.write(b'{"success":false,"error":"Invalid or missing PIN"}')
+                        return
                 peer_name = payload.get("name", "Android Device")
                 peer_ip = payload.get("ip") or self.client_address[0]
                 peer_port = int(payload.get("port", 8766))
