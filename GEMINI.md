@@ -1,0 +1,86 @@
+# Antigravity Workspace Rules & Directives (AS Studio)
+
+## 1. Communication & Tone
+- **Language**: Hamesha **Hinglish** (Urdu in Roman script) ya **English** mein communicate karo. Chat responses mein **Urdu script (عربی/اردو رسم الخط) likhna strictly prohibited hai** — hamesha Roman letters mein likho.
+- **Tone**: Direct, honest, concise, aur practical. Faltu ki lambi chori batein ya "trust me it works" bolna strictly prohibited hai.
+
+## 2. Memory & Workspace First (Strict Directive)
+- **Check Past Memory & Local Files First**: Jab user kisi setup ya task ka zikr kare (jaise Oracle, scripts, keys, etc.), toh hawa mein ya generic internet answers dene se pehle **workspace files aur past memory search karo**. Bina check kiye assume karna ya generic baatein bolna mana hai.
+
+## 3. Execution Discipline: Plan & TODO First (Universal Rule)
+- **Universal Application**: Chahe Stock assets hon, coding/software development ho, scripts hon, ya cloud automation — yeh rule har kaam par apply hoga.
+- **No Random Execution**: Bina plan aur TODO list ke seedha code likhna ya tools fire karna strictly mana hai.
+- **Workflow**:
+  1. **Phase 1: Clear Plan & Checklist**: Pehle task ko break down karo aur short TODO list banao (Step 1, Step 2, Step 3).
+  2. **Phase 2: Review/Alignment**: Steps clear karo.
+  3. **Phase 3: Focused Execution**: Ek waqt par focus karke execute karo aur checklist update karte jao.
+  4. **Phase 4: Empirical Proof**: Result ko verify karo (tests, file exist check, clean logs) tabhi complete mark karo.
+
+## 4. General Development & Coding Best Practices (All Projects)
+- **Modular & Clean Architecture**: Code hamesha clean, self-explanatory, error-handled aur reusable banao.
+- **Targeted Edits Only**: Poori poori 1000-line files baar baar replace ya rewrite mat karo; sirf zaroori block/function ko modify karo.
+- **Zero Hallucination Imports**: Kabhi aisi library import mat karo jo verify na ki ho. Dependencies pehle check karo.
+
+## 5. Token & Search Optimization Protocol (Smart Dynamic Search)
+- **Normal Tasks**: Normal prompts mein quota bachao — zero spam searches, maximum 1 targeted search agar zaroori ho.
+- **Deep Research Override**: Jab user explicitly bole **"deep research"** ya **"research deeply"**, tab agent fully free hai jitni zaroori searches ho sakein kare taake accurate, thorough aur reliable data mile.
+
+## 6. Hardware & Safety Guardrails (Zero Local Load)
+- **Local Specs**: User PC par Core i7-3540M aur 8GB RAM hai. 
+- **Rule**: Local PC par heavy tasks (AI image generation, upscaling, heavy video/rendering) chalana strictly mana hai.
+- **Cloud Heavy Lifting**: Saara heavy AI/compute workload Kaggle GPU, Google Drive, ya cloud automation ke zariye hoga.
+
+## 7. Vector & Stock Assets Quality Standards
+- **Subject**: Isolated single subjects only (e.g., kawaii animal mascot, clean icon). No furniture, no laptops, no complex multi-object scenes.
+- **Cleanliness**: 100% textless (koi AI fake words/letters nahi hone chahiye). Pure solid white background.
+- **Pipeline Order**: FLUX generation -> background isolation (rembg) -> 4x upscale (Real-ESRGAN) -> vtracer clean SVG -> Inkscape EPS.
+- **Licensing**: Only Apache 2.0 / BSD / MIT commercial-safe models (FLUX.1-schnell). Non-commercial models strictly prohibited.
+
+## 8. Zero Image Dependency & Media Payload Guardrail (API Crash Prevention)
+- **Zero Image Loading / Screencap Prohibited**: Agent kabhi bhi image files (`.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`) par `view_file` call nahi karega aur na hi `adb screencap` capture karke inspect karega. Image payload se Google API mein `HTTP 400 Bad Request INVALID_MEDIA (error 2011)` crash trigger hota hai jo conversation session ko permanently corrupt/block kar deta hai.
+- **Pure Text-Based & Empirical Verification**: Verification hamesha 100% text logs aur direct terminal commands ke zariye hogi (e.g., Gradle compilation logs `:app:assembleRelease --offline`, ADB dumpsys/logcat, file existence, unit test output). UI testing ke liye screencaps par depend hone ke bajaye direct code, layouts aur build status par kaam hoga.
+- **Direct Phase Execution**: Image checks ke bina direct next phases aur tasks execute karo.
+
+## 9. Preservation of Standalone Backend & Assets (Strict Guardrail)
+- **Zero Accidental Deletions**: `backend/` directory (`worker.js`, `schema.sql`) aur standalone authentication code (Cloudflare Worker + Google Apps Script Mail Bridge) ko codebase aur GitHub repository se kabhi bhi delete ya strip nahi karna. Yeh AANO ka intentional future feature hai (password-less Google bypass / shared device access).
+
+## 10. Centralized Version Management & Release Guardrail (Strict Protocol)
+- **Single Source of Truth**: Release versions ko kabhi bhi multiple files mein manually hardcode ya scatter nahi karna. Hamesha `python bump_version.py <version>` use karo jo atomicity ke sath `VERSION`, Android `build.gradle.kts` (`versionCode` + `versionName`), Windows `aano.iss`, `docs/index.html`, aur `CHANGELOG.md` ko synchronize karta hai.
+- **Version Integrity Audit**: Kisi bhi build ya release se pehle `python bump_version.py --check` run karke verify karo ke Android, Windows aur Web sab exact same version par synced hain.
+
+## 11. Permanent UI & Interface Lock (Islamic Azkar Pro)
+- **Zero Redesign Directive**: Islamic Azkar Pro ka visual design, layout aur core UI architecture 100% PERMANENTLY LOCKED hai. Koi bhi AI agent ya developer is interface ko alter, shuffle, rewrite ya redesign nahi karega.
+- **Strictly Frozen Components**:
+  1. Top Bar: Streak badge (`🔥 X دن`), direct sound toggle (`🔔`/`🔇`), glassmorphic zikr selector pill (`[ ☀️ ذکر منتخب کریں ▾ ]`), aur three-dot settings button (`⋮`).
+  2. Borderless Dynamic Greeting Tagline: Pure spiritual text without explicit digits or prayer hours.
+  3. Luxury Reading Counter: Counter ring with haptic animation, centered clean typography, and dua cards.
+  4. 7-Card Welcome Landing Dashboard with Salam and direct guidance.
+  5. Completion Screen with "↺ دوبارہ شروع کریں" and "🏠 مرکزی صفحہ".
+  6. Unified Settings Modal with card-based sections (Zoom, Quran font, Audio, Themes, Kahf preferences) and footer ("محفوظ کریں ✓" aur "📲 ایپ انسٹال کریں").
+- **Only Allowed Future Changes**:
+  1. Adding new Azkar / Supplications data into the catalog or custom list.
+  2. Adding new setting options / toggles inside the existing three-dot settings modal.
+  3. Bug fixes, performance optimizations, and offline PWA cache enhancements.
+
+## 12. Sacred Reference Adab & Human Error Disclaimer Protocol (Permanent Lock)
+- **Cautious Hadith Attribution**: Kisi bhi Hadith ka hawala dete waqt direct/absolute daawa (jaise "رسول اللہ ﷺ نے فرمایا:" ya "نبی کریم نے فرمایا:") likhna strictly mana hai. Hamesha ehtiyat aur adab ke sath **"روایت کے مفہوم کے مطابق..."**, **"حدیث شریف کا مفہوم ہے کہ..."**, ya English mein **"According to the contextual meaning of the narration (Hadith)..."** likha jaye.
+- **Noble Quranic Quotation**: Quranic ayats aur hawala ke liye hamesha ba-adab aur mohtaram alfaaz istemal hon: **"ارشادِ باری تعالیٰ ہے — [سورۃ ...: آیت ...]"**, **"فرمانِ حق تعالیٰ ہے..."**, ya English mein **"As declared by Allah the Almighty in the Holy Quran — [Surah ...: Verse ...]"**.
+- **Human Error & Tas-heeh Disclaimer**: Settings modal aur documentation mein humble disclaimer hamesha active rahay: *"تمام تراجم، اعراب اور حوالاجات میں انتہائی احتیاط برتی گئی ہے، تاہم انسان خطا کا پتلا ہے۔ اگر کسی بھی مقام پر تصحیح یا اصلاح درکار ہو تو برائے مہربانی مطلع فرمائیں۔"* (Tamam 6 languages mein).
+
+## 13. Zero Third-Party Brand & Trademark Footprint Protocol (Strict Store Safety)
+- **Functional Reference Only**: Jab user kisi feature, flow ya UI logic ke liye kisi commercial app ya third-party product ka hawala de (jaise Zapya, SHAREit, WhatsApp, Truecaller, Keep, etc.), toh use **sirf aur sirf architectural / conceptual reference** samjha jaye.
+- **Zero Trademark in Codebase**: Kisi bhi commercial app, company ya competitor ka trademark/brand name **KABHI BHI** code, UI text, button labels, toasts/dialogs, layout comments, code variables, documentation, ya git commit messages mein hardcode/mention **NAHI** hoga. Is se Google Play Store aur app marketplaces par "Impersonation / Trademark Infringement" policy strikes lagne ka khatra hota hai.
+- **Mandatory Native Terminology**: Hamesha generic, original, professional aur descriptive technical words use hon (e.g. "Direct Hotspot Mode", "Offline P2P Transfer", "Instant Sync", "Encrypted Vault").
+
+## 14. Centralized Cloud Rule Backup Protocol (Google Drive Antigravity Sync)
+- **Continuous Cloud Parity**: Jab bhi koi naya rule, directive ya policy add ya modify ho, toh `GEMINI.md` ko foran Google Drive ke `Antigravity/` folder mein `Antigravity_Rules_Master.txt` ke naam se upload/sync kiya jaye.
+- **Future Guarantee**: Kisi bhi future session mein rules ki continuity mehfooz rahe aur machine change/reset hone par bhi rules cloud se instant restore ho sakein.
+
+## 15. Strict Google Drive OAuth Scope Guardrail (Permanent Zero Scope-Creep Policy)
+- **Strict Single Scope**: Google Drive integration mein sirf aur sirf `DriveScopes.DRIVE_FILE` (`https://www.googleapis.com/auth/drive.file`) allowed hai.
+- **Strict Prohibition for AI & Contributors**: Koi bhi AI agent ya human contributor kabhi bhi broader, sensitive, ya unverified scopes (jaise `DriveScopes.DRIVE`, `DRIVE_APPDATA`, `drive.full`, etc.) code, manifests, ya PRs mein introduce ya propose **NAHI** karega.
+- **Zero App-Verification Risk**: Sensitive/restricted scopes Google OAuth warning screens (*"Google hasn't verified this app"*) trigger karte hain, app verification review demand karte hain, aur user trust destroy karte hain. `DRIVE_FILE` app-created files tak bounded rehta hai, frictionless sign-in deta hai, aur user privacy 100% guarantee karta hai.
+
+
+
+
