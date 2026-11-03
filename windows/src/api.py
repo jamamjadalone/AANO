@@ -59,6 +59,7 @@ class DesktopApi:
             for n in notes:
                 is_expired = (n.get("deleted", False) or n.get("purged", False)) and (n.get("deletedAt", 0) > 0) and (n.get("deletedAt", 0) < cutoff)
                 if is_expired:
+                    self._cleanup_media_files(n)
                     changed = True
                 else:
                     remaining.append(n)
@@ -99,12 +100,33 @@ class DesktopApi:
         self._async_auto_sync()
         return {"success": True}
 
+    def _cleanup_media_files(self, note):
+        try:
+            for img in note.get("images", []):
+                fn = os.path.basename(img)
+                if fn:
+                    p = os.path.join(storage.IMAGES_DIR, fn)
+                    if os.path.isfile(p):
+                        try:
+                            os.remove(p)
+                        except OSError as e:
+                            logger.debug("Failed to remove image file %s: %s", p, e)
+            audio_p = self._resolve_audio_path(note.get("audioUri"))
+            if audio_p and os.path.isfile(audio_p):
+                try:
+                    os.remove(audio_p)
+                except OSError as e:
+                    logger.debug("Failed to remove audio file %s: %s", audio_p, e)
+        except Exception as e:
+            logger.warning("Media cleanup error: %s", e)
+
     def permanent_delete_note(self, note_id):
         notes = storage.load_notes()
         now = int(time.time() * 1000)
         updated = []
         for n in notes:
             if n["id"] == note_id:
+                self._cleanup_media_files(n)
                 if n.get("isLocal", False):
                     continue  # Local-only: drop immediately
                 else:
@@ -133,6 +155,7 @@ class DesktopApi:
         updated = []
         for n in notes:
             if n.get("deleted", False) and not n.get("purged", False):
+                self._cleanup_media_files(n)
                 if n.get("isLocal", False):
                     continue  # Local notes dropped
                 else:

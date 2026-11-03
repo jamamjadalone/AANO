@@ -7,10 +7,10 @@ const ALLOWED_ORIGIN = "https://jamamjadalone.github.io";
 function getCorsHeaders(request, env) {
   const reqOrigin = request ? request.headers.get("Origin") : null;
   const configuredOrigin = (env && env.ALLOWED_ORIGIN) ? env.ALLOWED_ORIGIN : ALLOWED_ORIGIN;
+  const localhostRegex = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
   const isAllowed = reqOrigin && (
     reqOrigin === configuredOrigin ||
-    reqOrigin.startsWith("http://localhost") ||
-    reqOrigin.startsWith("http://127.0.0.1") ||
+    localhostRegex.test(reqOrigin) ||
     reqOrigin.startsWith("android-app://")
   );
   return {
@@ -22,6 +22,8 @@ function getCorsHeaders(request, env) {
 }
 
 const CORS_HEADERS = getCorsHeaders(null, null);
+
+let schemaReady = false;
 
 export default {
   async fetch(request, env) {
@@ -47,8 +49,11 @@ export default {
       return jsonResponse({ error: "Access Denied: Invalid Client Signature." }, 403, cors);
     }
 
-    // Auto-create required security tables if not exists
-    await ensureSchema(env);
+    // Auto-create required security tables if not exists (memoized)
+    if (!schemaReady) {
+      await ensureSchema(env);
+      schemaReady = true;
+    }
 
     try {
       let res;
@@ -65,7 +70,7 @@ export default {
       } else if (path === "/api/newsletter/subscribe" && request.method === "POST") {
         res = await handleNewsletterSubscribe(request, env, clientIp);
       } else if (path === "/api/newsletter/unsubscribe" && request.method === "POST") {
-        res = await handleNewsletterUnsubscribe(request, env);
+        res = await handleNewsletterUnsubscribe(request, env, clientIp);
       } else {
         return jsonResponse({ error: "Endpoint not found" }, 404, cors);
       }
@@ -586,7 +591,12 @@ async function handleNewsletterSubscribe(request, env, clientIp) {
   });
 }
 
-async function handleNewsletterUnsubscribe(request, env) {
+async function handleNewsletterUnsubscribe(request, env, clientIp) {
+  const rateLimit = await checkIpRateLimit(env, clientIp, "newsletter_unsub", 10, 3600000);
+  if (!rateLimit.allowed) {
+    return jsonResponse({ error: "Too many requests. Please try again later." }, 429);
+  }
+
   const body = await request.json().catch(() => ({}));
   const rawEmail = (body.email || "").trim().toLowerCase();
   if (!rawEmail) {

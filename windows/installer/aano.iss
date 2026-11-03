@@ -1,6 +1,6 @@
 ; Inno Setup Script for AANO Notes Windows Desktop
 #define MyAppName "AANO Notes"
-#define MyAppVersion "1.2.0-beta.2"
+#define MyAppVersion "1.2.0-beta.3"
 #define MyAppPublisher "Jam Amjad Rasheed"
 #define MyAppURL "https://github.com/jamamjadalone"
 #define MyAppExeName "AANO.exe"
@@ -16,7 +16,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={localappdata}\Programs\AANO Notes
 DisableProgramGroupPage=yes
 OutputDir=..\dist\Installer
-OutputBaseFilename=AANO-Setup-v1.2.0-beta.2
+OutputBaseFilename=AANO-Setup-v1.2.0-beta.3
 SetupIconFile=..\assets\aano.ico
 Compression=lzma2/ultra64
 InternalCompressLevel=ultra

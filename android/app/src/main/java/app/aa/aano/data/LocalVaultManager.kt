@@ -159,19 +159,39 @@ object LocalVaultManager {
         val allowedImageExts = setOf("png", "jpg", "jpeg", "webp", "gif")
         val allowedAudioExts = setOf("m4a", "aac", "wav", "mp3", "ogg")
 
+        val maxVaultBytes = 100L * 1024 * 1024
+        val maxFileBytes = 25L * 1024 * 1024
+        var totalBytes = 0L
+        val buffer = ByteArray(8192)
+
         ZipInputStream(BufferedInputStream(inputStream)).use { zis ->
             var entry: ZipEntry? = zis.nextEntry
             while (entry != null) {
                 val name = entry.name
+                var entryBytes = 0L
                 if (name == "notes.json" || name == "local_notes.json") {
-                    jsonContent = zis.readBytes().toString(Charsets.UTF_8)
+                    val baos = java.io.ByteArrayOutputStream()
+                    var len: Int
+                    while (zis.read(buffer).also { len = it } > 0) {
+                        totalBytes += len
+                        entryBytes += len
+                        if (entryBytes > maxFileBytes || totalBytes > maxVaultBytes) break
+                        baos.write(buffer, 0, len)
+                    }
+                    jsonContent = baos.toString("UTF-8")
                 } else if (name.startsWith("media/images/") || name.startsWith("images/")) {
                     val fileName = File(name).name
                     val ext = fileName.substringAfterLast('.', "").lowercase()
                     if (ext in allowedImageExts) {
                         val destFile = File(targetImagesDir, fileName)
                         destFile.outputStream().use { fos ->
-                            zis.copyTo(fos)
+                            var len: Int
+                            while (zis.read(buffer).also { len = it } > 0) {
+                                totalBytes += len
+                                entryBytes += len
+                                if (entryBytes > maxFileBytes || totalBytes > maxVaultBytes) break
+                                fos.write(buffer, 0, len)
+                            }
                         }
                         imagesRestored++
                     }
@@ -181,10 +201,20 @@ object LocalVaultManager {
                     if (ext in allowedAudioExts) {
                         val destFile = File(targetAudioDir, fileName)
                         destFile.outputStream().use { fos ->
-                            zis.copyTo(fos)
+                            var len: Int
+                            while (zis.read(buffer).also { len = it } > 0) {
+                                totalBytes += len
+                                entryBytes += len
+                                if (entryBytes > maxFileBytes || totalBytes > maxVaultBytes) break
+                                fos.write(buffer, 0, len)
+                            }
                         }
                         audioRestored++
                     }
+                }
+                if (totalBytes > maxVaultBytes) {
+                    Log.w("AANO", "Vault restore capped at 100MB safety limit.")
+                    break
                 }
                 zis.closeEntry()
                 entry = zis.nextEntry

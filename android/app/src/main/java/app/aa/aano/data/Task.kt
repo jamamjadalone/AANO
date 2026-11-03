@@ -25,6 +25,8 @@ data class Task(
     val recurrence: Recurrence = Recurrence.NONE,
     val subtasks: List<SubTask> = emptyList(),
     val focusHidden: Boolean = false,
+    val deleted: Boolean = false,
+    val deletedAt: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

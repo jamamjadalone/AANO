@@ -22,13 +22,14 @@ class TaskRepository(private val context: Context) {
 
     /** Active tasks, incomplete first (by priority then due date), completed last. */
     suspend fun getActive(): List<Task> = withContext(Dispatchers.IO) {
-        val active = readTasks().filterNot { it.completed }
-        val done = readTasks().filter { it.completed }
+        val nonDeleted = readTasks().filterNot { it.deleted }
+        val active = nonDeleted.filterNot { it.completed }
+        val done = nonDeleted.filter { it.completed }
         active.sortedWith(activeComparator) + done.sortedByDescending { it.updatedAt }
     }
 
     suspend fun getAll(): List<Task> = withContext(Dispatchers.IO) {
-        readTasks().sortedByDescending { it.updatedAt }
+        readTasks().filterNot { it.deleted }.sortedByDescending { it.updatedAt }
     }
 
     suspend fun getById(id: String): Task? = withContext(Dispatchers.IO) {
@@ -151,18 +152,28 @@ class TaskRepository(private val context: Context) {
     suspend fun delete(id: String) {
         withContext(Dispatchers.IO) {
             TaskReminderReceiver.cancel(context, id)
-            writeTasks(readTasks().filterNot { it.id == id })
+            val now = System.currentTimeMillis()
+            val tasks = readTasks().toMutableList()
+            val index = tasks.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                tasks[index] = tasks[index].copy(deleted = true, deletedAt = now, updatedAt = now)
+                writeTasks(tasks)
+            }
         }
     }
 
     suspend fun clearCompleted() {
         withContext(Dispatchers.IO) {
-            val all = readTasks()
-            val completed = all.filter { it.completed }
-            completed.forEach { task ->
-                TaskReminderReceiver.cancel(context, task.id)
+            val now = System.currentTimeMillis()
+            val all = readTasks().map { task ->
+                if (task.completed) {
+                    TaskReminderReceiver.cancel(context, task.id)
+                    task.copy(deleted = true, deletedAt = now, updatedAt = now)
+                } else {
+                    task
+                }
             }
-            writeTasks(all.filterNot { it.completed })
+            writeTasks(all)
         }
     }
 
@@ -206,6 +217,8 @@ class TaskRepository(private val context: Context) {
             }
         })
         put("focusHidden", task.focusHidden)
+        put("deleted", task.deleted)
+        put("deletedAt", task.deletedAt)
         put("createdAt", task.createdAt)
         put("updatedAt", task.updatedAt)
         put("enc", false)
@@ -217,7 +230,33 @@ class TaskRepository(private val context: Context) {
             val existing = byId[task.id]
             when {
                 existing == null -> byId[task.id] = task
-                task.updatedAt > existing.updatedAt -> byId[task.id] = task
+                task.updatedAt > existing.updatedAt -> {
+                    val isDeleted = if (task.deleted) true else (existing.deleted && existing.deletedAt > task.updatedAt)
+                    val delAt = if (isDeleted) maxOf(existing.deletedAt, task.deletedAt, if (existing.deleted) existing.updatedAt else task.updatedAt) else 0L
+                    byId[task.id] = task.copy(
+                        deleted = isDeleted,
+                        deletedAt = delAt
+                    )
+                }
+                task.updatedAt == existing.updatedAt -> {
+                    val isDeleted = existing.deleted || task.deleted
+                    val delAt = if (isDeleted) maxOf(existing.deletedAt, task.deletedAt) else 0L
+                    byId[task.id] = task.copy(
+                        completed = existing.completed || task.completed,
+                        deleted = isDeleted,
+                        deletedAt = delAt
+                    )
+                }
+                else -> {
+                    // Local is strictly newer: preserve local task, but honor deletion if remote was deleted AFTER local update
+                    if (task.deleted && !existing.deleted && task.deletedAt > existing.updatedAt) {
+                        byId[task.id] = existing.copy(
+                            deleted = true,
+                            deletedAt = task.deletedAt,
+                            updatedAt = task.updatedAt
+                        )
+                    }
+                }
             }
         }
         return byId.values.sortedByDescending { it.updatedAt }
@@ -269,7 +308,7 @@ class TaskRepository(private val context: Context) {
             } else raw
         }
 
-        val subs = JSONArray(obj.optString("subtasks", "[]"))
+        val subs = obj.optJSONArray("subtasks") ?: JSONArray()
         val subtasks = mutableListOf<SubTask>()
         for (i in 0 until subs.length()) {
             val s = subs.getJSONObject(i)
@@ -307,6 +346,8 @@ class TaskRepository(private val context: Context) {
             }.getOrDefault(Recurrence.NONE),
             subtasks = subtasks,
             focusHidden = obj.optBoolean("focusHidden", false),
+            deleted = obj.optBoolean("deleted", false),
+            deletedAt = obj.optLong("deletedAt", 0L),
             createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
             updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
         )
@@ -354,6 +395,8 @@ class TaskRepository(private val context: Context) {
             }
         })
         put("focusHidden", task.focusHidden)
+        put("deleted", task.deleted)
+        put("deletedAt", task.deletedAt)
         put("createdAt", task.createdAt)
         put("updatedAt", task.updatedAt)
         put("enc", true)

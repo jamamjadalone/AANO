@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0-beta.3] - 2026-11-03
+
+### Fixed
+- **AanoDrop Socket EOF Spin (BUG-01)**: Corrected byte read while-loop condition in `AanoDropManager.kt` preventing infinite 100% CPU lock on unexpected peer disconnection.
+- **Task Deletion & LWW Synchronization (BUG-02)**: Added `deleted` and `deletedAt` tombstone fields to `Task.kt` and `TaskRepository.kt`, preventing deleted tasks from resurrecting during Google Drive merges.
+- **Image Editor Out-of-Memory (BUG-03)**: Implemented proportional bitmap downsampling (`inSampleSize`) targeting 1280px in `EditorActivity.kt` with intermediate recycling.
+- **Audio & Microphone Lifecycle Leaks (BUG-04)**: Bound `stopVoiceRecording()` to `onPause()` and guaranteed release of `MediaPlayer` and `MediaRecorder` in `onDestroy()`.
+- **Drop Manager Activity Context Leak (BUG-05)**: Cleared `onNotesReceivedListener` in `HomeActivity.onDestroy()` and bound toast notifications to `applicationContext`.
+- **Windows Media Storage Orphanage (BUG-06)**: Added unlinking of orphaned images and audio attachments upon note permanent deletion and trash purges in `windows/src/api.py`.
+- **Backend CORS Wildcard Fix (BUG-07)**: Enforced strict regex matching for local development origins (`localhost`, `127.0.0.1`) in Cloudflare worker.
+- **Google Drive Remote Wipeout Guard (BUG-08)**: Safeguarded `sync()` in `DriveSyncManager.kt` to abort push cycles if remote files exist but pull encountered download errors.
+- **Android Keystore Keygen Concurrency (BUG-09)**: Synchronized AES key generation in `NoteCipher.kt` to eliminate key overwrites during simultaneous note encryptions.
+- **Orphaned Alarm Cancellations (BUG-10)**: Bound `AlarmManager.cancel()` prior to `PendingIntent.cancel()` across `TaskReminderReceiver.kt` and `NoteReminderReceiver.kt`.
+- **Zip Decompression Denial-of-Service Caps (BUG-11)**: Enforced strict 15MB file / 25MB total package extraction limits in `ShareReceiverActivity.kt` and 100MB vault cap in `LocalVaultManager.kt`.
+- **Cloudflare D1 Schema Memoization (BUG-12)**: Cached schema readiness flag in `backend/worker.js` preventing redundant DDL queries on every request.
+- **Newsletter Unsubscribe Rate Limiting (BUG-13)**: Added IP-based hourly rate limiting to `handleNewsletterUnsubscribe` endpoint.
+- **Windows Drop Concurrency Lock (BUG-14)**: Protected notes read-modify-write cycle in `aano_drop_server.py` with `_storage_lock` re-entrant lock.
+
 ## [1.2.0-beta.2] - 2026-11-02
 
 ### Added

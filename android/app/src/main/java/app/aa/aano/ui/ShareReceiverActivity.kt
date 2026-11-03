@@ -93,14 +93,21 @@ class ShareReceiverActivity : AppCompatActivity() {
 
                 contentResolver.openInputStream(uri)?.use { rawIn ->
                     java.util.zip.ZipInputStream(rawIn).use { zis ->
+                        val maxEntryBytes = 15L * 1024 * 1024 // 15MB max per entry
+                        val maxPackageBytes = 25L * 1024 * 1024 // 25MB max total
+                        var totalBytes = 0L
                         var entry = zis.nextEntry
                         val buffer = ByteArray(8192)
                         while (entry != null) {
                             val name = entry.name
+                            var entryBytes = 0L
                             if (name == "note.json") {
                                 val baos = java.io.ByteArrayOutputStream()
                                 var len: Int
                                 while (zis.read(buffer).also { len = it } > 0) {
+                                    totalBytes += len
+                                    entryBytes += len
+                                    if (entryBytes > maxEntryBytes || totalBytes > maxPackageBytes) break
                                     baos.write(buffer, 0, len)
                                 }
                                 noteJsonStr = baos.toString("UTF-8")
@@ -108,6 +115,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                                 val baos = java.io.ByteArrayOutputStream()
                                 var len: Int
                                 while (zis.read(buffer).also { len = it } > 0) {
+                                    totalBytes += len
+                                    entryBytes += len
+                                    if (entryBytes > maxEntryBytes || totalBytes > maxPackageBytes) break
                                     baos.write(buffer, 0, len)
                                 }
                                 fallbackMdStr = baos.toString("UTF-8")
@@ -115,6 +125,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                                 val baos = java.io.ByteArrayOutputStream()
                                 var len: Int
                                 while (zis.read(buffer).also { len = it } > 0) {
+                                    totalBytes += len
+                                    entryBytes += len
+                                    if (entryBytes > maxEntryBytes || totalBytes > maxPackageBytes) break
                                     baos.write(buffer, 0, len)
                                 }
                                 fallbackTxtStr = baos.toString("UTF-8")
@@ -127,6 +140,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                                     destFile.outputStream().use { fos ->
                                         var len: Int
                                         while (zis.read(buffer).also { len = it } > 0) {
+                                            totalBytes += len
+                                            entryBytes += len
+                                            if (entryBytes > maxEntryBytes || totalBytes > maxPackageBytes) break
                                             fos.write(buffer, 0, len)
                                         }
                                     }
@@ -143,6 +159,9 @@ class ShareReceiverActivity : AppCompatActivity() {
                                     destFile.outputStream().use { fos ->
                                         var len: Int
                                         while (zis.read(buffer).also { len = it } > 0) {
+                                            totalBytes += len
+                                            entryBytes += len
+                                            if (entryBytes > maxEntryBytes || totalBytes > maxPackageBytes) break
                                             fos.write(buffer, 0, len)
                                         }
                                     }
@@ -150,6 +169,10 @@ class ShareReceiverActivity : AppCompatActivity() {
                                         savedAudioPath = destFile.absolutePath
                                     }
                                 }
+                            }
+                            if (totalBytes > maxPackageBytes) {
+                                Log.w("AANO", "Package extraction capped at 25MB safety limit.")
+                                break
                             }
                             zis.closeEntry()
                             entry = zis.nextEntry

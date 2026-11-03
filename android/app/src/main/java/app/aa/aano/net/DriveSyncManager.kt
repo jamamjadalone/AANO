@@ -69,7 +69,7 @@ class DriveSyncManager(
 
     suspend fun pullFromDrive(): Boolean = withContext(Dispatchers.IO) {
         val service = buildDriveService()
-        var pulled = false
+        var errorOccurred = false
         findRemoteFile(service, REMOTE_NOTES_FILE)?.let { remote ->
             try {
                 val bytes = service.files().get(remote.id)
@@ -77,12 +77,11 @@ class DriveSyncManager(
                     .use { it.readBytes() }
                 if (bytes.isNotEmpty()) {
                     notesRepository.importJson(String(bytes, Charsets.UTF_8))
-                    pulled = true
                 }
             } catch (e: Exception) {
                 Log.e("AANO", "Failed to pull notes from Drive: ${e.message}", e)
+                errorOccurred = true
             }
-            Unit
         }
         findRemoteFile(service, REMOTE_TASKS_FILE)?.let { remote ->
             try {
@@ -91,14 +90,13 @@ class DriveSyncManager(
                     .use { it.readBytes() }
                 if (bytes.isNotEmpty()) {
                     tasksRepository.importJson(String(bytes, Charsets.UTF_8))
-                    pulled = true
                 }
             } catch (e: Exception) {
                 Log.e("AANO", "Failed to pull tasks from Drive: ${e.message}", e)
+                errorOccurred = true
             }
-            Unit
         }
-        pulled
+        !errorOccurred
     }
 
     suspend fun pushToDrive(): Boolean = withContext(Dispatchers.IO) {
@@ -110,7 +108,11 @@ class DriveSyncManager(
 
     suspend fun sync(): Boolean = withContext(Dispatchers.IO) {
         try {
-            pullFromDrive()
+            val pullOk = pullFromDrive()
+            if (!pullOk) {
+                Log.w("AANO", "Drive sync aborted: pullFromDrive failed, skipping push to prevent remote data loss.")
+                return@withContext false
+            }
             pushToDrive()
             true
         } catch (e: Exception) {

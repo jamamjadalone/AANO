@@ -87,6 +87,8 @@ class NoteReminderReceiver : BroadcastReceiver() {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
+            val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarm.cancel(pending)
             pending.cancel()
         }
     }

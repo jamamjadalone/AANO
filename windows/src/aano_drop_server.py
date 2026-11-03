@@ -130,20 +130,21 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                             logger.warning("Failed to save dropped image %s: %s", name, e)
 
                 # 2. Save incoming notes to local notes database
-                existing_notes = storage.load_notes()
-                existing_map = {n["id"]: n for n in existing_notes}
-                saved_notes = 0
+                with storage._storage_lock:
+                    existing_notes = storage.load_notes()
+                    existing_map = {n["id"]: n for n in existing_notes}
+                    saved_notes = 0
 
-                for n in incoming_notes:
-                    note_id = n.get("id")
-                    if not note_id:
-                        continue
-                    n["isLocal"] = True
-                    n["updatedAt"] = max(n.get("updatedAt", 0), int(time.time() * 1000))
-                    existing_map[note_id] = n
-                    saved_notes += 1
+                    for n in incoming_notes:
+                        note_id = n.get("id")
+                        if not note_id:
+                            continue
+                        n["isLocal"] = True
+                        n["updatedAt"] = max(n.get("updatedAt", 0), int(time.time() * 1000))
+                        existing_map[note_id] = n
+                        saved_notes += 1
 
-                storage.save_notes(list(existing_map.values()))
+                    storage.save_notes(list(existing_map.values()))
 
                 # 3. Auto-pair with sender if sender provided info
                 sender_name = payload.get("sender_name") or "Android Phone"

@@ -1150,6 +1150,16 @@ class EditorActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        if (isRecording) {
+            stopVoiceRecording()
+        }
+        if (isPlayingVoice || mediaPlayer?.isPlaying == true) {
+            try {
+                mediaPlayer?.pause()
+            } catch (e: Exception) { Log.w("AANO", "MediaPlayer pause error: ${e.message}") }
+            isPlayingVoice = false
+            binding.btnVoicePlayPause.setImageResource(R.drawable.ic_play)
+        }
         if (!isDeleted && loaded && !titleAndContentEmpty()) {
             lifecycleScope.launch {
                 persist()
@@ -1225,34 +1235,55 @@ class EditorActivity : AppCompatActivity() {
                 destFile.absolutePath
             } else {
                 val destFile = File(mediaDir, "img_${System.currentTimeMillis()}_${(100..999).random()}.webp")
+                val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 contentResolver.openInputStream(uri)?.use { input ->
-                    val original = BitmapFactory.decodeStream(input)
-                    if (original != null) {
-                        val maxDim = 1280
-                        val width = original.width
-                        val height = original.height
-                        val scaled = if (width > maxDim || height > maxDim) {
-                            val ratio = width.toFloat() / height.toFloat()
-                            if (width > height) {
-                                Bitmap.createScaledBitmap(original, maxDim, (maxDim / ratio).toInt(), true)
-                            } else {
-                                Bitmap.createScaledBitmap(original, (maxDim * ratio).toInt(), maxDim, true)
-                            }
-                        } else {
-                            original
-                        }
-                        destFile.outputStream().use { out ->
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                                scaled.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, out)
-                            } else {
-                                @Suppress("DEPRECATION")
-                                scaled.compress(Bitmap.CompressFormat.WEBP, 80, out)
-                            }
-                        }
-                        destFile.absolutePath
-                    } else {
-                        null
+                    BitmapFactory.decodeStream(input, null, boundsOpts)
+                }
+                val origW = boundsOpts.outWidth
+                val origH = boundsOpts.outHeight
+                val maxDim = 1280
+                var sampleSize = 1
+                if (origW > maxDim || origH > maxDim) {
+                    val halfW = origW / 2
+                    val halfH = origH / 2
+                    while ((halfW / sampleSize) >= maxDim || (halfH / sampleSize) >= maxDim) {
+                        sampleSize *= 2
                     }
+                }
+                val decodeOpts = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                val decoded = contentResolver.openInputStream(uri)?.use { input ->
+                    BitmapFactory.decodeStream(input, null, decodeOpts)
+                }
+                if (decoded != null) {
+                    val width = decoded.width
+                    val height = decoded.height
+                    val scaled = if (width > maxDim || height > maxDim) {
+                        val ratio = width.toFloat() / height.toFloat()
+                        val res = if (width > height) {
+                            Bitmap.createScaledBitmap(decoded, maxDim, (maxDim / ratio).toInt().coerceAtLeast(1), true)
+                        } else {
+                            Bitmap.createScaledBitmap(decoded, (maxDim * ratio).toInt().coerceAtLeast(1), maxDim, true)
+                        }
+                        if (res != decoded) decoded.recycle()
+                        res
+                    } else {
+                        decoded
+                    }
+                    destFile.outputStream().use { out ->
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            scaled.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, out)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            scaled.compress(Bitmap.CompressFormat.WEBP, 80, out)
+                        }
+                    }
+                    scaled.recycle()
+                    destFile.absolutePath
+                } else {
+                    null
                 }
             }
         } catch (e: Exception) {
@@ -1720,12 +1751,17 @@ class EditorActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (isRecording) {
+            stopVoiceRecording()
+        }
         try {
             mediaRecorder?.release()
         } catch (e: Exception) { Log.w("AANO", "MediaRecorder release error: ${e.message}") }
+        mediaRecorder = null
         try {
             mediaPlayer?.release()
         } catch (e: Exception) { Log.w("AANO", "MediaPlayer release error: ${e.message}") }
+        mediaPlayer = null
         recordingTimerHandler.removeCallbacksAndMessages(null)
         saveHandler.removeCallbacksAndMessages(null)
         super.onDestroy()

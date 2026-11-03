@@ -24,6 +24,7 @@ class NoteCipher {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val IV_LENGTH = 12
         private const val TAG_BITS = 128
+        private val keyLock = Any()
     }
 
     private val keyStore: KeyStore =
@@ -38,20 +39,22 @@ class NoteCipher {
     }
 
     private fun getOrCreateKey(): SecretKey {
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        synchronized(keyLock) {
+            (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
 
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
-        generator.init(
-            KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+            val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE)
+            generator.init(
+                KeyGenParameterSpec.Builder(
+                    KEY_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                )
+                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .setKeySize(256)
+                    .build()
             )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
-                .build()
-        )
-        return generator.generateKey()
+            return generator.generateKey()
+        }
     }
 
     /** Returns base64(IV || ciphertext). Empty string stays empty. */

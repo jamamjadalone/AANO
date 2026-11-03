@@ -122,8 +122,8 @@ class AanoDropManager(private val context: Context) {
                 var p3 = -1
                 var p2 = -1
                 var p1 = -1
-                var b = input.read()
-                while (b != -1) {
+                var b: Int
+                while (input.read().also { b = it } != -1) {
                     headerBytes.write(b)
                     if (p3 == '\r'.code && p2 == '\n'.code && p1 == '\r'.code && b == '\n'.code) {
                         break
