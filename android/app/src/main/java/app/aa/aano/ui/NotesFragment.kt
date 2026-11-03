@@ -40,6 +40,7 @@ import android.widget.TextView
 import android.widget.EditText
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -72,6 +73,7 @@ class NotesFragment : Fragment() {
     private var autoSyncJob: Job? = null
     private var query: String = ""
     private var currentFolder: String? = null
+    private var currentColorFilter: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -150,6 +152,7 @@ class NotesFragment : Fragment() {
                     adapter.clearSelection()
                     loadNotes()
                     buildFolderChips()
+                    buildPaletteChips()
                     Toast.makeText(requireContext(), "${ids.size} notes archived", Toast.LENGTH_SHORT).show()
                     if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                 }
@@ -167,6 +170,7 @@ class NotesFragment : Fragment() {
                             adapter.clearSelection()
                             loadNotes()
                             buildFolderChips()
+                            buildPaletteChips()
                             Toast.makeText(requireContext(), "${ids.size} notes moved to Trash", Toast.LENGTH_SHORT).show()
                             if (prefs.autoSync && cloudSyncManager.isLoggedIn) launchSync(silent = true)
                         }
@@ -177,7 +181,11 @@ class NotesFragment : Fragment() {
         }
 
         binding.fabAdd.setOnClickListener { openEditor(null, currentFolder) }
-        binding.clearFilterBtn.setOnClickListener { filterByFolder(null) }
+        binding.clearFilterBtn.setOnClickListener {
+            currentColorFilter = null
+            filterByFolder(null)
+            buildPaletteChips()
+        }
         binding.emptyView.visibility = View.GONE
 
         binding.searchInput.addTextChangedListener(object : android.text.TextWatcher {
@@ -200,16 +208,25 @@ class NotesFragment : Fragment() {
 
         updateFilterHeader()
         buildFolderChips()
+        buildPaletteChips()
         loadNotes()
     }
 
     private fun updateFilterHeader() {
+        val parts = mutableListOf<String>()
         if (currentFolder == "__LOCAL__") {
-            binding.filterHeaderBar.visibility = View.VISIBLE
-            binding.filterStatusText.text = "⚡ Showing: On-Device Notes (Local Vault)"
+            parts.add("⚡ On-Device Notes (Local Vault)")
         } else if (currentFolder != null) {
+            parts.add("📁 Folder: $currentFolder")
+        }
+        if (currentColorFilter != null) {
+            val label = COLOR_LABELS.getOrNull(currentColorFilter!!) ?: "Custom"
+            parts.add("🎨 Color: $label")
+        }
+
+        if (parts.isNotEmpty()) {
             binding.filterHeaderBar.visibility = View.VISIBLE
-            binding.filterStatusText.text = "📁 Showing notes in: $currentFolder"
+            binding.filterStatusText.text = "Showing: " + parts.joinToString(" • ")
         } else {
             binding.filterHeaderBar.visibility = View.GONE
         }
@@ -261,6 +278,99 @@ class NotesFragment : Fragment() {
                     }
                 }
                 binding.folderChips.addView(chip)
+            }
+        }
+    }
+
+    private fun buildPaletteChips() {
+        lifecycleScope.launch {
+            val colorCounts = repository.getColorCounts()
+            val totalNotes = colorCounts.values.sum()
+            binding.paletteChips.removeAllViews()
+
+            // 1. "All Colors" chip
+            val allChip = com.google.android.material.chip.Chip(requireContext()).apply {
+                text = "🎨 All ($totalNotes)"
+                isCheckable = true
+                isChecked = currentColorFilter == null
+                id = View.generateViewId()
+                setOnClickListener {
+                    binding.paletteChips.check(id)
+                    currentColorFilter = null
+                    updateFilterHeader()
+                    loadNotes()
+                }
+            }
+            binding.paletteChips.addView(allChip)
+
+            // 2. Preset color chips
+            val density = resources.displayMetrics.density
+            EditorActivity.NOTE_COLORS.forEachIndexed { index, colorRes ->
+                val count = colorCounts[index] ?: 0
+                if (count > 0 || currentColorFilter == index) {
+                    val resolvedColor = ContextCompat.getColor(requireContext(), colorRes)
+                    val label = COLOR_LABELS.getOrNull(index) ?: "Color $index"
+                    val chip = com.google.android.material.chip.Chip(requireContext()).apply {
+                        text = "$label ($count)"
+                        isCheckable = true
+                        isChecked = currentColorFilter == index
+                        id = View.generateViewId()
+
+                        chipIcon = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(resolvedColor)
+                            setStroke((1 * density).toInt(), 0x33000000.toInt())
+                            setSize((14 * density).toInt(), (14 * density).toInt())
+                        }
+                        isChipIconVisible = true
+
+                        setOnClickListener {
+                            if (currentColorFilter == index) {
+                                currentColorFilter = null
+                                binding.paletteChips.check(allChip.id)
+                            } else {
+                                currentColorFilter = index
+                                binding.paletteChips.check(id)
+                            }
+                            updateFilterHeader()
+                            loadNotes()
+                        }
+                    }
+                    binding.paletteChips.addView(chip)
+                }
+            }
+
+            // 3. Custom direct ARGB colors (if any)
+            colorCounts.forEach { (colorVal, count) ->
+                if (colorVal !in 0 until EditorActivity.NOTE_COLORS.size && count > 0) {
+                    val chip = com.google.android.material.chip.Chip(requireContext()).apply {
+                        text = "Custom ($count)"
+                        isCheckable = true
+                        isChecked = currentColorFilter == colorVal
+                        id = View.generateViewId()
+
+                        chipIcon = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(colorVal)
+                            setStroke((1 * density).toInt(), 0x33000000.toInt())
+                            setSize((14 * density).toInt(), (14 * density).toInt())
+                        }
+                        isChipIconVisible = true
+
+                        setOnClickListener {
+                            if (currentColorFilter == colorVal) {
+                                currentColorFilter = null
+                                binding.paletteChips.check(allChip.id)
+                            } else {
+                                currentColorFilter = colorVal
+                                binding.paletteChips.check(id)
+                            }
+                            updateFilterHeader()
+                            loadNotes()
+                        }
+                    }
+                    binding.paletteChips.addView(chip)
+                }
             }
         }
     }
@@ -359,6 +469,7 @@ class NotesFragment : Fragment() {
         updateFilterHeader()
         loadNotes()
         buildFolderChips()
+        buildPaletteChips()
         lifecycleScope.launch { repository.purgeExpiredTrash(TRASH_RETENTION_MS) }
         startForegroundAutoSync()
     }
@@ -390,6 +501,7 @@ class NotesFragment : Fragment() {
         if (res.isSuccess) {
             loadNotes()
             buildFolderChips()
+            buildPaletteChips()
         }
     }
 
@@ -740,6 +852,7 @@ class NotesFragment : Fragment() {
                         tags = note.tags
                     )
                     loadNotes()
+                    buildPaletteChips()
                     if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
                         launchSync(silent = true)
                     }
@@ -768,11 +881,16 @@ class NotesFragment : Fragment() {
     private fun loadNotes() {
         loadJob?.cancel()
         loadJob = lifecycleScope.launch {
-            val notes = when {
+            val baseNotes = when {
                 query.isNotBlank() -> repository.search(query)
                 currentFolder == "__LOCAL__" -> repository.getLocalNotes()
                 currentFolder != null -> repository.getVisibleInFolder(currentFolder)
                 else -> repository.getVisible()
+            }
+            val notes = if (currentColorFilter != null) {
+                baseNotes.filter { it.color == currentColorFilter }
+            } else {
+                baseNotes
             }
             adapter.submitList(notes)
             binding.emptyView.visibility =
@@ -803,6 +921,7 @@ class NotesFragment : Fragment() {
                 prefs.syncPending = false
                 loadNotes()
                 buildFolderChips()
+                buildPaletteChips()
                 if (!silent) {
                     Toast.makeText(requireContext(), "AANO Cloud Sync complete ($count items)", Toast.LENGTH_SHORT).show()
                 }
@@ -1224,5 +1343,19 @@ class NotesFragment : Fragment() {
 
     companion object {
         private const val TRASH_RETENTION_MS = 30L * 24 * 60 * 60 * 1000
+        val COLOR_LABELS = listOf(
+            "Default",   // 0
+            "Teal",      // 1
+            "Yellow",    // 2
+            "Green",     // 3
+            "Blue",      // 4
+            "Purple",    // 5
+            "Pink",      // 6
+            "Orange",    // 7
+            "Red",       // 8
+            "Sand",      // 9
+            "Slate",     // 10
+            "Charcoal"   // 11
+        )
     }
 }

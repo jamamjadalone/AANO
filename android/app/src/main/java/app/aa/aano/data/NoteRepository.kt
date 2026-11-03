@@ -133,6 +133,15 @@ class NoteRepository(private val context: Context) {
         counts
     }
 
+    suspend fun getColorCounts(): Map<Int, Int> = withContext(Dispatchers.IO) {
+        val all = readNotes().filter { !it.deleted && !it.archived }
+        val counts = mutableMapOf<Int, Int>()
+        all.forEach { note ->
+            counts[note.color] = (counts[note.color] ?: 0) + 1
+        }
+        counts
+    }
+
     /** Distinct tags in use, for the filter chips. */
     suspend fun tags(): List<String> = withContext(Dispatchers.IO) {
         readNotes().filter { !it.deleted && !it.archived }.flatMap { it.tags }.filter { it.isNotBlank() }.distinct().sorted()
