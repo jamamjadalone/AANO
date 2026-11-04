@@ -560,6 +560,80 @@ body {
   font-weight: 500;
 }
 
+/* Live Color Palette Filter Bar */
+.palette-filter-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 0 14px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.palette-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.palette-swatches-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.palette-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.palette-pill:hover {
+  background: var(--background);
+  color: var(--on-surface);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .palette-pill:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.palette-pill.active {
+  background: var(--brand-light);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--brand);
+}
+
+.palette-pill-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .palette-pill-dot {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.palette-pill-count {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
 /* Notes Grid / Masonry */
 .notes-grid {
   flex: 1;

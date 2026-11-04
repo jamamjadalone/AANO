@@ -185,6 +185,21 @@ const PALETTE_DARK = [
 
 const PASTEL_COLORS = PALETTE_LIGHT;
 
+const PALETTE_LABELS = [
+  "Default",   // 0
+  "Teal",      // 1
+  "Yellow",    // 2
+  "Green",     // 3
+  "Blue",      // 4
+  "Purple",    // 5
+  "Pink",      // 6
+  "Orange",    // 7
+  "Red",       // 8
+  "Sand",      // 9
+  "Slate",     // 10
+  "Charcoal"   // 11
+];
+
 function isCurrentThemeDark() {
   return document.documentElement.getAttribute("data-theme") === "dark";
 }
@@ -232,6 +247,7 @@ let allNotes = [];
 let archivedNotes = [];
 let trashNotes = [];
 let currentFilter = "all"; // "all" | "pinned" | "archived" | "trash" | "folder:<name>"
+let currentColorFilter = null; // null | number
 let currentSearch = "";
 let isListView = false;
 
@@ -588,6 +604,7 @@ function setupEventListeners() {
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
       item.classList.add("active");
+      currentColorFilter = null;
       currentFilter = item.dataset.filter;
       if (item.dataset.filter === "pinned") {
         document.getElementById("currentViewTitle").innerText = "Pinned Notes";
@@ -1473,12 +1490,121 @@ function renderFolders(folders) {
       document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
       document.querySelectorAll(".folder-item").forEach(f => f.classList.remove("active"));
       item.classList.add("active");
+      currentColorFilter = null;
       currentFilter = "folder:" + folder;
       document.getElementById("currentViewTitle").innerText = folder;
       exitSelectionMode();
       await refreshData();
     });
     container.appendChild(item);
+  });
+}
+
+function renderPaletteFilterBar(sourceNotes) {
+  const container = document.getElementById("paletteSwatchesList");
+  if (!container) return;
+  container.replaceChildren();
+
+  const isDark = isCurrentThemeDark();
+  const palette = isDark ? PALETTE_DARK : PALETTE_LIGHT;
+  const notes = sourceNotes || (currentFilter === "archived" ? archivedNotes : (currentFilter === "trash" ? trashNotes : allNotes));
+
+  // Count by color
+  const counts = {};
+  notes.forEach(n => {
+    const c = (n.color !== undefined && n.color !== null) ? n.color : 0;
+    counts[c] = (counts[c] || 0) + 1;
+  });
+
+  // "All" pill
+  const allPill = document.createElement("button");
+  allPill.type = "button";
+  allPill.className = "palette-pill" + (currentColorFilter === null ? " active" : "");
+  
+  const allLabel = document.createElement("span");
+  allLabel.textContent = "🎨 All";
+  allPill.appendChild(allLabel);
+
+  const allCount = document.createElement("span");
+  allCount.className = "palette-pill-count";
+  allCount.textContent = `(${notes.length})`;
+  allPill.appendChild(allCount);
+
+  allPill.addEventListener("click", () => {
+    currentColorFilter = null;
+    renderNotes();
+  });
+  container.appendChild(allPill);
+
+  // Preset color pills
+  PALETTE_LABELS.forEach((label, idx) => {
+    const count = counts[idx] || 0;
+    if (count > 0 || currentColorFilter === idx) {
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "palette-pill" + (currentColorFilter === idx ? " active" : "");
+      
+      const dot = document.createElement("span");
+      dot.className = "palette-pill-dot";
+      dot.style.background = palette[idx] || "#FFFFFF";
+      pill.appendChild(dot);
+
+      const text = document.createElement("span");
+      text.textContent = label;
+      pill.appendChild(text);
+
+      const countSpan = document.createElement("span");
+      countSpan.className = "palette-pill-count";
+      countSpan.textContent = `(${count})`;
+      pill.appendChild(countSpan);
+
+      pill.addEventListener("click", () => {
+        if (currentColorFilter === idx) {
+          currentColorFilter = null;
+        } else {
+          currentColorFilter = idx;
+        }
+        renderNotes();
+      });
+      container.appendChild(pill);
+    }
+  });
+
+  // Custom colors (if any)
+  Object.keys(counts).forEach(cStr => {
+    const cVal = parseInt(cStr, 10);
+    if (!isNaN(cVal) && (cVal < 0 || cVal >= PALETTE_LABELS.length)) {
+      const count = counts[cVal] || 0;
+      if (count > 0) {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "palette-pill" + (currentColorFilter === cVal ? " active" : "");
+        
+        const dot = document.createElement("span");
+        dot.className = "palette-pill-dot";
+        dot.style.background = resolveNoteColor(cVal);
+        pill.appendChild(dot);
+
+        const text = document.createElement("span");
+        text.textContent = "Custom";
+        pill.appendChild(text);
+
+        const countSpan = document.createElement("span");
+        countSpan.className = "palette-pill-count";
+        countSpan.textContent = `(${count})`;
+        pill.appendChild(countSpan);
+
+        pill.addEventListener("click", () => {
+          if (currentColorFilter === cVal) {
+            currentColorFilter = null;
+          } else {
+            currentColorFilter = cVal;
+          }
+          renderNotes();
+        });
+        container.appendChild(pill);
+      }
+    }
   });
 }
 
@@ -1507,6 +1633,7 @@ function renderNotes() {
   }
 
   const sourceNotes = (currentFilter === "archived") ? archivedNotes : (currentFilter === "trash" ? trashNotes : allNotes);
+  renderPaletteFilterBar(sourceNotes);
 
   let filtered = sourceNotes.filter(n => {
     // Nav / Folder filter
@@ -1519,6 +1646,11 @@ function renderNotes() {
     } else if (currentFilter.startsWith("folder:")) {
       const fName = currentFilter.replace("folder:", "");
       if (n.folder !== fName) return false;
+    }
+    // Color filter
+    if (currentColorFilter !== null) {
+      const noteColor = (n.color !== undefined && n.color !== null) ? n.color : 0;
+      if (noteColor !== currentColorFilter) return false;
     }
     // Search query
     if (currentSearch) {
@@ -1540,7 +1672,10 @@ function renderNotes() {
   lastFilteredNotes = filtered;
   updateBatchBar();
 
-  document.getElementById("notesCount").innerText = `${filtered.length} notes`;
+  const countLabel = currentColorFilter !== null
+    ? `${filtered.length} notes • 🎨 ${PALETTE_LABELS[currentColorFilter] || "Custom"}`
+    : `${filtered.length} notes`;
+  document.getElementById("notesCount").innerText = countLabel;
 
   if (filtered.length === 0) {
     emptyState.classList.remove("hidden");
