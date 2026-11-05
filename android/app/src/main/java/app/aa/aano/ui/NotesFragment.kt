@@ -220,7 +220,12 @@ class NotesFragment : Fragment() {
             parts.add("📁 Folder: $currentFolder")
         }
         if (currentColorFilter != null) {
-            val label = COLOR_LABELS.getOrNull(currentColorFilter!!) ?: "Custom"
+            val defaultLabel = COLOR_LABELS.getOrNull(currentColorFilter!!) ?: "Custom"
+            val label = if (currentColorFilter!! in 0 until COLOR_LABELS.size) {
+                prefs.getColorLabel(currentColorFilter!!, defaultLabel)
+            } else {
+                defaultLabel
+            }
             parts.add("🎨 Color: $label")
         }
 
@@ -309,9 +314,11 @@ class NotesFragment : Fragment() {
                 val count = colorCounts[index] ?: 0
                 if (count > 0 || currentColorFilter == index) {
                     val resolvedColor = ContextCompat.getColor(requireContext(), colorRes)
-                    val label = COLOR_LABELS.getOrNull(index) ?: "Color $index"
+                    val defaultLabel = COLOR_LABELS.getOrNull(index) ?: "Color $index"
+                    val label = prefs.getColorLabel(index, defaultLabel)
                     val chip = com.google.android.material.chip.Chip(requireContext()).apply {
                         text = "$label ($count)"
+                        tooltipText = "$label ($count) • Long-press to rename"
                         isCheckable = true
                         isChecked = currentColorFilter == index
                         id = View.generateViewId()
@@ -334,6 +341,10 @@ class NotesFragment : Fragment() {
                             }
                             updateFilterHeader()
                             loadNotes()
+                        }
+                        setOnLongClickListener {
+                            showRenameColorDialog(index, label, defaultLabel)
+                            true
                         }
                     }
                     binding.paletteChips.addView(chip)
@@ -373,6 +384,39 @@ class NotesFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun showRenameColorDialog(colorIndex: Int, currentLabel: String, defaultLabel: String) {
+        val input = android.widget.EditText(requireContext()).apply {
+            setText(currentLabel)
+            setSelection(text.length)
+            hint = defaultLabel
+            setSingleLine(true)
+        }
+        val density = resources.displayMetrics.density
+        val container = android.widget.FrameLayout(requireContext()).apply {
+            val pad = (20 * density).toInt()
+            setPadding(pad, (8 * density).toInt(), pad, 0)
+            addView(input)
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Rename Color Label")
+            .setMessage("Assign a custom category or name to this color:")
+            .setView(container)
+            .setPositiveButton("Save") { _, _ ->
+                val newLabel = input.text.toString().trim()
+                prefs.setColorLabel(colorIndex, newLabel)
+                buildPaletteChips()
+                updateFilterHeader()
+            }
+            .setNeutralButton("Reset to Default") { _, _ ->
+                prefs.setColorLabel(colorIndex, "")
+                buildPaletteChips()
+                updateFilterHeader()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun applyLayoutManager() {

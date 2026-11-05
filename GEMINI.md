@@ -81,6 +81,27 @@
 - **Strict Prohibition for AI & Contributors**: Koi bhi AI agent ya human contributor kabhi bhi broader, sensitive, ya unverified scopes (jaise `DriveScopes.DRIVE`, `DRIVE_APPDATA`, `drive.full`, etc.) code, manifests, ya PRs mein introduce ya propose **NAHI** karega.
 - **Zero App-Verification Risk**: Sensitive/restricted scopes Google OAuth warning screens (*"Google hasn't verified this app"*) trigger karte hain, app verification review demand karte hain, aur user trust destroy karte hain. `DRIVE_FILE` app-created files tak bounded rehta hai, frictionless sign-in deta hai, aur user privacy 100% guarantee karta hai.
 
+## 16. Strict Research & Inspection First Protocol (Zero Assumptions Guardrail)
+- **Zero Casual / Memory Assumptions**: Kisi bhi software, module, tool, framework, ya package (jaise HMA-OSS, Zygisk Next, TrickyStore, Magisk modules, etc.) ke architecture ya backend working mechanism par hawa mein assumption lagana ya purane generic knowledge par depend karna (maslan Zygisk module ko Xposed/LSPosed se mix karna) strictly PROHIBITED hai.
+- **Mandatory Direct Inspection Before Explaining**: Kisi bhi component ke baare mein user ko guide karne, solution propose karne, ya instructions dene se pehle uske files, `module.prop`, configuration, manifest aur binaries ko system par `view_file`, `cat`, ya terminal tools se inspect karna lazmi hai.
+- **Root Cause & Verification**: Jab bhi koi system feature (jaise app hiding, attestation, hook injection) discuss ho, pehle device ka live state aur module type verify karo ke woh standalone Zygisk hai, Xposed module hai, ya kernel/su level tool hai.
+
+## 17. Zero Unsolicited PII & Personal Data Guardrail (Strict Privacy Directive)
+- **Zero Assumption on PII**: User ki zaati details — jaise email address, physical location / city / country, phone number, real name, ya personal contact links — ko KABHI BHI kisi code, README, profile, config, commit message, ya documentation mein khud se assume karke add ya expose NAHI karna.
+- **Explicit Instruction Only**: Personal identity ya location details sirf aur sirf tabhi add hon gi jab user EXPLICITLY aur LAZMI taur par kahe ke "mera yeh email ya yeh city/location add karo". Warna default mein hamesha neutral, generic, ya purely professional placeholders / public usernames use kiye jayen.
+- **Privacy First Across All Projects**: Yeh rule har repository, profile README, documentation, metadata, aur code file par uniformly apply hoga without exception.
+
+## 18. Zero Hardcoded Drive & Local Paths Guardrail (Portability & Anti-Pollution Directive)
+- **Zero Hardcoded Local Paths**: Kisi bhi project, script, automation ya tool mein local drive letters ya machine-specific hardcoded paths (jaise `C:\Users\AS\...`, `D:\...`, `E:\...`) hardcode karna **STRICTLY PROHIBITED** hai.
+- **Dynamic & Relative Path Architecture**: Agar kisi script ya module ko files ya folders read/write karne ki zaroorat ho, toh hamesha **relative paths** ya **dynamic runtime resolution** use hogi:
+  - Python: `Path(__file__).resolve().parent` ya `os.getcwd()`
+  - Node.js: `__dirname` ya `process.cwd()`
+  - Bash: `$(cd "$(dirname "$0")" && pwd)`
+- **Zero Random Folder Creation**: Kisi bhi drive (C:, D:, etc.) ke root ya random directory mein bina explicit user instruction ke koi file ya folder create karna strictly mana hai. Saara kaam sirf aur sirf current workspace repository ya scoped output directory ke andar hoga.
+- **Config / Environment Variables for External Paths**: Agar kisi project ko external drive ya cloud sync path ki lazmi zaroorat ho, toh use hardcode karne ke bajaye hamesha `.env`, user prompt, ya command-line argument (`--output-dir`) ke zariye dynamically accept kiya jaye.
+
+
+
 
 
 

@@ -200,6 +200,75 @@ const PALETTE_LABELS = [
   "Charcoal"   // 11
 ];
 
+let customColorLabels = {};
+
+async function loadCustomColorLabels() {
+  try {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.get_color_labels) {
+      customColorLabels = await window.pywebview.api.get_color_labels() || {};
+    } else {
+      const stored = localStorage.getItem("aano_color_labels");
+      customColorLabels = stored ? JSON.parse(stored) : {};
+    }
+  } catch (_e) {
+    const stored = localStorage.getItem("aano_color_labels");
+    try {
+      customColorLabels = stored ? JSON.parse(stored) : {};
+    } catch (_ex) {
+      customColorLabels = {};
+    }
+  }
+}
+
+function getColorLabel(idx, defaultLabel) {
+  const key = String(idx);
+  if (customColorLabels && customColorLabels[key]) {
+    return customColorLabels[key];
+  }
+  return defaultLabel || PALETTE_LABELS[idx] || `Color ${idx}`;
+}
+
+async function saveCustomColorLabel(idx, newLabel) {
+  const clean = (newLabel || "").trim();
+  const key = String(idx);
+  if (clean) {
+    customColorLabels[key] = clean;
+  } else {
+    delete customColorLabels[key];
+  }
+  try {
+    localStorage.setItem("aano_color_labels", JSON.stringify(customColorLabels));
+  } catch (err) {
+    console.warn("Failed to cache color labels in localStorage:", err);
+  }
+  try {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.set_color_label) {
+      await window.pywebview.api.set_color_label(idx, clean);
+    }
+  } catch (err) {
+    console.warn("Failed to persist color label via API:", err);
+  }
+  renderPaletteFilterBar();
+  renderNotes();
+  renderColorPalette();
+}
+
+async function promptRenameColor(idx) {
+  const def = PALETTE_LABELS[idx] || `Color ${idx}`;
+  const current = getColorLabel(idx, def);
+  const result = await showNativePrompt({
+    title: "Rename Color Label",
+    message: `Set a custom category or name for "${def}":`,
+    placeholder: def,
+    defaultValue: current !== def ? current : "",
+    confirmText: "Save",
+    cancelText: "Cancel"
+  });
+  if (result !== null) {
+    await saveCustomColorLabel(idx, result);
+  }
+}
+
 function isCurrentThemeDark() {
   return document.documentElement.getAttribute("data-theme") === "dark";
 }
@@ -1446,6 +1515,7 @@ async function refreshData() {
   if (!api) return;
 
   try {
+    await loadCustomColorLabels();
     allNotes = await api.get_notes();
     archivedNotes = (await api.get_archived_notes()) || [];
     trashNotes = (await api.get_trashed_notes()) || [];
@@ -1537,12 +1607,14 @@ function renderPaletteFilterBar(sourceNotes) {
   container.appendChild(allPill);
 
   // Preset color pills
-  PALETTE_LABELS.forEach((label, idx) => {
+  PALETTE_LABELS.forEach((defaultLabel, idx) => {
     const count = counts[idx] || 0;
     if (count > 0 || currentColorFilter === idx) {
+      const label = getColorLabel(idx, defaultLabel);
       const pill = document.createElement("button");
       pill.type = "button";
       pill.className = "palette-pill" + (currentColorFilter === idx ? " active" : "");
+      pill.title = `${label} (${count}) • Right-click or double-click to rename`;
       
       const dot = document.createElement("span");
       dot.className = "palette-pill-dot";
@@ -1565,6 +1637,14 @@ function renderPaletteFilterBar(sourceNotes) {
           currentColorFilter = idx;
         }
         renderNotes();
+      });
+      pill.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        promptRenameColor(idx);
+      });
+      pill.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        promptRenameColor(idx);
       });
       container.appendChild(pill);
     }
@@ -1802,14 +1882,19 @@ function renderColorPalette() {
   palette.forEach((color, idx) => {
     const dot = document.createElement("div");
     const isMatched = (typeof editingColor === "number" && editingColor === idx);
+    const label = getColorLabel(idx, PALETTE_LABELS[idx] || `Color ${idx + 1}`);
     dot.className = "color-dot" + (isMatched ? " active" : "");
     dot.style.background = color;
-    dot.title = `Color shade ${idx + 1}`;
+    dot.title = `${label} • Right-click to rename`;
     dot.addEventListener("click", () => {
       editingColor = idx;
       applyEditorColor(color);
       document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("active"));
       dot.classList.add("active");
+    });
+    dot.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      promptRenameColor(idx);
     });
     container.appendChild(dot);
   });

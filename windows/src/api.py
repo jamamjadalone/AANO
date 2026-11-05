@@ -85,6 +85,12 @@ class DesktopApi:
         notes = storage.load_notes()
         return [n for n in notes if n.get("deleted", False) and not n.get("purged", False)]
 
+    def get_color_labels(self):
+        return storage.get_color_labels()
+
+    def set_color_label(self, color_index, label):
+        return storage.set_color_label(color_index, label)
+
     def restore_note(self, note_id):
         notes = storage.load_notes()
         now = int(time.time() * 1000)

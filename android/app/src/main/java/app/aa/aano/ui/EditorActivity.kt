@@ -671,6 +671,8 @@ class EditorActivity : AppCompatActivity() {
         val density = resources.displayMetrics.density
         binding.colorRow.removeAllViews()
         NOTE_COLORS.forEachIndexed { index, colorRes ->
+            val defaultLabel = NotesFragment.COLOR_LABELS.getOrNull(index) ?: "Color $index"
+            val label = prefs.getColorLabel(index, defaultLabel)
             val dot = View(this).apply {
                 val size = (34 * density).toInt()
                 layoutParams = LinearLayout.LayoutParams(size, size).apply {
@@ -688,10 +690,18 @@ class EditorActivity : AppCompatActivity() {
                 }
                 isClickable = true
                 tag = index
+                contentDescription = "$label (Long-press to rename)"
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    tooltipText = "$label (Long-press to rename)"
+                }
                 setOnClickListener {
                     selectedColor = index
                     highlightSelectedColor()
                     triggerAutoSave()
+                }
+                setOnLongClickListener {
+                    showRenameColorDialog(index, defaultLabel)
+                    true
                 }
             }
             binding.colorRow.addView(dot)
@@ -720,6 +730,40 @@ class EditorActivity : AppCompatActivity() {
         binding.colorRow.addView(customBtn)
 
         highlightSelectedColor()
+    }
+
+    private fun showRenameColorDialog(colorIndex: Int, defaultLabel: String) {
+        val currentLabel = prefs.getColorLabel(colorIndex, defaultLabel)
+        val input = EditText(this).apply {
+            setText(currentLabel)
+            setSelection(text.length)
+            hint = defaultLabel
+            setSingleLine(true)
+        }
+        val density = resources.displayMetrics.density
+        val container = android.widget.FrameLayout(this).apply {
+            val pad = (20 * density).toInt()
+            setPadding(pad, (8 * density).toInt(), pad, 0)
+            addView(input)
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Rename Color Label")
+            .setMessage("Assign a custom category or name to this color:")
+            .setView(container)
+            .setPositiveButton("Save") { _, _ ->
+                val newLabel = input.text.toString().trim()
+                prefs.setColorLabel(colorIndex, newLabel)
+                buildColorRow()
+                Toast.makeText(this, "Label saved: ${newLabel.ifBlank { defaultLabel }}", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Reset to Default") { _, _ ->
+                prefs.setColorLabel(colorIndex, "")
+                buildColorRow()
+                Toast.makeText(this, "Label reset to $defaultLabel", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showCustomColorPickerDialog() {

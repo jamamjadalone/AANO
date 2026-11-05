@@ -79,6 +79,20 @@ class Prefs(context: Context) {
         get() = prefs.getString(KEY_APP_THEME, "light") ?: "light"
         set(value) = prefs.edit().putString(KEY_APP_THEME, value).apply()
 
+    fun getColorLabel(colorIndex: Int, defaultLabel: String): String {
+        val raw = prefs.getString("color_label_$colorIndex", null)
+        return if (!raw.isNullOrBlank()) raw.trim() else defaultLabel
+    }
+
+    fun setColorLabel(colorIndex: Int, label: String) {
+        val clean = label.trim()
+        if (clean.isBlank()) {
+            prefs.edit().remove("color_label_$colorIndex").apply()
+        } else {
+            prefs.edit().putString("color_label_$colorIndex", clean).apply()
+        }
+    }
+
     companion object {
         private const val KEY_APP_THEME = "app_theme"
         private const val KEY_AUTO_SYNC = "auto_sync"

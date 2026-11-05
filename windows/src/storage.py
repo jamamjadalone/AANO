@@ -57,6 +57,23 @@ def save_config(cfg):
         except OSError as e:
             logger.error("Failed to save config: %s", e)
 
+def get_color_labels():
+    cfg = load_config()
+    return cfg.get("color_labels", {})
+
+def set_color_label(color_index, label):
+    cfg = load_config()
+    labels = cfg.get("color_labels", {})
+    key = str(color_index)
+    clean = (label or "").strip()
+    if clean:
+        labels[key] = clean
+    else:
+        labels.pop(key, None)
+    cfg["color_labels"] = labels
+    save_config(cfg)
+    return labels
+
 def load_notes():
     with _storage_lock:
         if os.path.exists(NOTES_FILE):
