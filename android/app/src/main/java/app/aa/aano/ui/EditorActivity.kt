@@ -493,6 +493,15 @@ class EditorActivity : AppCompatActivity() {
         binding.btnBullet.setOnClickListener {
             insertBulletPoint()
         }
+
+        // Checklist
+        binding.btnChecklist.setOnClickListener {
+            convertToOrToggleChecklist()
+        }
+        binding.btnChecklist.setOnLongClickListener {
+            showChecklistOptionsMenu()
+            true
+        }
     }
 
     private fun getSelectionRange(): Pair<Int, Int> {
@@ -664,6 +673,151 @@ class EditorActivity : AppCompatActivity() {
         val textStr = editable.toString()
         val lineStart = textStr.lastIndexOf('\n', (start - 1).coerceAtLeast(0)).let { if (it == -1) 0 else it + 1 }
         editable.insert(lineStart, "• ")
+        triggerAutoSave()
+    }
+
+    private fun convertToOrToggleChecklist() {
+        val start = binding.noteContent.selectionStart.coerceAtLeast(0)
+        val end = binding.noteContent.selectionEnd.coerceAtLeast(0)
+        val editable = binding.noteContent.text ?: return
+        val textStr = editable.toString()
+
+        if (start != end) {
+            val selStart = minOf(start, end)
+            val selEnd = maxOf(start, end)
+            val lineStart = textStr.lastIndexOf('\n', (selStart - 1).coerceAtLeast(0)).let { if (it == -1) 0 else it + 1 }
+            val lineEnd = textStr.indexOf('\n', selEnd).let { if (it == -1) textStr.length else it }
+            val sub = textStr.substring(lineStart, lineEnd)
+            val lines = sub.split("\n")
+            val allCheck = lines.filter { it.isNotBlank() }.all { 
+                val t = it.trimStart()
+                t.startsWith("☐ ") || t.startsWith("☑ ") || t.startsWith("[ ] ") || t.startsWith("[x] ") 
+            }
+            val converted = lines.joinToString("\n") { line ->
+                val trimmed = line.trimStart()
+                if (allCheck) {
+                    line.replaceFirst(Regex("^(?:\\s*)(?:☐ |☑ |\\[ \\] |\\[x\\] )"), "")
+                } else if (!trimmed.startsWith("☐ ") && !trimmed.startsWith("☑ ") && !trimmed.startsWith("[ ] ") && !trimmed.startsWith("[x] ")) {
+                    if (trimmed.startsWith("• ")) line.replaceFirst("• ", "☐ ") else "☐ $line"
+                } else {
+                    line
+                }
+            }
+            editable.replace(lineStart, lineEnd, converted)
+        } else {
+            val lineStart = textStr.lastIndexOf('\n', (start - 1).coerceAtLeast(0)).let { if (it == -1) 0 else it + 1 }
+            val lineEnd = textStr.indexOf('\n', start).let { if (it == -1) textStr.length else it }
+            val currentLine = if (lineEnd > lineStart) textStr.substring(lineStart, lineEnd) else ""
+            val trimmed = currentLine.trimStart()
+
+            if (trimmed.startsWith("☐ ")) {
+                val relIdx = currentLine.indexOf("☐ ")
+                editable.replace(lineStart + relIdx, lineStart + relIdx + 2, "☑ ")
+            } else if (trimmed.startsWith("☑ ")) {
+                val relIdx = currentLine.indexOf("☑ ")
+                editable.replace(lineStart + relIdx, lineStart + relIdx + 2, "☐ ")
+            } else if (trimmed.startsWith("[ ] ")) {
+                val relIdx = currentLine.indexOf("[ ] ")
+                editable.replace(lineStart + relIdx, lineStart + relIdx + 4, "[x] ")
+            } else if (trimmed.startsWith("[x] ") || trimmed.startsWith("[X] ")) {
+                val relIdx = currentLine.indexOf(trimmed.substring(0, 4))
+                editable.replace(lineStart + relIdx, lineStart + relIdx + 4, "[ ] ")
+            } else if (trimmed.startsWith("• ")) {
+                val relIdx = currentLine.indexOf("• ")
+                editable.replace(lineStart + relIdx, lineStart + relIdx + 2, "☐ ")
+            } else {
+                editable.insert(lineStart, "☐ ")
+            }
+        }
+        triggerAutoSave()
+    }
+
+    private fun showChecklistOptionsMenu() {
+        val options = arrayOf(
+            "Convert Note to Checklist",
+            "Sort Completed to Bottom",
+            "Mark All Completed",
+            "Uncheck All Items",
+            "Remove All Checkboxes"
+        )
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Checklist Actions")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> convertAllLinesToChecklist()
+                    1 -> autoSinkCompletedChecklistItems()
+                    2 -> setAllChecklistItemsState(completed = true)
+                    3 -> setAllChecklistItemsState(completed = false)
+                    4 -> removeAllCheckboxes()
+                }
+            }
+            .show()
+    }
+
+    private fun convertAllLinesToChecklist() {
+        val editable = binding.noteContent.text ?: return
+        val lines = editable.toString().split("\n")
+        val converted = lines.joinToString("\n") { line ->
+            val trimmed = line.trimStart()
+            if (trimmed.isNotBlank() && !trimmed.startsWith("☐ ") && !trimmed.startsWith("☑ ") && !trimmed.startsWith("[ ] ") && !trimmed.startsWith("[x] ")) {
+                if (trimmed.startsWith("• ")) line.replaceFirst("• ", "☐ ") else "☐ $line"
+            } else {
+                line
+            }
+        }
+        binding.noteContent.setText(converted)
+        triggerAutoSave()
+    }
+
+    private fun autoSinkCompletedChecklistItems() {
+        val editable = binding.noteContent.text ?: return
+        val lines = editable.toString().split("\n")
+        val active = mutableListOf<String>()
+        val completed = mutableListOf<String>()
+
+        for (line in lines) {
+            val trimmed = line.trimStart()
+            if (trimmed.startsWith("☑") || trimmed.startsWith("[x]") || trimmed.startsWith("[X]")) {
+                completed.add(line)
+            } else {
+                active.add(line)
+            }
+        }
+
+        val reordered = (active + completed).joinToString("\n")
+        if (reordered != editable.toString()) {
+            binding.noteContent.setText(reordered)
+            triggerAutoSave()
+            Toast.makeText(this, "Completed items sorted to bottom", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun setAllChecklistItemsState(completed: Boolean) {
+        val editable = binding.noteContent.text ?: return
+        val lines = editable.toString().split("\n")
+        val updated = lines.joinToString("\n") { line ->
+            val trimmed = line.trimStart()
+            if (completed) {
+                if (trimmed.startsWith("☐ ")) line.replaceFirst("☐ ", "☑ ")
+                else if (trimmed.startsWith("[ ] ")) line.replaceFirst("[ ] ", "[x] ")
+                else line
+            } else {
+                if (trimmed.startsWith("☑ ")) line.replaceFirst("☑ ", "☐ ")
+                else if (trimmed.startsWith("[x] ") || trimmed.startsWith("[X] ")) line.replaceFirst(Regex("^\\[[xX]\\] "), "[ ] ")
+                else line
+            }
+        }
+        binding.noteContent.setText(updated)
+        triggerAutoSave()
+    }
+
+    private fun removeAllCheckboxes() {
+        val editable = binding.noteContent.text ?: return
+        val lines = editable.toString().split("\n")
+        val stripped = lines.joinToString("\n") { line ->
+            line.replaceFirst(Regex("^(?:\\s*)(?:☐ |☑ |\\[ \\] |\\[x\\] |\\[X\\] )"), "")
+        }
+        binding.noteContent.setText(stripped)
         triggerAutoSave()
     }
 

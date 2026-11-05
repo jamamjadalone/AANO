@@ -115,10 +115,26 @@ class NotesAdapter(
         val note = notes[position]
         holder.title.text = note.title.ifBlank { "(No title)" }
         val rawContent = note.content
-        holder.preview.text = if (rawContent.contains("<") && rawContent.contains(">")) {
-            android.text.Html.fromHtml(rawContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim().ifBlank { "(Empty note)" }
+        val plainText = if (rawContent.contains("<") && rawContent.contains(">")) {
+            android.text.Html.fromHtml(rawContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
         } else {
-            rawContent.ifBlank { "(Empty note)" }
+            rawContent
+        }
+        val lines = plainText.split("\n")
+        val checklistItems = lines.filter { line ->
+            val t = line.trimStart()
+            t.startsWith("☐ ") || t.startsWith("☑ ") || t.startsWith("[ ] ") || t.startsWith("[x] ") || t.startsWith("[X] ")
+        }
+        if (checklistItems.isNotEmpty()) {
+            val completed = checklistItems.count { line ->
+                val t = line.trimStart()
+                t.startsWith("☑ ") || t.startsWith("[x] ") || t.startsWith("[X] ")
+            }
+            val total = checklistItems.size
+            val prefix = "☑ $completed/$total done\n"
+            holder.preview.text = prefix + plainText.ifBlank { "(Empty note)" }
+        } else {
+            holder.preview.text = plainText.ifBlank { "(Empty note)" }
         }
         holder.date.text = formatFriendlyDate(note.updatedAt)
         holder.pinned.visibility = if (note.pinned) View.VISIBLE else View.GONE
