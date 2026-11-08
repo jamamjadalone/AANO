@@ -12,6 +12,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import sys
 import logging
+import merge_engine
 
 logger = logging.getLogger("AANO.DriveSync")
 
@@ -383,6 +384,17 @@ class GoogleDriveSync:
                     merged["archived"] = is_archived
                     if is_deleted:
                         merged["deletedAt"] = max(existing.get("deletedAt", 0), rn.get("deletedAt", 0), rn_updated)
+                    else:
+                        # 3-way line/block merge to prevent overwriting paragraphs
+                        merged_content, _ = merge_engine.merge_note_contents(
+                            existing.get("content", ""),
+                            rn.get("content", "")
+                        )
+                        merged["content"] = merged_content
+                        # Merge tags & images union
+                        merged["tags"] = list(dict.fromkeys(existing.get("tags", []) + rn.get("tags", [])))
+                        merged["images"] = list(dict.fromkeys(existing.get("images", []) + rn.get("images", [])))
+
                     local_map[rid] = merged
                 else:
                     if existing.get("deleted", False):
@@ -394,6 +406,16 @@ class GoogleDriveSync:
                     existing["archived"] = is_archived
                     if is_deleted:
                         existing["deletedAt"] = max(existing.get("deletedAt", 0), rn.get("deletedAt", 0), ex_updated)
+                    else:
+                        # 3-way line/block merge
+                        merged_content, _ = merge_engine.merge_note_contents(
+                            existing.get("content", ""),
+                            rn.get("content", "")
+                        )
+                        existing["content"] = merged_content
+                        existing["tags"] = list(dict.fromkeys(existing.get("tags", []) + rn.get("tags", [])))
+                        existing["images"] = list(dict.fromkeys(existing.get("images", []) + rn.get("images", [])))
+
                     local_map[rid] = existing
 
         return list(local_map.values())

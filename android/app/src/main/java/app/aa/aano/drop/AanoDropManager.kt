@@ -16,6 +16,7 @@ import android.os.Vibrator
 import android.util.Base64
 import android.util.Log
 import app.aa.aano.data.Note
+import app.aa.aano.data.NoteMergeEngine
 import app.aa.aano.data.NoteRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -353,11 +354,24 @@ class AanoDropManager(private val context: Context) {
                             val nObj = notesArr.getJSONObject(i)
                             val id = nObj.optString("id")
                             if (id.isEmpty()) continue
-                            val note = repository.deserialize(nObj).copy(
-                                isLocal = true,
-                                updatedAt = maxOf(nObj.optLong("updatedAt", System.currentTimeMillis()), System.currentTimeMillis())
-                            )
-                            repository.upsertNote(note)
+                            val incoming = repository.deserialize(nObj)
+                            val existing = repository.getById(id)
+                            val finalNote = if (existing != null && existing.content != incoming.content) {
+                                val (mergedContent, _) = NoteMergeEngine.mergeNoteContent(existing.content, incoming.content)
+                                incoming.copy(
+                                    content = mergedContent,
+                                    tags = (existing.tags + incoming.tags).distinct(),
+                                    images = (existing.images + incoming.images).distinct(),
+                                    isLocal = true,
+                                    updatedAt = maxOf(nObj.optLong("updatedAt", System.currentTimeMillis()), System.currentTimeMillis())
+                                )
+                            } else {
+                                incoming.copy(
+                                    isLocal = true,
+                                    updatedAt = maxOf(nObj.optLong("updatedAt", System.currentTimeMillis()), System.currentTimeMillis())
+                                )
+                            }
+                            repository.upsertNote(finalNote)
                             savedNotes++
                         }
                     }

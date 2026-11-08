@@ -6,6 +6,7 @@ package app.aa.aano.net
 
 import android.content.Context
 import app.aa.aano.data.Note
+import app.aa.aano.data.NoteMergeEngine
 import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
 import app.aa.aano.data.Task
@@ -190,7 +191,15 @@ class CloudSyncManager(
                             val isArchived = if (!obj.has("archived")) localExisting.archived else (parsed.archived || localExisting.archived)
                             val isDeleted = parsed.deleted || localExisting.deleted
                             val delAt = if (isDeleted) maxOf(localExisting.deletedAt, parsed.deletedAt) else 0L
+                            val mergedContent = if (!isDeleted && localExisting.content != parsed.content) {
+                                NoteMergeEngine.mergeNoteContent(localExisting.content, parsed.content).first
+                            } else {
+                                parsed.content
+                            }
                             parsed.copy(
+                                content = mergedContent,
+                                tags = (localExisting.tags + parsed.tags).distinct(),
+                                images = (localExisting.images + parsed.images).distinct(),
                                 archived = isArchived,
                                 deleted = isDeleted,
                                 deletedAt = delAt
