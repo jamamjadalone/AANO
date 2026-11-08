@@ -23,7 +23,11 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
 
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
@@ -48,6 +52,8 @@ jobs:
         working-directory: android
 
       - name: Build Android Release APK
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.http.connectionTimeout=120000"
         run: ./gradlew :app:assembleRelease --no-daemon --stacktrace
         working-directory: android
 
