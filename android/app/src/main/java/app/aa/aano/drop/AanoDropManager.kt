@@ -40,8 +40,11 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.journeyapps.barcodescanner.BarcodeEncoder
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.HttpURLConnection
 import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
@@ -52,6 +55,7 @@ class AanoDropManager(private val context: Context) {
 
     companion object {
         const val DROP_PORT = 8766
+        const val DISCOVERY_PORT = 8767
         const val PROTOCOL_VERSION = "aano-drop-v1"
         private const val TAG = "AANODrop"
 
@@ -68,11 +72,64 @@ class AanoDropManager(private val context: Context) {
     private val repository = NoteRepository(context)
     private val prefs = app.aa.aano.data.Prefs(context)
     private var serverSocket: ServerSocket? = null
+    private var udpBeaconSocket: DatagramSocket? = null
+    private var multicastLock: android.net.wifi.WifiManager.MulticastLock? = null
     private var isRunning = false
     val pin = String.format("%06d", Random.nextInt(100000, 999999))
     val token = "drop_android_${System.currentTimeMillis()}_${Random.nextInt(1000, 9999)}"
 
     var onNotesReceivedListener: ((count: Int, images: Int) -> Unit)? = null
+
+    private fun startUdpBeacon() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                multicastLock = wifiManager?.createMulticastLock("aano_beacon_lock")?.apply {
+                    setReferenceCounted(true)
+                    acquire()
+                }
+                udpBeaconSocket = DatagramSocket(DISCOVERY_PORT).apply {
+                    soTimeout = 1000
+                    broadcast = true
+                }
+                val buf = ByteArray(2048)
+                while (isRunning) {
+                    try {
+                        val packet = DatagramPacket(buf, buf.size)
+                        udpBeaconSocket?.receive(packet) ?: break
+                        val msgStr = String(packet.data, 0, packet.length, Charsets.UTF_8)
+                        val json = JSONObject(msgStr)
+                        if (json.optString("action") == "ping" && json.optString("app") == "aano") {
+                            val resp = JSONObject().apply {
+                                put("action", "pong")
+                                put("app", "aano")
+                                put("device", Build.MODEL)
+                                put("ip", getLocalWifiIp())
+                                put("port", DROP_PORT)
+                                put("type", "android")
+                            }
+                            val respBytes = resp.toString().toByteArray(Charsets.UTF_8)
+                            val respPacket = DatagramPacket(respBytes, respBytes.size, packet.address, packet.port)
+                            udpBeaconSocket?.send(respPacket)
+                        }
+                    } catch (e: java.net.SocketTimeoutException) {
+                        continue
+                    } catch (e: Exception) {
+                        if (isRunning) Log.d(TAG, "UDP beacon loop error: ${e.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not start UDP beacon on port $DISCOVERY_PORT: ${e.message}")
+            } finally {
+                try {
+                    multicastLock?.release()
+                    multicastLock = null
+                } catch (e: Exception) {
+                    Log.d(TAG, "MulticastLock release notice: ${e.message}")
+                }
+            }
+        }
+    }
 
     fun startServer() {
         if (isRunning) return
@@ -81,6 +138,7 @@ class AanoDropManager(private val context: Context) {
                 lockProcessToWifi()
                 serverSocket = ServerSocket(DROP_PORT)
                 isRunning = true
+                startUdpBeacon()
                 Log.i(TAG, "AANO Drop Android server started on port $DROP_PORT with PIN $pin")
 
                 while (isRunning) {
@@ -102,6 +160,14 @@ class AanoDropManager(private val context: Context) {
 
     fun stopServer() {
         isRunning = false
+        try {
+            udpBeaconSocket?.close()
+            udpBeaconSocket = null
+            multicastLock?.release()
+            multicastLock = null
+        } catch (e: Exception) {
+            Log.d(TAG, "Error closing UDP beacon: ${e.message}")
+        }
         try {
             serverSocket?.close()
             serverSocket = null
@@ -651,9 +717,78 @@ class AanoDropManager(private val context: Context) {
     suspend fun discoverNearbyPeers(): List<DiscoveredPeer> = withContext(Dispatchers.IO) {
         val myIp = getLocalWifiIp()
         if (myIp == "127.0.0.1") return@withContext emptyList()
-        val prefix = myIp.substringBeforeLast(".") + "."
         val found = mutableListOf<DiscoveredPeer>()
+        val seen = mutableSetOf<String>()
 
+        // 1. Ultra-fast UDP broadcast probe (<400ms)
+        try {
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            val lock = wifiManager?.createMulticastLock("aano_drop_discovery")?.apply {
+                setReferenceCounted(true)
+                acquire()
+            }
+            val udpSock = DatagramSocket().apply {
+                broadcast = true
+                soTimeout = 350
+            }
+            val pingMsg = JSONObject().apply {
+                put("action", "ping")
+                put("app", "aano")
+                put("device", Build.MODEL)
+            }.toString().toByteArray(Charsets.UTF_8)
+
+            val bcastAddr = InetAddress.getByName("255.255.255.255")
+            udpSock.send(DatagramPacket(pingMsg, pingMsg.size, bcastAddr, DISCOVERY_PORT))
+            if (myIp.contains(".")) {
+                try {
+                    val subnetAddr = InetAddress.getByName(myIp.substringBeforeLast(".") + ".255")
+                    udpSock.send(DatagramPacket(pingMsg, pingMsg.size, subnetAddr, DISCOVERY_PORT))
+                } catch (e: Exception) {
+                    Log.d(TAG, "Subnet bcast notice: ${e.message}")
+                }
+            }
+
+            val buf = ByteArray(2048)
+            val startT = System.currentTimeMillis()
+            while (System.currentTimeMillis() - startT < 350) {
+                try {
+                    val packet = DatagramPacket(buf, buf.size)
+                    udpSock.receive(packet)
+                    val host = packet.address?.hostAddress ?: ""
+                    if (host.isEmpty() || host == myIp || host == "127.0.0.1") continue
+                    val respStr = String(packet.data, 0, packet.length, Charsets.UTF_8)
+                    val json = JSONObject(respStr)
+                    if (json.optString("app") == "aano" && json.optString("action") == "pong") {
+                        val port = json.optInt("port", 8765)
+                        val devName = json.optString("device", host)
+                        val key = "$host:$port"
+                        if (seen.add(key)) {
+                            found.add(DiscoveredPeer(devName, host, port))
+                        }
+                    }
+                } catch (e: java.net.SocketTimeoutException) {
+                    break
+                } catch (e: Exception) {
+                    break
+                }
+            }
+            udpSock.close()
+            try {
+                lock?.release()
+            } catch (e: Exception) {
+                Log.d(TAG, "MulticastLock release notice: ${e.message}")
+            }
+
+            if (found.isNotEmpty()) {
+                Log.i(TAG, "Fast UDP peer discovery found ${found.size} devices")
+                return@withContext found
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Fast UDP discovery skipped: ${e.message}")
+        }
+
+        // 2. Subnet scan fallback
+        val prefix = myIp.substringBeforeLast(".") + "."
         coroutineScope {
             val jobs = mutableListOf<Deferred<Unit>>()
             for (i in 1..254) {
@@ -671,8 +806,11 @@ class AanoDropManager(private val context: Context) {
                                 val json = JSONObject(text)
                                 if (json.optString("protocol") == PROTOCOL_VERSION) {
                                     val name = json.optString("device", json.optString("hostname", "Device"))
+                                    val key = "$host:$port"
                                     synchronized(found) {
-                                        found.add(DiscoveredPeer(name, host, port))
+                                        if (seen.add(key)) {
+                                            found.add(DiscoveredPeer(name, host, port))
+                                        }
                                     }
                                 }
                             }

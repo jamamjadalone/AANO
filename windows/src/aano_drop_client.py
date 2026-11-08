@@ -56,7 +56,11 @@ def send_drop_to_device(target_ip, target_port=8766, notes=None, pin=None, token
                 logger.warning("Failed to encode image %s: %s", fn, e)
 
     import socket
+    import hashlib
     import aano_drop_server
+
+    raw_payload_check = json.dumps({"notes": notes, "images": images_payload}, sort_keys=True).encode("utf-8")
+    payload_hash = hashlib.sha256(raw_payload_check).hexdigest()
 
     payload = {
         "protocol": "aano-drop-v1",
@@ -66,7 +70,8 @@ def send_drop_to_device(target_ip, target_port=8766, notes=None, pin=None, token
         "sender_ip": aano_drop_server.get_local_ip(),
         "sender_port": 8765,
         "notes": notes,
-        "images": images_payload
+        "images": images_payload,
+        "sha256": payload_hash
     }
     data = json.dumps(payload).encode("utf-8")
 
@@ -147,10 +152,18 @@ def pair_with_device(target_ip, target_port=8766, pin=None):
 
 def scan_nearby_devices():
     """
-    Scans the local subnet for active AANO Drop instances (ports 8765 & 8766).
+    Scans for active AANO Drop instances (ports 8765 & 8766).
+    Fast UDP broadcast discovery first (<0.4s), falling back to subnet probe if needed.
     Returns list of discovered devices: [{ name, ip, port }].
     """
     import aano_drop_server
+
+    # 1. Fast UDP Broadcast Probe (sub-50ms response)
+    fast_peers = aano_drop_server.discover_peers(timeout_sec=0.4)
+    if fast_peers:
+        logger.info("AANO Drop radar fast UDP discovery found %d peers", len(fast_peers))
+        return fast_peers
+
     from concurrent.futures import ThreadPoolExecutor
 
     local_ip = aano_drop_server.get_local_ip()

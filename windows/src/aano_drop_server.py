@@ -18,6 +18,7 @@ import storage
 logger = logging.getLogger("AANO.DropServer")
 
 DROP_PORT = 8765
+DISCOVERY_PORT = 8767
 PROTOCOL_VERSION = "aano-drop-v1"
 ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
@@ -220,9 +221,49 @@ class AanoDropServer:
         self.on_receive_callback = on_receive_callback
         self.server = None
         self.thread = None
+        self.udp_sock = None
+        self.udp_thread = None
         self.pin = str(random.randint(100000, 999999))
         self.token = f"drop_sec_{int(time.time())}_{random.randint(1000, 9999)}"
         self._running = False
+
+    def _start_udp_beacon(self):
+        def _beacon_loop():
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind(("0.0.0.0", DISCOVERY_PORT))
+                sock.settimeout(1.0)
+                self.udp_sock = sock
+                while self._running:
+                    try:
+                        data, addr = sock.recvfrom(2048)
+                        msg = json.loads(data.decode("utf-8", errors="ignore"))
+                        if msg.get("action") == "ping" and msg.get("app") == "aano":
+                            resp = {
+                                "action": "pong",
+                                "app": "aano",
+                                "device": socket.gethostname(),
+                                "ip": get_local_ip(),
+                                "port": self.port,
+                                "type": "desktop"
+                            }
+                            sock.sendto(json.dumps(resp).encode("utf-8"), addr)
+                    except socket.timeout:
+                        continue
+                    except Exception as loop_err:
+                        logger.debug("UDP beacon loop notice: %s", loop_err)
+            except Exception as e:
+                logger.warning("Could not bind UDP beacon on port %d: %s", DISCOVERY_PORT, e)
+            finally:
+                if self.udp_sock:
+                    try:
+                        self.udp_sock.close()
+                    except Exception as err:
+                        logger.debug("UDP close notice: %s", err)
+
+        self.udp_thread = threading.Thread(target=_beacon_loop, daemon=True)
+        self.udp_thread.start()
 
     def start(self):
         if self._running:
@@ -234,6 +275,7 @@ class AanoDropServer:
             self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
             self.thread.start()
             self._running = True
+            self._start_udp_beacon()
             logger.info("AANO Drop server listening on port %d with PIN %s", self.port, self.pin)
             return True
         except Exception as e:
@@ -241,13 +283,18 @@ class AanoDropServer:
             return False
 
     def stop(self):
+        self._running = False
+        if self.udp_sock:
+            try:
+                self.udp_sock.close()
+            except Exception as err:
+                logger.debug("UDP close notice: %s", err)
         if self.server:
             try:
                 self.server.shutdown()
                 self.server.server_close()
             except Exception as e:
                 logger.warning("Error stopping drop server: %s", e)
-        self._running = False
 
     def get_paired_peer(self):
         cfg = storage.load_config()
@@ -294,3 +341,51 @@ class AanoDropServer:
             "qr_data": qr_uri,
             "qr_data_url": qr_data_url
         }
+
+def discover_peers(timeout_sec=0.4):
+    """
+    Broadcasts UDP ping on DISCOVERY_PORT to quickly discover active AANO devices on LAN.
+    Returns list of discovered peers: [{"name": ..., "ip": ..., "port": ..., "type": ...}].
+    """
+    peers = []
+    seen = set()
+    my_ip = get_local_ip()
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(timeout_sec)
+        msg = json.dumps({"action": "ping", "app": "aano", "device": socket.gethostname()}).encode("utf-8")
+        sock.sendto(msg, ("255.255.255.255", DISCOVERY_PORT))
+        if "." in my_ip and my_ip != "127.0.0.1":
+            subnet_bcast = my_ip.rsplit(".", 1)[0] + ".255"
+            try:
+                sock.sendto(msg, (subnet_bcast, DISCOVERY_PORT))
+            except Exception as err:
+                logger.debug("Subnet bcast notice: %s", err)
+        start_t = time.time()
+        while time.time() - start_t < timeout_sec:
+            try:
+                data, addr = sock.recvfrom(2048)
+                peer_ip = addr[0]
+                if peer_ip == my_ip or peer_ip == "127.0.0.1":
+                    continue
+                info = json.loads(data.decode("utf-8", errors="ignore"))
+                if info.get("app") == "aano" and info.get("action") == "pong":
+                    key = (peer_ip, int(info.get("port", DROP_PORT)))
+                    if key not in seen:
+                        seen.add(key)
+                        peers.append({
+                            "name": info.get("device", peer_ip),
+                            "ip": peer_ip,
+                            "port": int(info.get("port", DROP_PORT)),
+                            "type": info.get("type", "device")
+                        })
+            except socket.timeout:
+                break
+            except Exception:
+                break
+        sock.close()
+    except Exception as e:
+        logger.debug("discover_peers notice: %s", e)
+    return peers
+
