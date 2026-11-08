@@ -490,9 +490,33 @@ async function handleNewsletterSubscribe(request, env, clientIp) {
       subscribed_at = excluded.subscribed_at
   `).bind(rawEmail, source, now).run();
 
+  // Dispatch Automatic Welcome Confirmation Email via Google Mail Bridge
+  const bridgeUrl = env.MAIL_BRIDGE_URL;
+  const bridgeSecret = env.MAIL_BRIDGE_SECRET;
+
+  if (bridgeUrl && bridgeSecret) {
+    try {
+      await fetch(bridgeUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        redirect: "follow",
+        body: JSON.stringify({
+          key: bridgeSecret,
+          to: rawEmail,
+          type: "newsletter_welcome",
+          subject: "Welcome to AANO Product Updates!",
+          body: "Thank you for subscribing to AANO product updates!\n\nYou're all set. You will receive notifications about new features, security enhancements, and desktop/mobile updates.\n\nWarm regards,\nAANO Team",
+          otp: "WELCOME",
+        }),
+      });
+    } catch (mailErr) {
+      console.warn("Mail bridge welcome dispatch notice:", mailErr);
+    }
+  }
+
   return jsonResponse({
     success: true,
-    message: "Thank you for subscribing to AANO product updates!",
+    message: "Thank you for subscribing to AANO product updates! A confirmation email has been dispatched.",
   });
 }
 
