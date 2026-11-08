@@ -64,7 +64,13 @@ class NoteCipher {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key)
         val iv = cipher.iv
-        val ct = cipher.doFinal(plain.toByteArray(Charsets.UTF_8))
+        val plainBytes = plain.toByteArray(Charsets.UTF_8)
+        val ct: ByteArray
+        try {
+            ct = cipher.doFinal(plainBytes)
+        } finally {
+            java.util.Arrays.fill(plainBytes, 0.toByte())
+        }
         val out = ByteArray(iv.size + ct.size)
         System.arraycopy(iv, 0, out, 0, iv.size)
         System.arraycopy(ct, 0, out, iv.size, ct.size)
@@ -81,6 +87,11 @@ class NoteCipher {
         val ct = input.copyOfRange(IV_LENGTH, input.size)
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, iv))
-        return String(cipher.doFinal(ct), Charsets.UTF_8)
+        val decryptedBytes = cipher.doFinal(ct)
+        return try {
+            String(decryptedBytes, Charsets.UTF_8)
+        } finally {
+            java.util.Arrays.fill(decryptedBytes, 0.toByte())
+        }
     }
 }
