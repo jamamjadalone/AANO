@@ -50,6 +50,11 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URL
+import java.security.MessageDigest
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 import kotlin.random.Random
 
 class AanoDropManager(private val context: Context) {
@@ -318,9 +323,43 @@ class AanoDropManager(private val context: Context) {
                         return@launch
                     }
 
+                    val isEncrypted = payload.optBoolean("encrypted", false)
+                    val imagesArr: JSONArray?
+                    val notesArr: JSONArray?
+
+                    if (isEncrypted) {
+                        val ivB64 = payload.optString("iv_b64")
+                        val dataB64 = payload.optString("data_b64")
+                        if (ivB64.isNotEmpty() && dataB64.isNotEmpty()) {
+                            try {
+                                val iv = Base64.decode(ivB64, Base64.DEFAULT)
+                                val ct = Base64.decode(dataB64, Base64.DEFAULT)
+                                val effectiveKeyPin = if (pin.isNotEmpty()) pin else reqToken
+                                val keyBytes = MessageDigest.getInstance("SHA-256")
+                                    .digest("AANO_DROP_TRANSPORT_KEY_V1:$effectiveKeyPin".toByteArray(Charsets.UTF_8))
+                                val secretKey = SecretKeySpec(keyBytes, "AES")
+                                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                                cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(128, iv))
+                                val plainBytes = cipher.doFinal(ct)
+                                val innerJson = JSONObject(String(plainBytes, Charsets.UTF_8))
+                                imagesArr = innerJson.optJSONArray("images")
+                                notesArr = innerJson.optJSONArray("notes")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Decryption of incoming drop payload failed: ${e.message}")
+                                sendHttpResponse(output, 403, "Forbidden", "application/json", "{\"success\":false,\"error\":\"Payload decryption failed. Invalid PIN or tampering detected.\"}")
+                                return@launch
+                            }
+                        } else {
+                            imagesArr = null
+                            notesArr = null
+                        }
+                    } else {
+                        imagesArr = payload.optJSONArray("images")
+                        notesArr = payload.optJSONArray("notes")
+                    }
+
                     // 1. Process images with extension whitelist
                     val allowedImageExts = setOf("png", "jpg", "jpeg", "webp", "gif")
-                    val imagesArr = payload.optJSONArray("images")
                     var savedImages = 0
                     if (imagesArr != null) {
                         val mediaDir = File(context.filesDir, "media/images").apply { mkdirs() }
@@ -347,7 +386,6 @@ class AanoDropManager(private val context: Context) {
                     }
 
                     // 2. Process notes
-                    val notesArr = payload.optJSONArray("notes")
                     var savedNotes = 0
                     if (notesArr != null) {
                         for (i in 0 until notesArr.length()) {
@@ -637,6 +675,31 @@ class AanoDropManager(private val context: Context) {
         }
 
         val effectivePin = if (!targetPin.isNullOrBlank()) targetPin else prefs.lastDropPin
+        var isEncrypted = false
+        var ivB64: String? = null
+        var dataB64: String? = null
+
+        if (effectivePin.isNotBlank()) {
+            try {
+                val innerJson = JSONObject().apply {
+                    put("notes", notesArr)
+                    put("images", imagesArr)
+                }
+                val iv = ByteArray(12).apply { SecureRandom().nextBytes(this) }
+                val keyBytes = MessageDigest.getInstance("SHA-256")
+                    .digest("AANO_DROP_TRANSPORT_KEY_V1:$effectivePin".toByteArray(Charsets.UTF_8))
+                val secretKey = SecretKeySpec(keyBytes, "AES")
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(128, iv))
+                val ct = cipher.doFinal(innerJson.toString().toByteArray(Charsets.UTF_8))
+
+                ivB64 = Base64.encodeToString(iv, Base64.NO_WRAP)
+                dataB64 = Base64.encodeToString(ct, Base64.NO_WRAP)
+                isEncrypted = true
+            } catch (e: Exception) {
+                Log.w(TAG, "Transport encryption failed: ${e.message}")
+            }
+        }
 
         val payload = JSONObject().apply {
             put("protocol", PROTOCOL_VERSION)
@@ -645,8 +708,16 @@ class AanoDropManager(private val context: Context) {
             put("sender_name", "Android Phone")
             put("sender_ip", getLocalWifiIp())
             put("sender_port", DROP_PORT)
-            put("notes", notesArr)
-            put("images", imagesArr)
+            put("encrypted", isEncrypted)
+            if (isEncrypted) {
+                put("iv_b64", ivB64)
+                put("data_b64", dataB64)
+                put("notes", JSONArray())
+                put("images", JSONArray())
+            } else {
+                put("notes", notesArr)
+                put("images", imagesArr)
+            }
         }
         val payloadBytes = payload.toString().toByteArray(Charsets.UTF_8)
 

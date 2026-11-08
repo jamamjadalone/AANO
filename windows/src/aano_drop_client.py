@@ -62,15 +62,37 @@ def send_drop_to_device(target_ip, target_port=8766, notes=None, pin=None, token
     raw_payload_check = json.dumps({"notes": notes, "images": images_payload}, sort_keys=True).encode("utf-8")
     payload_hash = hashlib.sha256(raw_payload_check).hexdigest()
 
+    effective_pin = str(pin or token or "").strip()
+    encrypted_flag = False
+    iv_b64 = None
+    data_b64 = None
+
+    if effective_pin:
+        try:
+            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+            key = hashlib.sha256(f"AANO_DROP_TRANSPORT_KEY_V1:{effective_pin}".encode("utf-8")).digest()
+            iv = os.urandom(12)
+            inner_bytes = json.dumps({"notes": notes, "images": images_payload}).encode("utf-8")
+            aesgcm = AESGCM(key)
+            ct = aesgcm.encrypt(iv, inner_bytes, None)
+            iv_b64 = base64.b64encode(iv).decode("ascii")
+            data_b64 = base64.b64encode(ct).decode("ascii")
+            encrypted_flag = True
+        except Exception as enc_err:
+            logger.warning("AANO Drop transport encryption failed: %s", enc_err)
+
     payload = {
-        "protocol": "aano-drop-v1",
+        "protocol": "aano-drop-v2",
         "pin": pin,
         "token": token or pin,
         "sender_name": f"Desktop PC ({socket.gethostname()})",
         "sender_ip": aano_drop_server.get_local_ip(),
         "sender_port": 8765,
-        "notes": notes,
-        "images": images_payload,
+        "encrypted": encrypted_flag,
+        "iv_b64": iv_b64,
+        "data_b64": data_b64,
+        "notes": [] if encrypted_flag else notes,
+        "images": [] if encrypted_flag else images_payload,
         "sha256": payload_hash
     }
     data = json.dumps(payload).encode("utf-8")

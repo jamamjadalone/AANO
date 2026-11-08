@@ -136,117 +136,38 @@ class CloudSyncManager(
             return@withContext if (ok) Result.success(notesRepo.getAll().size) else Result.failure(Exception("Google Drive sync failed"))
         }
 
-        val token = prefs.cloudToken ?: return@withContext Result.failure(Exception("Not logged in"))
+        Result.failure(Exception("Google Drive account required for cloud sync. Please sign in with Google."))
+    }
+
+    suspend fun subscribeNewsletter(email: String, source: String = "android_app"): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val localNotes = notesRepo.getAll()
-            val localTasks = tasksRepo.getAll()
-
-            val notesArray = JSONArray()
-            for (n in localNotes) {
-                notesArray.put(JSONObject().apply {
-                    put("id", n.id)
-                    put("title", n.title)
-                    put("content", n.content)
-                    put("color", n.color)
-                    put("folder", n.folder)
-                    put("pinned", n.pinned)
-                    put("updatedAt", n.updatedAt)
-                    put("deleted", n.deleted)
-                    put("archived", n.archived)
-                })
+            val body = JSONObject().apply {
+                put("email", email)
+                put("source", source)
             }
-
-            val tasksArray = JSONArray()
-            for (t in localTasks) {
-                tasksArray.put(JSONObject().apply {
-                    put("id", t.id)
-                    put("title", t.title)
-                    put("completed", t.completed)
-                    put("priority", t.priority.name)
-                    put("dueAt", t.dueAt ?: 0L)
-                    put("updatedAt", t.updatedAt)
-                })
-            }
-
-            val payload = JSONObject().apply {
-                put("notes", notesArray)
-                put("tasks", tasksArray)
-                put("lastSyncTime", prefs.lastCloudSyncTime)
-            }
-
-            val res = postJson("$BASE_URL/api/sync", payload, token)
+            val res = postJson("$BASE_URL/api/newsletter/subscribe", body, null)
             if (res.optBoolean("success", false)) {
-                val serverNotes = res.optJSONArray("notes") ?: JSONArray()
-                val serverTasks = res.optJSONArray("tasks") ?: JSONArray()
-
-                // Merge server notes into local
-                if (serverNotes.length() > 0) {
-                    val incomingNotes = mutableListOf<Note>()
-                    val localNotesMap = localNotes.associateBy { it.id }
-                    for (i in 0 until serverNotes.length()) {
-                        val obj = serverNotes.getJSONObject(i)
-                        val parsed = Note.fromJson(obj)
-                        val localExisting = localNotesMap[parsed.id]
-                        val finalNote = if (localExisting != null) {
-                            val isArchived = if (!obj.has("archived")) localExisting.archived else (parsed.archived || localExisting.archived)
-                            val isDeleted = parsed.deleted || localExisting.deleted
-                            val delAt = if (isDeleted) maxOf(localExisting.deletedAt, parsed.deletedAt) else 0L
-                            val mergedContent = if (!isDeleted && localExisting.content != parsed.content) {
-                                NoteMergeEngine.mergeNoteContent(localExisting.content, parsed.content).first
-                            } else {
-                                parsed.content
-                            }
-                            parsed.copy(
-                                content = mergedContent,
-                                tags = (localExisting.tags + parsed.tags).distinct(),
-                                images = (localExisting.images + parsed.images).distinct(),
-                                archived = isArchived,
-                                deleted = isDeleted,
-                                deletedAt = delAt
-                            )
-                        } else {
-                            parsed
-                        }
-                        incomingNotes.add(finalNote)
-                    }
-                    notesRepo.replaceAll(incomingNotes)
-                }
-
-                // Merge server tasks into local
-                if (serverTasks.length() > 0) {
-                    val incomingTasks = mutableListOf<Task>()
-                    for (i in 0 until serverTasks.length()) {
-                        val obj = serverTasks.getJSONObject(i)
-                        val prioStr = obj.optString("priority", "MEDIUM")
-                        val prio = runCatching { TaskPriority.valueOf(prioStr) }.getOrDefault(TaskPriority.MEDIUM)
-                        val dueAtRaw = obj.optLong("dueAt", 0L)
-                        incomingTasks.add(
-                            Task(
-                                id = obj.getString("id"),
-                                title = obj.optString("title", ""),
-                                completed = obj.optBoolean("completed", false),
-                                priority = prio,
-                                dueAt = if (dueAtRaw > 0) dueAtRaw else null,
-                                updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
-                            )
-                        )
-                    }
-                    tasksRepo.replaceAll(incomingTasks)
-                }
-
-                prefs.lastCloudSyncTime = res.optLong("serverTime", System.currentTimeMillis())
-                Result.success(serverNotes.length() + serverTasks.length())
+                Result.success(res.optString("message", "Subscribed to newsletter"))
             } else {
-                val err = res.optString("error", "Sync error")
-                if (err == "Unauthorized access token." || err.contains("401")) {
-                    prefs.cloudToken = null
-                }
-                Result.failure(Exception(err))
+                Result.failure(Exception(res.optString("error", "Subscription failed")))
             }
         } catch (e: Exception) {
-            if (e.message?.contains("401") == true || e.message?.contains("Unauthorized") == true) {
-                prefs.cloudToken = null
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unsubscribeNewsletter(email: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val body = JSONObject().apply {
+                put("email", email)
             }
+            val res = postJson("$BASE_URL/api/newsletter/unsubscribe", body, null)
+            if (res.optBoolean("success", false)) {
+                Result.success(res.optString("message", "Unsubscribed from newsletter"))
+            } else {
+                Result.failure(Exception(res.optString("error", "Unsubscribe failed")))
+            }
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }

@@ -28,6 +28,45 @@ logger = logging.getLogger("AANO.Storage")
 _storage_lock = threading.RLock()
 _sync_lock = threading.Lock()
 
+import ctypes
+from ctypes import wintypes
+
+class _DATA_BLOB(ctypes.Structure):
+    _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+VAULT_HEADER = b"AANO_VAULT_DPAPI_V1\n"
+
+def _dpapi_encrypt(data: bytes, descr: str = "AANO Secure Vault") -> bytes:
+    """Encrypts plaintext bytes using Windows built-in DPAPI."""
+    if os.name != "nt" or not hasattr(ctypes, "windll") or not hasattr(ctypes.windll, "crypt32"):
+        raise OSError("DPAPI is only supported on Windows NT platforms")
+    in_blob = _DATA_BLOB(len(data), ctypes.cast(ctypes.c_char_p(data), ctypes.POINTER(ctypes.c_char)))
+    out_blob = _DATA_BLOB()
+    if not ctypes.windll.crypt32.CryptProtectData(
+        ctypes.byref(in_blob), descr, None, None, None, 0, ctypes.byref(out_blob)
+    ):
+        raise ctypes.WinError()
+    try:
+        return ctypes.string_at(out_blob.pbData, out_blob.cbData)
+    finally:
+        ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+
+def _dpapi_decrypt(encrypted: bytes) -> bytes:
+    """Decrypts DPAPI-encrypted bytes for the current logged-in Windows user."""
+    if os.name != "nt" or not hasattr(ctypes, "windll") or not hasattr(ctypes.windll, "crypt32"):
+        raise OSError("DPAPI is only supported on Windows NT platforms")
+    in_blob = _DATA_BLOB(len(encrypted), ctypes.cast(ctypes.c_char_p(encrypted), ctypes.POINTER(ctypes.c_char)))
+    out_blob = _DATA_BLOB()
+    if not ctypes.windll.crypt32.CryptUnprotectData(
+        ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob)
+    ):
+        raise ctypes.WinError()
+    try:
+        return ctypes.string_at(out_blob.pbData, out_blob.cbData)
+    finally:
+        ctypes.windll.kernel32.LocalFree(out_blob.pbData)
+
+
 def load_config():
     with _storage_lock:
         if os.path.exists(CONFIG_FILE):
@@ -78,9 +117,15 @@ def load_notes():
     with _storage_lock:
         if os.path.exists(NOTES_FILE):
             try:
-                with open(NOTES_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, OSError) as e:
+                with open(NOTES_FILE, "rb") as f:
+                    raw = f.read()
+                if raw.startswith(VAULT_HEADER):
+                    enc_blob = raw[len(VAULT_HEADER):]
+                    decrypted = _dpapi_decrypt(enc_blob)
+                    return json.loads(decrypted.decode("utf-8"))
+                else:
+                    return json.loads(raw.decode("utf-8"))
+            except (json.JSONDecodeError, OSError, Exception) as e:
                 backup_path = f"{NOTES_FILE}.corrupt.{int(time.time())}.bak"
                 logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving corrupt file at %s", e, backup_path)
                 try:
@@ -115,8 +160,17 @@ def save_notes(notes):
     with _storage_lock:
         tmp = NOTES_FILE + ".tmp"
         try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(notes, f, indent=2, ensure_ascii=False)
+            json_text = json.dumps(notes, indent=2, ensure_ascii=False)
+            json_bytes = json_text.encode("utf-8")
+            try:
+                enc_data = _dpapi_encrypt(json_bytes)
+                payload = VAULT_HEADER + enc_data
+            except Exception as enc_err:
+                logger.warning("DPAPI encryption fallback to plaintext: %s", enc_err)
+                payload = json_bytes
+
+            with open(tmp, "wb") as f:
+                f.write(payload)
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(tmp, NOTES_FILE)
@@ -230,96 +284,18 @@ def sync_with_cloud():
                         save_config(cfg)
                 return res
 
-        # Priority 2: Legacy Cloudflare Worker Sync (Fallback)
-        token = cfg.get("cloud_token")
-        if not token:
-            return {"success": False, "error": "Not logged in"}
-
-        notes = load_notes()
-        payload = {
-            "notes": notes,
-            "tasks": [],
-            "lastSyncTime": cfg.get("last_sync_time", 0)
-        }
-
-        res = post_json("/api/sync", payload, token)
-        if res.get("success"):
-            server_notes = res.get("notes", [])
-            with _storage_lock:
-                live_local_notes = load_notes()
-                local_map = {n["id"]: n for n in live_local_notes}
-                if server_notes:
-                    for sn in server_notes:
-                        existing = local_map.get(sn["id"])
-                        if not existing:
-                            local_map[sn["id"]] = sn
-                        else:
-                            is_archived = bool(existing.get("archived", False) or sn.get("archived", False))
-                            sn_updated = sn.get("updatedAt", 0)
-                            ex_updated = existing.get("updatedAt", 0)
-
-                            is_purged = bool(sn.get("purged", False) or (existing and existing.get("purged", False)))
-                            if is_purged:
-                                del_at = max(existing.get("deletedAt", 0) if existing else 0, sn.get("deletedAt", 0), sn_updated, ex_updated)
-                                up_at = max(sn_updated, ex_updated)
-                                base = dict(existing if existing else sn)
-                                base["title"] = ""
-                                base["content"] = ""
-                                base["images"] = []
-                                base["audioUri"] = None
-                                base["deleted"] = True
-                                base["purged"] = True
-                                base["deletedAt"] = del_at
-                                base["updatedAt"] = up_at
-                                base["isLocal"] = False
-                                local_map[sn["id"]] = base
-                                continue
-
-                            if sn_updated >= ex_updated:
-                                if sn.get("deleted", False):
-                                    is_deleted = True
-                                else:
-                                    is_deleted = bool(existing.get("deleted", False) and existing.get("deletedAt", 0) > sn_updated)
-
-                                merged_note = dict(sn)
-                                merged_note["deleted"] = is_deleted
-                                merged_note["archived"] = is_archived
-                                merged_note["purged"] = False
-                                if is_deleted:
-                                    merged_note["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), sn_updated)
-                                local_map[sn["id"]] = merged_note
-                            else:
-                                if existing.get("deleted", False):
-                                    is_deleted = True
-                                else:
-                                    is_deleted = bool(sn.get("deleted", False) and sn.get("deletedAt", 0) > ex_updated)
-
-                                existing["deleted"] = is_deleted
-                                existing["archived"] = is_archived
-                                existing["purged"] = False
-                                if is_deleted:
-                                    existing["deletedAt"] = max(existing.get("deletedAt", 0), sn.get("deletedAt", 0), ex_updated)
-                                local_map[sn["id"]] = existing
-                    live_local_notes = list(local_map.values())
-                    save_notes(live_local_notes)
-
-                cfg = load_config()
-                cfg["last_sync_time"] = res.get("serverTime", int(time.time() * 1000))
-                cfg["session_expired"] = False
-                save_config(cfg)
-            return {"success": True, "count": len(server_notes), "mode": "cloudflare"}
-        else:
-            err_msg = res.get("error", "Sync failed")
-            if err_msg == "Unauthorized access token." or "401" in str(err_msg):
-                with _storage_lock:
-                    cfg = load_config()
-                    cfg["cloud_token"] = None
-                    cfg["session_expired"] = True
-                    save_config(cfg)
-                return {"success": False, "error": "Session expired. Please sign in again.", "auth_expired": True}
-            return {"success": False, "error": err_msg}
+        # Google Drive is the sole and authoritative cloud sync provider
+        return {"success": False, "error": "Google Drive sync is not connected. Sign in with your Google Account to sync."}
     finally:
         _sync_lock.release()
+
+def subscribe_newsletter(email: str, source: str = "windows_app") -> dict:
+    """Subscribes an email to the AANO product newsletter via Cloudflare Worker."""
+    return post_json("/api/newsletter/subscribe", {"email": email, "source": source})
+
+def unsubscribe_newsletter(email: str) -> dict:
+    """Unsubscribes an email from the AANO product newsletter via Cloudflare Worker."""
+    return post_json("/api/newsletter/unsubscribe", {"email": email})
 
 
 

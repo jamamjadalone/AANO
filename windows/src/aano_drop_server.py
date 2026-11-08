@@ -8,6 +8,7 @@ import time
 import base64
 import random
 import socket
+import hashlib
 import logging
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -106,8 +107,34 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                     self.wfile.write(b'{"success":false,"error":"Invalid or missing PIN or Token"}')
                     return
 
-                incoming_notes = payload.get("notes", [])
-                incoming_images = payload.get("images", [])
+                if payload.get("encrypted"):
+                    iv_b64 = payload.get("iv_b64")
+                    data_b64 = payload.get("data_b64")
+                    if iv_b64 and data_b64:
+                        try:
+                            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+                            dec_pin = str(server.pin or incoming_token or "").strip()
+                            key = hashlib.sha256(f"AANO_DROP_TRANSPORT_KEY_V1:{dec_pin}".encode("utf-8")).digest()
+                            iv = base64.b64decode(iv_b64)
+                            ct = base64.b64decode(data_b64)
+                            aesgcm = AESGCM(key)
+                            inner_bytes = aesgcm.decrypt(iv, ct, None)
+                            inner_obj = json.loads(inner_bytes.decode("utf-8"))
+                            incoming_notes = inner_obj.get("notes", [])
+                            incoming_images = inner_obj.get("images", [])
+                        except Exception as dec_err:
+                            logger.warning("Decryption of incoming drop payload failed: %s", dec_err)
+                            self.send_response(403)
+                            self._send_cors_headers()
+                            self.end_headers()
+                            self.wfile.write(b'{"success":false,"error":"Payload decryption failed. Invalid PIN or tampering detected."}')
+                            return
+                    else:
+                        incoming_notes = []
+                        incoming_images = []
+                else:
+                    incoming_notes = payload.get("notes", [])
+                    incoming_images = payload.get("images", [])
 
                 # 1. Save incoming images to local images directory with extension whitelisting
                 saved_images = 0

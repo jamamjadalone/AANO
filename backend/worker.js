@@ -63,10 +63,6 @@ export default {
         res = await handleVerifyAndRegister(request, env, clientIp);
       } else if (path === "/api/reset-password" && request.method === "POST") {
         res = await handleResetPassword(request, env, clientIp);
-      } else if (path === "/api/login" && request.method === "POST") {
-        res = await handleLogin(request, env, clientIp);
-      } else if (path === "/api/sync" && request.method === "POST") {
-        res = await handleSync(request, env);
       } else if (path === "/api/newsletter/subscribe" && request.method === "POST") {
         res = await handleNewsletterSubscribe(request, env, clientIp);
       } else if (path === "/api/newsletter/unsubscribe" && request.method === "POST") {
@@ -128,17 +124,6 @@ async function ensureSchema(env) {
     );
   `).run();
 
-
-  try {
-    await env.DB.prepare("ALTER TABLE notes ADD COLUMN archived INTEGER DEFAULT 0;").run();
-  } catch (err) {
-    console.debug("Schema migration notice (archived):", err.message || err);
-  }
-  try {
-    await env.DB.prepare("ALTER TABLE notes ADD COLUMN purged INTEGER DEFAULT 0;").run();
-  } catch (err) {
-    console.debug("Schema migration notice (purged):", err.message || err);
-  }
 }
 
 // -------------------------------------------------------------
@@ -476,86 +461,6 @@ async function authUser(request, env) {
     return null;
   }
   return null;
-}
-
-// -------------------------------------------------------------
-// 5. BI-DIRECTIONAL SYNC (Strict Notes only, with Size Caps)
-// -------------------------------------------------------------
-async function handleSync(request, env) {
-  const userId = await authUser(request, env);
-  if (!userId) {
-    return jsonResponse({ error: "Unauthorized access token." }, 401);
-  }
-
-  const payload = await request.json();
-  const clientNotes = payload.notes || [];
-  const lastSyncTime = Number(payload.lastSyncTime) || 0;
-
-  // Process Notes (Max 500KB limit per note, up to 500 notes per batch)
-  for (const n of clientNotes.slice(0, 500)) {
-    const title = String(n.title || "").substring(0, 250);
-    const content = String(n.content || "").substring(0, 500000); // 500KB safe cap
-    const folder = String(n.folder || "").substring(0, 50);
-    const color = Number(n.color) || 0;
-    const pinned = n.pinned ? 1 : 0;
-    const deleted = n.deleted ? 1 : 0;
-    const archived = n.archived ? 1 : 0;
-    const purged = n.purged ? 1 : 0;
-    const updatedAt = Number(n.updatedAt) || Date.now();
-    const noteId = String(n.id || "").substring(0, 64);
-
-    if (!noteId) continue;
-
-    // Security Check: Verify note ownership globally before upsert (IDOR prevention)
-    const existing = await env.DB.prepare("SELECT user_id, updated_at FROM notes WHERE id = ?")
-      .bind(noteId)
-      .first();
-
-    if (existing && existing.user_id !== userId) {
-      // Reject cross-account collision; note belongs to another user
-      continue;
-    }
-
-    if (!existing || updatedAt > existing.updated_at) {
-      await env.DB.prepare(`
-        INSERT INTO notes (id, user_id, title, content, color, folder, pinned, updated_at, deleted, archived, purged)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET
-          title = excluded.title,
-          content = excluded.content,
-          color = excluded.color,
-          folder = excluded.folder,
-          pinned = excluded.pinned,
-          updated_at = excluded.updated_at,
-          deleted = excluded.deleted,
-          archived = excluded.archived,
-          purged = excluded.purged
-        WHERE notes.user_id = excluded.user_id
-      `).bind(noteId, userId, title, content, color, folder, pinned, updatedAt, deleted, archived, purged).run();
-    }
-  }
-
-  // Fetch updated notes from server
-  const serverNotes = await env.DB.prepare(
-    "SELECT id, title, content, color, folder, pinned, updated_at, deleted, archived, purged FROM notes WHERE user_id = ? AND updated_at > ?"
-  ).bind(userId, lastSyncTime).all();
-
-  return jsonResponse({
-    success: true,
-    serverTime: Date.now(),
-    notes: (serverNotes.results || []).map((r) => ({
-      id: r.id,
-      title: r.title,
-      content: r.content,
-      color: r.color,
-      folder: r.folder,
-      pinned: r.pinned === 1,
-      updatedAt: r.updated_at,
-      deleted: r.deleted === 1,
-      archived: r.archived === 1,
-      purged: r.purged === 1,
-    })),
-  });
 }
 
 // -------------------------------------------------------------
