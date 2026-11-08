@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0-beta.4] - 2026-11-08
+
+### Added
+- **AANO Drop 2.0 (Zero-Friction UDP Beacon Radar)**: Instant sub-50ms peer discovery on `DISCOVERY_PORT = 8767` across Android and Windows Desktop on local Wi-Fi without manual QR code pairing.
+- **PIN-Derived AES-256-GCM LAN Transport Encryption**: End-to-end authenticated payload encryption over local Wi-Fi sockets, eliminating eavesdropping and packet sniffing on public networks.
+- **CRDT 3-Way Line & Block Merge Engine**: Non-destructive conflict-free reconciliation for concurrent offline edits across phone and PC without overwriting data.
+- **Clean-Room Rich-Text AST Block Editor**: Abstract Syntax Tree hierarchy with moveable thought blocks (`Alt+ArrowUp/Down`), Blockquotes (`>`), and Code blocks (`pre`).
+- **Windows DPAPI Vault Encryption at Rest**: Native Windows Data Protection API (`crypt32.dll`) integration protecting `%APPDATA%/AANO/notes.json` with user-bound hardware encryption.
+- **Dual Note Mode Instant Checklists**: 1-Tap interactive checklist toggle with automatic bottom-sinking for completed items.
+- **SQLite FTS Full-Text Search**: Sub-millisecond indexed offline search across note titles and content.
+- **Custom Palette Labels & Live Filter Bar**: User-defined custom tags for all 12 note palette colors with instant real-time filtering.
+- **Dedicated Cloudflare Newsletter Engine**: Production email update subscription engine with automatic welcome dispatch via official Google Mail Bridge.
+
+### Changed
+- Re-architected Cloud Sync to treat user-owned Google Drive OAuth (`drive.file`) as the exclusive, uncompromised cloud sync provider.
+- Retired legacy notes sync from Cloudflare Worker and D1 database, permanently eliminating centralized note retention.
+- Re-aligned Windows Inno Setup installer with automatic DPAPI vault upgrade upon legacy JSON detection.
+
+### Fixed
+- Enforced transient memory zeroization (`Arrays.fill(bytes, 0)`) across Android `NoteCipher` to eliminate decrypted plaintext memory persistence.
+- Stripped sensitive verbose and debug logs from release builds in Android `proguard-rules.pro`.
+- Resolved tombstone Last-Write-Wins (LWW) reconciliation preventing restored notes from being erroneously re-deleted.
+
 ## [1.2.0-beta.3] - 2026-11-03
 
 ### Fixed
