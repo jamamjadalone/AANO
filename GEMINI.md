@@ -100,8 +100,25 @@
 - **Zero Random Folder Creation**: Kisi bhi drive (C:, D:, etc.) ke root ya random directory mein bina explicit user instruction ke koi file ya folder create karna strictly mana hai. Saara kaam sirf aur sirf current workspace repository ya scoped output directory ke andar hoga.
 - **Config / Environment Variables for External Paths**: Agar kisi project ko external drive ya cloud sync path ki lazmi zaroorat ho, toh use hardcode karne ke bajaye hamesha `.env`, user prompt, ya command-line argument (`--output-dir`) ke zariye dynamically accept kiya jaye.
 
+## 19. Andrej Karpathy Engineering Guardrails (Zero Wasted Cycles & Anti-Hallucination)
+- **1. Think Before Coding (Never Assume, Never Hide Confusion)**:
+  - Kabhi bhi hawa mein ya assumptions par code mat badlo. Agar requirement ambiguous ho ya DOM/flow uncertain ho, seedha pehle inspect karo aur explicitly clarify karo.
+  - Blind trial-and-error changes commit karna strictly prohibited hai. Har change se pehle actual cause samjho.
+- **2. Simplicity First (Minimum Code That Solves The Problem)**:
+  - Jo pucha gaya ho sirf wahi implement karo — koi speculative feature ya unnecessary complex abstraction nahi banani.
+  - Har code piece ko senior-engineer lens se evaluate karo: "Agar yeh 15 lines mein ho sakta hai toh 100 lines ka bulky logic kyun likhna?" Overcomplication zero tolerance policy hai.
+- **3. Surgical Changes (Touch Only What You Must)**:
+  - Sirf wahi lines aur functions touch karo jo directly problem solve karne ke liye zaroori hon.
+  - Working code, adjacent functions, comments ya formatting ko bina wajah "improve" ya alter mat karo. Har changed line direct user request se trace honi chahiye.
+  - Kabhi broad ya global selectors na likho jo scope se bahar ke elements ko hijack kar lein (e.g. background elements affecting active views).
+- **4. Goal-Driven Execution & Loop Until Verified**:
+  - Har task ka verifiable success criteria define karo:
+    1. Step -> verify check
+    2. Step -> empirical evidence
+  - Empirical proof ke bina task complete mark mat karo. Weak criteria par hawa mein aagay barhna mana hai.
 
-
-
-
-
+## 20. CI/CD & Remote Action Triage Protocol (Zero Local Detour Directive)
+- **Zero Local Fallback Assumption**: Jab user kisi CI/CD workflow, GitHub Actions, cloud build, ya remote automation ke failure ya error ka zikr kare, toh **local machine par switch karke local build ya tests chalana STRICTLY PROHIBITED** hai. Local machine par shift hone se na runner ka issue solve hota hai aur na hi user ka waqt bachta hai.
+- **Mandatory Remote Log Inspection First**: Agent ka sab se pehla aur fori qadam remote runner/job ke exact failure logs inspect karna hoga (`gh run view --log-failed` ya direct workflow job logs) taake exact remote failure point aur runner context pata chal sake.
+- **Surgical Remote/Environment Diagnosis**: Failure ka root cause remote runner context (jaise network timeouts, missing runner secrets, Ubuntu/runner toolchain version, caching, ProGuard, ya workflow YAML steps) ke mutabiq identify aur fix kiya jayega.
+- **Loop Until Remote Verified**: Fix commit aur push karne ke baad verification hamesha remote CI workflow (`gh run list` / `gh run view`) ke live passing status (`conclusion: success`) se confirm hogi.

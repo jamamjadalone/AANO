@@ -40,8 +40,13 @@ class ShareReceiverActivity : AppCompatActivity() {
                     handleDropPairing(uri)
                     return
                 }
-                // Directly open and unpack .aano note package
-                handleOpenPackage(uri)
+                if (isAanoPackageUri(uri)) {
+                    // Directly open and unpack .aano note package
+                    handleOpenPackage(uri)
+                    return
+                }
+                // Plain text, markdown, or JSON document ingestion
+                handleOpenDocument(uri, type)
                 return
             }
         }
@@ -401,5 +406,95 @@ class ShareReceiverActivity : AppCompatActivity() {
         }
         startActivity(homeIntent)
         finish()
+    }
+
+    private fun handleOpenDocument(uri: Uri, mimeType: String?) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val maxChars = 250_000
+                val fileName = resolveFileName(uri) ?: "Imported Note"
+                val cleanTitle = fileName.substringBeforeLast(".")
+
+                val stringBuilder = StringBuilder()
+                var truncated = false
+
+                contentResolver.openInputStream(uri)?.use { stream ->
+                    val reader = java.io.BufferedReader(java.io.InputStreamReader(stream, Charsets.UTF_8))
+                    val buffer = CharArray(8192)
+                    var readCount: Int
+                    while (reader.read(buffer).also { readCount = it } != -1) {
+                        if (stringBuilder.length + readCount > maxChars) {
+                            val remaining = maxChars - stringBuilder.length
+                            if (remaining > 0) {
+                                stringBuilder.append(buffer, 0, remaining)
+                            }
+                            truncated = true
+                            break
+                        } else {
+                            stringBuilder.append(buffer, 0, readCount)
+                        }
+                    }
+                }
+
+                if (stringBuilder.isBlank()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ShareReceiverActivity, "Document is empty", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                    return@launch
+                }
+
+                if (truncated) {
+                    stringBuilder.append("\n\n[Content Truncated - Exceeds 250KB Safe Limit]")
+                }
+
+                val now = System.currentTimeMillis()
+                val targetNote = Note(
+                    id = UUID.randomUUID().toString(),
+                    title = cleanTitle,
+                    content = stringBuilder.toString(),
+                    folder = "Imported",
+                    color = 0,
+                    createdAt = now,
+                    updatedAt = now,
+                    isLocal = true
+                )
+
+                NoteRepository(this@ShareReceiverActivity).upsertNote(targetNote)
+
+                withContext(Dispatchers.Main) {
+                    val editIntent = Intent(this@ShareReceiverActivity, EditorActivity::class.java).apply {
+                        putExtra(EditorActivity.EXTRA_NOTE_ID, targetNote.id)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    startActivity(editIntent)
+                    Toast.makeText(this@ShareReceiverActivity, "⚡ Opened in AANO Notes", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            } catch (e: Exception) {
+                Log.e("AANO", "Failed to open document: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ShareReceiverActivity, "Failed to read document: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        }
+    }
+
+    private fun resolveFileName(uri: Uri): String? {
+        if (uri.scheme == "content") {
+            try {
+                contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            return cursor.getString(nameIndex)
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return uri.lastPathSegment?.substringAfterLast('/')
     }
 }
