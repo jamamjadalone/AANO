@@ -2220,6 +2220,71 @@ function setupFormattingToolbar() {
         }
       }
     });
+
+    const btnCode = document.getElementById("btnInsertCodeBlock");
+    if (btnCode) {
+      btnCode.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.execCommand("formatBlock", false, "pre");
+        editorContent.focus();
+      });
+    }
+
+    editorContent.addEventListener("keydown", (e) => {
+      if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        moveCurrentBlock(e.key === "ArrowUp" ? -1 : 1);
+      }
+    });
+  }
+}
+
+function moveCurrentBlock(direction) {
+  const content = document.getElementById("editorContent");
+  if (!content) return;
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+
+  let curBlock = sel.anchorNode;
+  while (curBlock && curBlock.parentNode !== content) {
+    curBlock = curBlock.parentNode;
+  }
+  if (curBlock && curBlock.parentNode === content && curBlock !== content) {
+    if (direction < 0 && curBlock.previousElementSibling) {
+      content.insertBefore(curBlock, curBlock.previousElementSibling);
+      return;
+    }
+    if (direction > 0 && curBlock.nextElementSibling) {
+      content.insertBefore(curBlock.nextElementSibling, curBlock);
+      return;
+    }
+  }
+
+  const text = content.innerText || "";
+  const lines = text.split("\n");
+  if (lines.length <= 1) return;
+  const range = sel.getRangeAt(0);
+  const preCaretRange = range.cloneRange();
+  preCaretRange.selectNodeContents(content);
+  preCaretRange.setEnd(range.endContainer, range.endOffset);
+  const caretPos = preCaretRange.toString().length;
+
+  let charCount = 0;
+  let activeLineIdx = 0;
+  for (let i = 0; i < lines.length; i++) {
+    charCount += lines[i].length + 1;
+    if (caretPos <= charCount) {
+      activeLineIdx = i;
+      break;
+    }
+  }
+
+  const targetLineIdx = activeLineIdx + direction;
+  if (targetLineIdx >= 0 && targetLineIdx < lines.length) {
+    const temp = lines[activeLineIdx];
+    lines[activeLineIdx] = lines[targetLineIdx];
+    lines[targetLineIdx] = temp;
+    content.innerText = lines.join("\n");
   }
 }
 

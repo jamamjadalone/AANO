@@ -13,6 +13,7 @@ import logging
 import storage
 import aano_drop_server
 import aano_drop_client
+import block_model
 
 logger = logging.getLogger("AANO.API")
 
@@ -316,6 +317,37 @@ class DesktopApi:
         storage.save_notes(notes)
         self._async_auto_sync()
         return {"success": True}
+
+    def get_note_blocks(self, note_id):
+        notes = storage.load_notes()
+        for n in notes:
+            if n.get("id") == note_id:
+                return {"success": True, "blocks": block_model.parse_blocks(n.get("content", ""))}
+        return {"success": False, "error": "Note not found", "blocks": []}
+
+    def save_note_blocks(self, note_id, blocks):
+        markdown_text = block_model.blocks_to_markdown(blocks)
+        return self.save_note(note_id, {"content": markdown_text})
+
+    def format_note_markdown(self, note_id):
+        notes = storage.load_notes()
+        for n in notes:
+            if n.get("id") == note_id:
+                title = n.get("title") or "Untitled"
+                blocks = block_model.parse_blocks(n.get("content", ""))
+                md = f"# {title}\n\n" + block_model.blocks_to_markdown(blocks)
+                return {"success": True, "title": title, "content": md, "filename": f"{title}.md"}
+        return {"success": False, "error": "Note not found"}
+
+    def format_note_plain_text(self, note_id):
+        notes = storage.load_notes()
+        for n in notes:
+            if n.get("id") == note_id:
+                title = n.get("title") or "Untitled"
+                blocks = block_model.parse_blocks(n.get("content", ""))
+                txt = f"{title}\n\n" + block_model.blocks_to_plain_text(blocks)
+                return {"success": True, "title": title, "content": txt, "filename": f"{title}.txt"}
+        return {"success": False, "error": "Note not found"}
 
     def batch_delete_notes(self, note_ids):
         id_set = set(note_ids)

@@ -63,6 +63,8 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import app.aa.aano.R
 import app.aa.aano.data.Note
+import app.aa.aano.data.NoteBlock
+import app.aa.aano.data.NoteBlockParser
 import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
 import app.aa.aano.data.TaskRepository
@@ -502,6 +504,51 @@ class EditorActivity : AppCompatActivity() {
             showChecklistOptionsMenu()
             true
         }
+    }
+
+    fun moveSelectedBlock(direction: Int) {
+        val editable = binding.noteContent.text ?: return
+        val text = editable.toString()
+        val lines = text.lines().toMutableList()
+        if (lines.size <= 1) return
+
+        val selStart = binding.noteContent.selectionStart.coerceAtLeast(0)
+        var charCount = 0
+        var activeLineIdx = 0
+        for (i in lines.indices) {
+            charCount += lines[i].length + 1
+            if (selStart <= charCount) {
+                activeLineIdx = i
+                break
+            }
+        }
+
+        val targetLineIdx = activeLineIdx + direction
+        if (targetLineIdx in lines.indices) {
+            val temp = lines[activeLineIdx]
+            lines[activeLineIdx] = lines[targetLineIdx]
+            lines[targetLineIdx] = temp
+            val newContent = lines.joinToString("\n")
+            binding.noteContent.setText(newContent)
+            var newCursor = 0
+            for (i in 0 until targetLineIdx) {
+                newCursor += lines[i].length + 1
+            }
+            binding.noteContent.setSelection(newCursor.coerceAtMost(newContent.length))
+            triggerAutoSave()
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (event?.isAltPressed == true && keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP) {
+            moveSelectedBlock(-1)
+            return true
+        }
+        if (event?.isAltPressed == true && keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN) {
+            moveSelectedBlock(1)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private fun getSelectionRange(): Pair<Int, Int> {
@@ -2348,11 +2395,13 @@ class EditorActivity : AppCompatActivity() {
     private fun exportCurrentNoteToTxt() {
         val currentTitle = binding.noteTitle.text.toString().trim()
         val currentContent = binding.noteContent.text.toString()
-        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+        val rawText = if (currentContent.contains("<") && currentContent.contains(">")) {
             android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
         } else {
             currentContent.trim()
         }
+        val blocks = NoteBlockParser.parse(rawText)
+        val plainContent = NoteBlockParser.toPlainText(blocks)
         val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
         val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
 
@@ -2399,18 +2448,20 @@ class EditorActivity : AppCompatActivity() {
     private fun exportCurrentNoteToMd() {
         val currentTitle = binding.noteTitle.text.toString().trim()
         val currentContent = binding.noteContent.text.toString()
-        val plainContent = if (currentContent.contains("<") && currentContent.contains(">")) {
+        val rawText = if (currentContent.contains("<") && currentContent.contains(">")) {
             android.text.Html.fromHtml(currentContent, android.text.Html.FROM_HTML_MODE_COMPACT).toString().trim()
         } else {
             currentContent.trim()
         }
+        val blocks = NoteBlockParser.parse(rawText)
+        val formattedMd = NoteBlockParser.toMarkdown(blocks)
         val title = if (currentTitle.isNotBlank()) currentTitle else "Untitled Note"
         val cleanTitle = title.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(30).ifBlank { "Note" }
 
         val sb = StringBuilder()
         sb.append("# ").append(title).append("\n\n")
         sb.append("> **Folder:** ").append(selectedFolder.ifBlank { "General" }).append("\n\n")
-        sb.append(plainContent).append("\n")
+        sb.append(formattedMd).append("\n")
 
         if (attachedImages.isNotEmpty() || !attachedAudioUri.isNullOrBlank()) {
             sb.append("\n\n---\n### Attachments\n\n")
