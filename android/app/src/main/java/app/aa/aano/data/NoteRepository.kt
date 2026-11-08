@@ -29,6 +29,7 @@ class NoteRepository(private val context: Context) {
     private val notesFile: File = File(context.filesDir, "notes.json")
     private val cipher = NoteCipher()
     private val prefs = Prefs(context)
+    private val ftsIndex = NoteFtsIndex(context)
 
     suspend fun getAll(): List<Note> = withContext(Dispatchers.IO) {
         readNotes()
@@ -49,15 +50,21 @@ class NoteRepository(private val context: Context) {
     suspend fun search(query: String): List<Note> = withContext(Dispatchers.IO) {
         val q = query.trim()
         val all = readNotes().filter { !it.deleted && !it.archived }
-        if (q.isEmpty()) sortNotes(all)
-        else sortNotes(
+        if (q.isEmpty()) return@withContext sortNotes(all)
+
+        // Lightning-fast SQLite FTS index lookup
+        val ftsIds = ftsIndex.search(q).toSet()
+        val results = if (ftsIds.isNotEmpty()) {
+            all.filter { it.id in ftsIds }
+        } else {
             all.filter {
                 it.title.contains(q, ignoreCase = true) ||
                     it.content.contains(q, ignoreCase = true) ||
                     it.folder.contains(q, ignoreCase = true) ||
                     it.tags.any { tag -> tag.contains(q, ignoreCase = true) }
             }
-        )
+        }
+        sortNotes(results)
     }
 
     /** Distinct folder names in use + custom folders. */
@@ -653,6 +660,11 @@ class NoteRepository(private val context: Context) {
                     }
                 }
                 memoryCache = fixed.toMutableList()
+                try {
+                    ftsIndex.syncAll(fixed)
+                } catch (fe: Exception) {
+                    Log.w("AANO", "Failed to init FTS index: ${fe.message}")
+                }
                 if (needsResave) {
                     val array = JSONArray()
                     fixed.forEach { array.put(serializeNote(it)) }
@@ -753,6 +765,11 @@ class NoteRepository(private val context: Context) {
                     tmpFile.delete()
                 }
                 memoryCache = notes.toMutableList()
+                try {
+                    ftsIndex.syncAll(notes)
+                } catch (fe: Exception) {
+                    Log.w("AANO", "Failed to update FTS index on write: ${fe.message}")
+                }
                 true
             } catch (e: Exception) {
                 Log.e("AANO", "writeNotes failed: ${e.message}", e)

@@ -85,6 +85,31 @@ class DesktopApi:
         notes = storage.load_notes()
         return [n for n in notes if n.get("deleted", False) and not n.get("purged", False)]
 
+    def search_notes_fts(self, query):
+        clean = (query or "").strip()
+        notes = self.get_notes()
+        if not clean:
+            return notes
+        try:
+            try:
+                from . import fts_index
+            except ImportError:
+                import fts_index
+            matching_ids = set(fts_index.search(clean))
+            if matching_ids:
+                return [n for n in notes if n.get("id") in matching_ids]
+        except Exception as e:
+            logger.debug("FTS search fallback triggered: %s", e)
+
+        q_lower = clean.lower()
+        return [
+            n for n in notes
+            if q_lower in (n.get("title") or "").lower()
+            or q_lower in (n.get("content") or "").lower()
+            or q_lower in (n.get("folder") or "").lower()
+            or any(q_lower in str(tag).lower() for tag in n.get("tags", []))
+        ]
+
     def get_color_labels(self):
         return storage.get_color_labels()
 

@@ -318,6 +318,7 @@ let trashNotes = [];
 let currentFilter = "all"; // "all" | "pinned" | "archived" | "trash" | "folder:<name>"
 let currentColorFilter = null; // null | number
 let currentSearch = "";
+let ftsMatchIds = null;
 let isListView = false;
 
 let isSelectionMode = false;
@@ -559,7 +560,18 @@ function setupEventListeners() {
     currentSearch = e.target.value.trim().toLowerCase();
     btnClearSearch.classList.toggle("hidden", !currentSearch);
     clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
+    searchDebounceTimer = setTimeout(async () => {
+      if (currentSearch && window.pywebview && window.pywebview.api && window.pywebview.api.search_notes_fts) {
+        try {
+          const matches = await window.pywebview.api.search_notes_fts(currentSearch);
+          ftsMatchIds = new Set((matches || []).map(m => m.id));
+        } catch (err) {
+          console.debug("FTS search fallback triggered:", err);
+          ftsMatchIds = null;
+        }
+      } else {
+        ftsMatchIds = null;
+      }
       renderNotes();
     }, 120);
   });
@@ -568,6 +580,7 @@ function setupEventListeners() {
     clearTimeout(searchDebounceTimer);
     searchInput.value = "";
     currentSearch = "";
+    ftsMatchIds = null;
     btnClearSearch.classList.add("hidden");
     renderNotes();
   });
@@ -1732,13 +1745,17 @@ function renderNotes() {
       const noteColor = (n.color !== undefined && n.color !== null) ? n.color : 0;
       if (noteColor !== currentColorFilter) return false;
     }
-    // Search query
+    // Search query (accelerated by SQLite FTS5)
     if (currentSearch) {
-      const matchTitle = (n.title || "").toLowerCase().includes(currentSearch);
-      const plainText = stripHtml(n.content || "").toLowerCase();
-      const matchContent = plainText.includes(currentSearch);
-      const matchFolder = (n.folder || "").toLowerCase().includes(currentSearch);
-      if (!matchTitle && !matchContent && !matchFolder) return false;
+      if (ftsMatchIds && ftsMatchIds.size > 0) {
+        if (!ftsMatchIds.has(n.id)) return false;
+      } else {
+        const matchTitle = (n.title || "").toLowerCase().includes(currentSearch);
+        const plainText = stripHtml(n.content || "").toLowerCase();
+        const matchContent = plainText.includes(currentSearch);
+        const matchFolder = (n.folder || "").toLowerCase().includes(currentSearch);
+        if (!matchTitle && !matchContent && !matchFolder) return false;
+      }
     }
     return true;
   });

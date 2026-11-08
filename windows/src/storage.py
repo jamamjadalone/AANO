@@ -120,6 +120,14 @@ def save_notes(notes):
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(tmp, NOTES_FILE)
+            try:
+                try:
+                    from . import fts_index
+                except ImportError:
+                    import fts_index
+                fts_index.sync_all(notes)
+            except Exception as fe:
+                logger.debug("FTS sync_all deferred: %s", fe)
             return True
         except OSError as e:
             logger.error("Failed to save notes: %s", e)
