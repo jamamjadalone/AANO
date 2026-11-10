@@ -1,4 +1,4 @@
-﻿// Document Ingestion Reader for text, markdown and JSON documents.
+// Document Ingestion Reader for text, markdown and JSON documents.
 // Copyright (C) 2026 Jam Amjad Rasheed
 // Licensed under GPL-3.0-or-later.
 
@@ -80,7 +80,8 @@ object DocumentIngestionReader {
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.d("DocumentIngestion", "Resolve file name notice: ${e.message}")
             }
         }
         return uri.lastPathSegment?.substringAfterLast('/')

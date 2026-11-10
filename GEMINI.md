@@ -133,3 +133,5 @@
 - **Strict File Size Cap**: Maximum 300 lines per file (`No file over 300 lines`). Agar file 300 lines cross kare toh use focused modular sub-components ya helper files mein split karo.
 - **Check Existing First**: Before writing anything new, check if it already exists to prevent duplication and bloat.
 - **Folder-by-Folder Safe Refactoring**: Cleanup one folder at a time, strictly verifying that behavior does not break and without changing what the app does.
+- **Token-Saver Architecture Index First**: Har task ya inquiry shuru karne se pehle agent ko poore codebase ko grep/read karne ke bajaye hamesha `ARCHITECTURE_INDEX.md` consult karna hoga taake target file direct identify ho sake aur prompt token quota 80%-90% save ho sake.
+- **Automated Verification**: Kisi bhi code change ke baad `python aano_dev.py check` aur `python aano_dev.py map` chalana lazmi hai taake line caps, anti-slop, aur architecture index auto-synced rahein.

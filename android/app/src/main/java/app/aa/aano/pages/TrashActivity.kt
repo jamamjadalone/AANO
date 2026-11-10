@@ -4,10 +4,9 @@
 
 package app.aa.aano.pages
 
+import android.util.Log
 import app.aa.aano.components.adapters.*
 import app.aa.aano.components.views.*
-
-import app.aa.aano.ui.*
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -106,7 +105,8 @@ class TrashActivity : AppCompatActivity() {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     cloudSyncManager.syncNow()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.d("TrashActivity", "Background sync notice: ${e.message}")
                 }
             }
         }
