@@ -106,10 +106,10 @@ android/app/src/main/java/app/aa/aano/
 ### `components/adapters/` (List & Grid Bindings)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NotesAdapter.kt` | 214 | Main notes grid adapter with staggered cards, colors, and badge tags. |
+| `NotesAdapter.kt` | 216 | Main notes grid adapter with staggered cards, colors, and badge tags. |
 | `ArchiveAdapter.kt` | 76 | Archived notes list adapter with unarchive action callbacks. |
 | `TrashAdapter.kt` | 59 | Recycled notes list adapter with restore and permanent purge callbacks. |
-| `TasksAdapter.kt` | 99 | Checklist task items adapter with strike-through completion and priority dots. |
+| `TasksAdapter.kt` | 126 | Checklist task items adapter with strike-through completion and priority dots. |
 | `FoldersAdapter.kt` | 85 | Folder grid card adapter with note count badges. |
 | `FocusAdapter.kt` | 52 | FocusFragment reading cards list adapter. |
 
@@ -129,7 +129,7 @@ android/app/src/main/java/app/aa/aano/
 | `NoteMergeEngine.kt` | 70 | 3-way conflict-free block and line merging engine for notes. |
 | `LocalVaultManager.kt` | 276 | Offline-only encrypted note storage vault with separate Keystore key. |
 | `TaskRepository.kt` | 275 | To-Do task JSON persistence repository and priority sorting. |
-| `Task.kt` | 32 | Task, SubTask, Priority, and Recurrence data models. |
+| `Task.kt` | 56 | Task, SubTask, Priority, and Recurrence data models. |
 | `TaskSerializer.kt` | 106 | Task JSON serializer/deserializer with encryption spans. |
 | `TaskMergeEngine.kt` | 46 | Conflict-free sync merge engine for tasks. |
 | `Prefs.kt` | 112 | SharedPreferences wrapper for user settings, themes, sort order, and accounts. |

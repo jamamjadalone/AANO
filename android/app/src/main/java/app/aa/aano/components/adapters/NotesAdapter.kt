@@ -125,15 +125,17 @@ class NotesAdapter(
         val lines = plainText.split("\n")
         val checklistItems = lines.filter { line ->
             val t = line.trimStart()
+            t.startsWith("- [ ] ") || t.startsWith("- [x] ") || t.startsWith("- [X] ") ||
             t.startsWith("☐ ") || t.startsWith("☑ ") || t.startsWith("[ ] ") || t.startsWith("[x] ") || t.startsWith("[X] ")
         }
-        if (checklistItems.isNotEmpty()) {
+        if (checklistItems.isNotEmpty() || note.type == Note.TYPE_CHECKLIST) {
             val completed = checklistItems.count { line ->
                 val t = line.trimStart()
+                t.startsWith("- [x] ") || t.startsWith("- [X] ") ||
                 t.startsWith("☑ ") || t.startsWith("[x] ") || t.startsWith("[X] ")
             }
             val total = checklistItems.size
-            val prefix = "☑ $completed/$total done\n"
+            val prefix = if (total > 0) "☑ $completed/$total done\n" else ""
             holder.preview.text = prefix + plainText.ifBlank { "(Empty note)" }
         } else {
             holder.preview.text = plainText.ifBlank { "(Empty note)" }

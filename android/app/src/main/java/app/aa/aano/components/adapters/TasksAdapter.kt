@@ -50,8 +50,10 @@ class TasksAdapter(
         holder.check.isChecked = task.completed
         if (task.completed) {
             holder.title.paintFlags = holder.title.paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
+            holder.title.alpha = 0.45f
         } else {
             holder.title.paintFlags = holder.title.paintFlags and android.graphics.Paint.STRIKE_THRU_TEXT_FLAG.inv()
+            holder.title.alpha = 1.0f
         }
 
         holder.prio.text = when (task.priority) {
@@ -87,7 +89,11 @@ class TasksAdapter(
             )
         }
 
-        holder.check.setOnClickListener { holder.check.isChecked = task.completed; onToggle(task) }
+        holder.check.setOnClickListener {
+            holder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            holder.check.isChecked = task.completed
+            onToggle(task)
+        }
         holder.itemView.setOnClickListener { onClick(task) }
         holder.itemView.setOnLongClickListener { onLongClick(task); true }
     }
@@ -96,4 +102,25 @@ class TasksAdapter(
         tasks = newTasks
         notifyDataSetChanged()
     }
+
+    fun moveItem(from: Int, to: Int): Boolean {
+        if (from !in tasks.indices || to !in tasks.indices) return false
+        val list = tasks.toMutableList()
+        val item = list.removeAt(from)
+        list.add(to, item)
+        tasks = list
+        notifyItemMoved(from, to)
+        return true
+    }
+
+    fun removeItem(position: Int): Task? {
+        if (position !in tasks.indices) return null
+        val list = tasks.toMutableList()
+        val item = list.removeAt(position)
+        tasks = list
+        notifyItemRemoved(position)
+        return item
+    }
+
+    fun getCurrentList(): List<Task> = tasks
 }

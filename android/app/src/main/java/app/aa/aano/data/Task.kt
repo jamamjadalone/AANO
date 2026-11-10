@@ -30,3 +30,27 @@ data class Task(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+data class ChecklistItem(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val text: String,
+    val isChecked: Boolean = false,
+    val orderIndex: Int = 0,
+    val isSubTask: Boolean = false
+) {
+    fun toMarkdown(): String {
+        val indent = if (isSubTask) "  " else ""
+        val check = if (isChecked) "- [x] " else "- [ ] "
+        return "$indent$check$text"
+    }
+
+    companion object {
+        fun fromMarkdown(line: String, order: Int = 0): ChecklistItem {
+            val isSub = line.startsWith("  ") || line.startsWith("\t")
+            val trimmed = line.trim()
+            val isChecked = trimmed.startsWith("- [x] ", ignoreCase = true) || trimmed.startsWith("☑") || trimmed.startsWith("[x] ", ignoreCase = true)
+            val cleanText = trimmed.replaceFirst(Regex("^(?:-\\s*\\[[xX ]\\]\\s*|☐\\s*|☑\\s*|\\[[xX ]\\]\\s*)"), "")
+            return ChecklistItem(text = cleanText, isChecked = isChecked, orderIndex = order, isSubTask = isSub)
+        }
+    }
+}
