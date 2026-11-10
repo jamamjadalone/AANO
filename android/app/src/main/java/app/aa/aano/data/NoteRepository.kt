@@ -12,7 +12,7 @@ import org.json.JSONObject
 
 enum class SortBy { UPDATED_DESC, CREATED_DESC, TITLE_ASC, PINNED_FIRST }
 
-class NoteRepository(context: Context) {
+class NoteRepository(val context: Context) {
 
     private val storage = NoteStorageDelegate(context)
     private val prefs = Prefs(context)

@@ -64,7 +64,7 @@ object EditorPersistenceDelegate {
         }
         val cleanFolder = folder.trim()
 
-        if (noteId != null) {
+        val savedId = if (noteId != null) {
             repository.update(
                 id = noteId,
                 title = title,
@@ -92,6 +92,8 @@ object EditorPersistenceDelegate {
             )
             created.id
         }
+        app.aa.aano.service.NoteWidgetProvider.updateAll(repository.context)
+        savedId
     }
 
     fun isNoteEmpty(

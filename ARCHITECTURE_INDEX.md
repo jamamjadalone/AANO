@@ -142,7 +142,7 @@ android/app/src/main/java/app/aa/aano/
 | `NotePackageUnpacker.kt` | 181 | `.aano` ZIP archive parser for restoring notes and media bundles. |
 | `SettingsBackupDelegate.kt` | 71 | Encrypted app settings JSON backup and restore delegate. |
 | `NoteBlock.kt` | 124 | Block-based rich text model (headers, quotes, code, lists, images). |
-| `EditorPersistenceDelegate.kt` | 104 | Auto-save draft persistence and HTML span serialization delegate for editor. |
+| `EditorPersistenceDelegate.kt` | 106 | Auto-save draft persistence and HTML span serialization delegate for editor. |
 
 ---
 
