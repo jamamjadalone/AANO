@@ -135,3 +135,9 @@
 - **Folder-by-Folder Safe Refactoring**: Cleanup one folder at a time, strictly verifying that behavior does not break and without changing what the app does.
 - **Token-Saver Architecture Index First**: Har task ya inquiry shuru karne se pehle agent ko poore codebase ko grep/read karne ke bajaye hamesha `ARCHITECTURE_INDEX.md` consult karna hoga taake target file direct identify ho sake aur prompt token quota 80%-90% save ho sake.
 - **Automated Verification**: Kisi bhi code change ke baad `python aano_dev.py check` aur `python aano_dev.py map` chalana lazmi hai taake line caps, anti-slop, aur architecture index auto-synced rahein.
+
+## 22. Strict Background Task Lifecycle & Zero Orphan Task Protocol
+- **Zero Orphaned Tasks Guarantee**: Koi bhi background task (`run_command` ya `schedule`) user ke response se pehle bina waja background mein running state mein chhorna **STRICTLY PROHIBITED** hai.
+- **Immediate Triage of Failed/Hung Tasks**: Agar koi command background task banti hai aur syntax error, prompt hang, ya timeout ka shikaar hoti hai, toh agent ka pehla farz hai ke alternative solution chalane se pehle purani task ko `manage_task(Action='kill')` karke terminate kare.
+- **Pre-Turn Idle Audit**: Har turn complete karne ya user ko reply bhejne se pehle agent ko verify karna hoga ke background tasks list mein koi unintended/dangling process na ho (`manage_task(Action='list')`).
+- **Clean Non-Interactive Shell Commands**: Shell commands hamesha non-interactive aur clean single-line ya script-based hon taake multi-line terminal syntax errors aur unclosed process handles se bacha ja sake.
