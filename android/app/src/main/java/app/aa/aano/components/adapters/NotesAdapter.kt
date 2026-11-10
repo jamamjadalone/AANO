@@ -186,7 +186,7 @@ class NotesAdapter(
         } else {
             holder.badgeImageLayout?.visibility = View.GONE
         }
-        holder.badgeLocal?.visibility = View.GONE
+        holder.badgeLocal?.visibility = if (note.isLocal) View.VISIBLE else View.GONE
 
         // Folder pill badge / Color label
         val labelText = if (note.colorLabel.isNotBlank()) note.colorLabel else note.folder

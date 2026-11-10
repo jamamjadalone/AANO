@@ -27,6 +27,8 @@ class LockActivity : AppCompatActivity() {
 
     private var pinBuffer = StringBuilder()
     private var pendingConfirm: String? = null
+    private var failedAttempts = 0
+    private var lockoutUntilMs = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +100,13 @@ class LockActivity : AppCompatActivity() {
     }
 
     private fun onKey(label: String) {
+        val now = System.currentTimeMillis()
+        if (now < lockoutUntilMs) {
+            val remainSec = ((lockoutUntilMs - now) / 1000).coerceAtLeast(1)
+            pinError.text = "Locked out. Try again in ${remainSec}s"
+            pinError.visibility = View.VISIBLE
+            return
+        }
         pinError.visibility = View.INVISIBLE
         when (label) {
             "back" -> if (pinBuffer.isNotEmpty()) pinBuffer.deleteCharAt(pinBuffer.length - 1)
@@ -141,6 +150,7 @@ class LockActivity : AppCompatActivity() {
             }
             MODE_DISABLE -> {
                 if (lock.verifyPin(pin)) {
+                    failedAttempts = 0
                     lock.clearPin()
                     setResult(RESULT_OK)
                     finish()
@@ -150,6 +160,7 @@ class LockActivity : AppCompatActivity() {
             }
             else -> {
                 if (lock.verifyPin(pin)) {
+                    failedAttempts = 0
                     app.aa.aano.AanoApp.isUnlockedThisSession = true
                     setResult(RESULT_OK)
                     finish()
@@ -161,7 +172,14 @@ class LockActivity : AppCompatActivity() {
     }
 
     private fun showWrongPin() {
-        pinError.text = getString(R.string.wrong_pin)
+        failedAttempts++
+        if (failedAttempts >= 5) {
+            val lockoutSec = if (failedAttempts >= 8) 300L else 30L
+            lockoutUntilMs = System.currentTimeMillis() + (lockoutSec * 1000L)
+            pinError.text = "Too many attempts. Locked out for ${lockoutSec}s"
+        } else {
+            pinError.text = getString(R.string.wrong_pin) + " ($failedAttempts/5)"
+        }
         pinError.visibility = View.VISIBLE
         pinBuffer.clear()
         updateDots()

@@ -37,7 +37,7 @@ android/app/src/main/java/app/aa/aano/
 | `FocusFragment.kt` | 183 | Distraction-free zen reading and single-note contemplation mode. |
 | `ArchiveActivity.kt` | 97 | Archived notes list with batch unarchive, delete, and search actions. |
 | `TrashActivity.kt` | 114 | Deleted notes recycle bin with 30-day auto-purge and restore controls. |
-| `LockActivity.kt` | 232 | AppLock PIN / biometric authentication prompt screen. |
+| `LockActivity.kt` | 250 | AppLock PIN / biometric authentication prompt screen. |
 | `CropActivity.kt` | 158 | Image cropping screen with custom aspect ratios and rotation controls. |
 | `QuickNoteActivity.kt` | 67 | Floating/quick note creation dialog activity launched from quick settings. |
 | `ShareReceiverActivity.kt` | 287 | Android system share target intent receiver (text, images, URLs). |
