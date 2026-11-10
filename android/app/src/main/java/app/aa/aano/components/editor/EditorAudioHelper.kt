@@ -210,7 +210,11 @@ class EditorAudioHelper(
     fun onPauseCleanup() {
         if (isRecording) stopVoiceRecording()
         if (isPlayingVoice || mediaPlayer?.isPlaying == true) {
-            try { mediaPlayer?.pause() } catch (_: Exception) {}
+            try {
+                mediaPlayer?.pause()
+            } catch (e: Exception) {
+                Log.d("EditorAudioHelper", "Pause playback error: ${e.message}")
+            }
             isPlayingVoice = false
             binding.btnVoicePlayPause.setImageResource(R.drawable.ic_play)
         }

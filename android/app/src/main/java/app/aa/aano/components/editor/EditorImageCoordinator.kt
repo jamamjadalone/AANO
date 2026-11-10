@@ -6,6 +6,7 @@ package app.aa.aano.components.editor
 
 import android.app.Activity
 import android.content.Intent
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import app.aa.aano.databinding.ActivityEditorBinding
@@ -38,7 +39,9 @@ class EditorImageCoordinator(
             if (!newPath.isNullOrBlank() && File(newPath).exists()) {
                 val old = attachedImages[croppingIndex]
                 attachedImages[croppingIndex] = newPath
-                if (old != newPath) try { File(old).delete() } catch (_: Exception) {}
+                if (old != newPath) {
+                    try { File(old).delete() } catch (e: Exception) { Log.d("EditorImageCoordinator", "Delete old file error: ${e.message}") }
+                }
                 render()
                 onImagesModified()
             }
@@ -52,7 +55,9 @@ class EditorImageCoordinator(
             if (newPath != null) {
                 val old = attachedImages[replacingIndex]
                 attachedImages[replacingIndex] = newPath
-                if (old != newPath) try { File(old).delete() } catch (_: Exception) {}
+                if (old != newPath) {
+                    try { File(old).delete() } catch (e: Exception) { Log.d("EditorImageCoordinator", "Delete old file error: ${e.message}") }
+                }
                 render()
                 onImagesModified()
             }

@@ -11,6 +11,7 @@ import android.text.method.ArrowKeyMovementMethod
 import android.text.method.LinkMovementMethod
 import android.text.style.URLSpan
 import android.text.util.Linkify
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -91,7 +92,9 @@ object EditorTouchHelper {
     ) {
         try {
             Linkify.addLinks(binding.noteContent, Linkify.WEB_URLS or Linkify.EMAIL_ADDRESSES)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Log.d("EditorTouchHelper", "Linkify error: ${e.message}")
+        }
 
         binding.noteTitle.isFocusable = isEditMode
         binding.noteTitle.isFocusableInTouchMode = isEditMode
