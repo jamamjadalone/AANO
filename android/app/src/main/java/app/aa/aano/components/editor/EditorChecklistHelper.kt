@@ -89,13 +89,19 @@ object EditorChecklistHelper {
             .show()
     }
 
-    private fun convertAllLinesToChecklist(editText: EditText, onSaveNeeded: () -> Unit) {
+    fun convertAllLinesToChecklist(editText: EditText, onSaveNeeded: () -> Unit) {
         val editable = editText.text ?: return
         val lines = editable.toString().split("\n")
         val converted = lines.joinToString("\n") { line ->
             val trimmed = line.trimStart()
-            if (trimmed.isNotBlank() && !trimmed.startsWith("☐ ") && !trimmed.startsWith("☑ ") && !trimmed.startsWith("[ ] ") && !trimmed.startsWith("[x] ")) {
-                if (trimmed.startsWith("• ")) line.replaceFirst("• ", "☐ ") else "☐ $line"
+            if (trimmed.isNotBlank() && !trimmed.startsWith("- [ ] ") && !trimmed.startsWith("- [x] ") &&
+                !trimmed.startsWith("☐ ") && !trimmed.startsWith("☑ ") && !trimmed.startsWith("[ ] ") && !trimmed.startsWith("[x] ")
+            ) {
+                if (trimmed.startsWith("• ") || trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                    line.replaceFirst(Regex("^(?:\\s*)(?:• |- |\\* )"), "- [ ] ")
+                } else {
+                    "- [ ] $line"
+                }
             } else {
                 line
             }
@@ -112,7 +118,9 @@ object EditorChecklistHelper {
 
         for (line in lines) {
             val trimmed = line.trimStart()
-            if (trimmed.startsWith("☑") || trimmed.startsWith("[x]") || trimmed.startsWith("[X]")) {
+            if (trimmed.startsWith("- [x]") || trimmed.startsWith("- [X]") ||
+                trimmed.startsWith("☑") || trimmed.startsWith("[x]") || trimmed.startsWith("[X]")
+            ) {
                 completed.add(line)
             } else {
                 active.add(line)
@@ -133,11 +141,13 @@ object EditorChecklistHelper {
         val updated = lines.joinToString("\n") { line ->
             val trimmed = line.trimStart()
             if (completed) {
-                if (trimmed.startsWith("☐ ")) line.replaceFirst("☐ ", "☑ ")
+                if (trimmed.startsWith("- [ ] ")) line.replaceFirst("- [ ] ", "- [x] ")
+                else if (trimmed.startsWith("☐ ")) line.replaceFirst("☐ ", "☑ ")
                 else if (trimmed.startsWith("[ ] ")) line.replaceFirst("[ ] ", "[x] ")
                 else line
             } else {
-                if (trimmed.startsWith("☑ ")) line.replaceFirst("☑ ", "☐ ")
+                if (trimmed.startsWith("- [x] ") || trimmed.startsWith("- [X] ")) line.replaceFirst(Regex("^-\\s*\\[[xX]\\] "), "- [ ] ")
+                else if (trimmed.startsWith("☑ ")) line.replaceFirst("☑ ", "☐ ")
                 else if (trimmed.startsWith("[x] ") || trimmed.startsWith("[X] ")) line.replaceFirst(Regex("^\\[[xX]\\] "), "[ ] ")
                 else line
             }
@@ -146,11 +156,11 @@ object EditorChecklistHelper {
         onSaveNeeded()
     }
 
-    private fun removeAllCheckboxes(editText: EditText, onSaveNeeded: () -> Unit) {
+    fun removeAllCheckboxes(editText: EditText, onSaveNeeded: () -> Unit) {
         val editable = editText.text ?: return
         val lines = editable.toString().split("\n")
         val updated = lines.joinToString("\n") { line ->
-            line.replaceFirst(Regex("^(?:\\s*)(?:☐ |☑ |\\[ \\] |\\[x\\] )"), "")
+            line.replaceFirst(Regex("^(?:\\s*)(?:- \\[ \\] |- \\[x\\] |- \\[X\\] |☐ |☑ |\\[ \\] |\\[x\\] )"), "")
         }
         editText.setText(updated)
         onSaveNeeded()

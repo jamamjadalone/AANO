@@ -7,6 +7,9 @@ package app.aa.aano.data
 import android.text.Editable
 import android.text.Html
 import android.text.style.CharacterStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 object EditorPersistenceDelegate {
@@ -52,7 +55,7 @@ object EditorPersistenceDelegate {
         images: List<String>,
         audioUri: String?,
         audioDuration: Long
-    ): String {
+    ): String = withContext(Dispatchers.IO + NonCancellable) {
         val title = rawTitle?.trim().orEmpty()
         val content = if (editableContent != null && editableContent.getSpans(0, editableContent.length, CharacterStyle::class.java).isNotEmpty()) {
             Html.toHtml(editableContent, Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE)
@@ -61,7 +64,7 @@ object EditorPersistenceDelegate {
         }
         val cleanFolder = folder.trim()
 
-        return if (noteId != null) {
+        if (noteId != null) {
             repository.update(
                 id = noteId,
                 title = title,

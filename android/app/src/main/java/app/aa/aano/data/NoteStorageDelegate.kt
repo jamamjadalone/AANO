@@ -157,7 +157,15 @@ class NoteStorageDelegate(private val context: Context) {
             images = imagesList,
             audioUri = audioUriStr,
             audioDuration = obj.optLong("audioDuration", 0L),
-            purged = obj.optBoolean("purged", false)
+            purged = obj.optBoolean("purged", false),
+            type = obj.optInt("type", Note.TYPE_TEXT),
+            colorIndex = obj.optInt("colorIndex", 0),
+            colorLabel = field("colorLabel"),
+            importance = obj.optInt("importance", 0),
+            reminderType = obj.optInt("reminderType", Note.REMINDER_NONE),
+            reminderDate = obj.optLong("reminderDate", 0L),
+            minorModifiedDate = obj.optLong("minorModifiedDate", 0L),
+            noteExt = obj.optString("noteExt", "")
         )
     }
 
@@ -180,6 +188,14 @@ class NoteStorageDelegate(private val context: Context) {
         if (note.audioUri != null) put("audioUri", note.audioUri)
         put("audioDuration", note.audioDuration)
         put("purged", note.purged)
+        put("type", note.type)
+        put("colorIndex", note.colorIndex)
+        put("colorLabel", cipher.encrypt(note.colorLabel))
+        put("importance", note.importance)
+        put("reminderType", note.reminderType)
+        put("reminderDate", note.reminderDate)
+        put("minorModifiedDate", note.minorModifiedDate)
+        put("noteExt", note.noteExt)
         put("enc", true)
     }
 

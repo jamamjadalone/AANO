@@ -28,7 +28,7 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `HomeActivity.kt` | 119 | Main landing screen, bottom navigation routing, and toolbar coordination. |
-| `EditorActivity.kt` | 297 | Note editor screen orchestrating format bar, audio, checklist, and media. |
+| `EditorActivity.kt` | 298 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
@@ -50,12 +50,12 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `EditorAudioHelper.kt` | 241 | Voice memo audio recording (M4A/AAC), playback controls, timer, and visualizer. |
-| `EditorChecklistHelper.kt` | 158 | Markdown interactive checklist toggling, batch checked sinking, and item menus. |
+| `EditorChecklistHelper.kt` | 168 | Markdown interactive checklist toggling, batch checked sinking, and item menus. |
 | `EditorColorPickerHelper.kt` | 225 | ARGB note background color picker, preset palettes, and custom hex builder. |
 | `EditorDialogHelper.kt` | 216 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
 | `EditorDropHelper.kt` | 87 | Direct P2P note drop dispatcher, QR scanner launcher, and peer pairing. |
 | `EditorExportHelper.kt` | 270 | Note export to TXT, MD, PDF, ZIP attachment bundles, and `.aano` packages. |
-| `EditorFormatBarHelper.kt` | 278 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
+| `EditorFormatBarHelper.kt` | 297 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
 | `EditorImageCoordinator.kt` | 96 | Image picker contracts, crop launchers, replace triggers, and image container render. |
 | `EditorImageHelper.kt` | 279 | Fullscreen image lightbox preview, crop dialog, and gallery exporter. |
 | `EditorMediaHelper.kt` | 86 | Image downsampling (1280px), JPEG compression, and local sandbox caching. |
@@ -119,13 +119,13 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `NoteRepository.kt` | 194 | Clean facade exposing all 39 note operations to activities (0 breaking changes). |
-| `NoteStorageDelegate.kt` | 201 | Low-level JSON read/write, Keystore AES-256 cipher, and memory cache. |
+| `NoteStorageDelegate.kt` | 217 | Low-level JSON read/write, Keystore AES-256 cipher, and memory cache. |
 | `NoteQueryDelegate.kt` | 110 | SQLite FTS search, sorting algorithms, visibility filters, and aggregations. |
-| `NoteCrudDelegate.kt` | 262 | Note mutations (create, update, pin, reminder, delete, archive, folders). |
+| `NoteCrudDelegate.kt` | 268 | Note mutations (create, update, pin, reminder, delete, archive, folders). |
 | `NoteSyncTrashDelegate.kt` | 218 | Multi-device 3-way merge, trash purge lifecycle, and cloud JSON export/import. |
-| `Note.kt` | 79 | Core Note data model, JSON serialization, and immutable copy methods. |
+| `Note.kt` | 110 | Core Note data model, JSON serialization, and immutable copy methods. |
 | `NoteCipher.kt` | 97 | Hardware-backed Android Keystore AES-256-GCM cipher wrapper. |
-| `NoteFtsIndex.kt` | 134 | SQLite Full-Text Search (FTS4) index database for sub-millisecond search. |
+| `NoteFtsIndex.kt` | 139 | SQLite Full-Text Search (FTS4) index database for sub-millisecond search. |
 | `NoteMergeEngine.kt` | 70 | 3-way conflict-free block and line merging engine for notes. |
 | `LocalVaultManager.kt` | 276 | Offline-only encrypted note storage vault with separate Keystore key. |
 | `TaskRepository.kt` | 275 | To-Do task JSON persistence repository and priority sorting. |
@@ -139,7 +139,7 @@ android/app/src/main/java/app/aa/aano/
 | `NotePackageUnpacker.kt` | 181 | `.aano` ZIP archive parser for restoring notes and media bundles. |
 | `SettingsBackupDelegate.kt` | 71 | Encrypted app settings JSON backup and restore delegate. |
 | `NoteBlock.kt` | 124 | Block-based rich text model (headers, quotes, code, lists, images). |
-| `EditorPersistenceDelegate.kt` | 101 | Auto-save draft persistence and HTML span serialization delegate for editor. |
+| `EditorPersistenceDelegate.kt` | 104 | Auto-save draft persistence and HTML span serialization delegate for editor. |
 
 ---
 

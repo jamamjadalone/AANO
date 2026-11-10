@@ -18,6 +18,11 @@ class NoteFtsIndex(context: Context) : SQLiteOpenHelper(context, DB_NAME, null, 
         private const val TABLE_FTS = "notes_fts"
     }
 
+    override fun onConfigure(db: SQLiteDatabase) {
+        super.onConfigure(db)
+        setWriteAheadLoggingEnabled(true)
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
             """

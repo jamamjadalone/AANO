@@ -25,7 +25,15 @@ data class Note(
     val images: List<String> = emptyList(),
     val audioUri: String? = null,
     val audioDuration: Long = 0L,
-    val purged: Boolean = false
+    val purged: Boolean = false,
+    val type: Int = TYPE_TEXT,
+    val colorIndex: Int = 0,
+    val colorLabel: String = "",
+    val importance: Int = 0,
+    val reminderType: Int = REMINDER_NONE,
+    val reminderDate: Long = 0L,
+    val minorModifiedDate: Long = 0L,
+    val noteExt: String = ""
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -46,10 +54,25 @@ data class Note(
         if (audioUri != null) put("audioUri", audioUri)
         put("audioDuration", audioDuration)
         put("purged", purged)
+        put("type", type)
+        put("colorIndex", colorIndex)
+        put("colorLabel", colorLabel)
+        put("importance", importance)
+        put("reminderType", reminderType)
+        put("reminderDate", reminderDate)
+        put("minorModifiedDate", minorModifiedDate)
+        put("noteExt", noteExt)
     }
 
     companion object {
         const val COLOR_DEFAULT = 0
+        const val TYPE_TEXT = 0
+        const val TYPE_CHECKLIST = 1
+        const val REMINDER_NONE = 0
+        const val REMINDER_ALL_DAY = 16
+        const val REMINDER_TIME = 32
+        const val REMINDER_REPEAT = 64
+        const val REMINDER_STATUS_PIN = 128
 
         fun fromJson(obj: JSONObject): Note = Note(
             id = obj.getString("id"),
@@ -73,7 +96,15 @@ data class Note(
             } ?: emptyList(),
             audioUri = if (obj.has("audioUri") && !obj.isNull("audioUri")) obj.optString("audioUri") else null,
             audioDuration = obj.optLong("audioDuration", 0L),
-            purged = obj.optBoolean("purged", false)
+            purged = obj.optBoolean("purged", false),
+            type = obj.optInt("type", TYPE_TEXT),
+            colorIndex = obj.optInt("colorIndex", 0),
+            colorLabel = obj.optString("colorLabel", ""),
+            importance = obj.optInt("importance", 0),
+            reminderType = obj.optInt("reminderType", REMINDER_NONE),
+            reminderDate = obj.optLong("reminderDate", 0L),
+            minorModifiedDate = obj.optLong("minorModifiedDate", 0L),
+            noteExt = obj.optString("noteExt", "")
         )
     }
 }

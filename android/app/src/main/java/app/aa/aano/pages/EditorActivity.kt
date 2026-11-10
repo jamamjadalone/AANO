@@ -118,8 +118,7 @@ class EditorActivity : AppCompatActivity() {
         binding.btnToggleQuality.setOnClickListener { imageCoordinator.toggleQuality(binding.btnToggleQuality, this) }
         binding.btnRecordVoice.setOnClickListener { audioHelper.handleRecordVoiceClick(requestAudioPermissionLauncher) }
         binding.btnStopRecording.setOnClickListener { audioHelper.stopVoiceRecording() }
-        binding.btnVoicePlayPause.setOnClickListener { audioHelper.playVoiceMemo() }
-        binding.btnVoiceDelete.setOnClickListener { audioHelper.deleteVoiceMemo() }
+        binding.btnVoicePlayPause.setOnClickListener { audioHelper.playVoiceMemo() }; binding.btnVoiceDelete.setOnClickListener { audioHelper.deleteVoiceMemo() }
 
         EditorColorPickerHelper.buildColorRow(this, binding.colorRow, prefs, selectedColor) { color ->
             selectedColor = color
@@ -201,6 +200,8 @@ class EditorActivity : AppCompatActivity() {
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
         if (undoRedoManager.handleKeyEvent(event, this, binding.noteContent) { triggerAutoSave() }) return true
+        if (event.action == android.view.KeyEvent.ACTION_DOWN &&
+            EditorFormatBarHelper.handleFormattingKeyShortcut(event.keyCode, event, this, binding.noteContent) { triggerAutoSave() }) return true
         return super.dispatchKeyEvent(event)
     }
 
@@ -260,21 +261,21 @@ class EditorActivity : AppCompatActivity() {
     private fun saveAndFinish() {
         if (isDeleted) { finish(); return }
         saveHandler.removeCallbacks(autoSaveRunnable)
-        if (EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri) && noteId == null) {
-            finish(); return
-        }
+        if (EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri) && noteId == null) { finish(); return }
         lifecycleScope.launch {
             persist()
-            if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
-                CoroutineScope(Dispatchers.IO).launch { runCatching { cloudSyncManager.syncNow() } }
-            }
+            if (prefs.autoSync && cloudSyncManager.isLoggedIn) CoroutineScope(Dispatchers.IO).launch { runCatching { cloudSyncManager.syncNow() } }
             finish()
         }
     }
 
     private fun saveSilently() {
         if (!isDeleted && !(EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri) && noteId == null)) {
-            lifecycleScope.launch { persist() }
+            lifecycleScope.launch {
+                persist()
+                binding.tvWordCount.text = "✓ Saved • " + EditorFormatBarHelper.formatReadingMetrics(binding.noteContent.text)
+                binding.tvWordCount.postDelayed({ if (!isFinishing && !isDestroyed) updateWordCount() }, 1200L)
+            }
         }
     }
     override fun onPause() {

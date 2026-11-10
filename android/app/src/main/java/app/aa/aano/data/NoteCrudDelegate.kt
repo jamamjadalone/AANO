@@ -94,7 +94,10 @@ class NoteCrudDelegate(
         val notes = storage.readNotes().toMutableList()
         val index = notes.indexOfFirst { it.id == id }
         if (index >= 0) {
-            notes[index] = notes[index].copy(pinned = !notes[index].pinned)
+            notes[index] = notes[index].copy(
+                pinned = !notes[index].pinned,
+                minorModifiedDate = System.currentTimeMillis()
+            )
             storage.writeNotes(notes)
         }
     }
@@ -114,7 +117,10 @@ class NoteCrudDelegate(
         val notes = storage.readNotes().toMutableList()
         val index = notes.indexOfFirst { it.id == id }
         if (index >= 0) {
-            notes[index] = notes[index].copy(reminderAt = reminderAt)
+            notes[index] = notes[index].copy(
+                reminderAt = reminderAt,
+                minorModifiedDate = System.currentTimeMillis()
+            )
             storage.writeNotes(notes)
         }
     }

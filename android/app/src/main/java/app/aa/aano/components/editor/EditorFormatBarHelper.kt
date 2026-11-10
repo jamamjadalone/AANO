@@ -169,8 +169,6 @@ object EditorFormatBarHelper {
         onSaveNeeded()
     }
 
-
-
     fun moveSelectedBlock(editText: EditText, direction: Int, onSaveNeeded: () -> Unit) {
         val editable = editText.text ?: return
         val text = editable.toString()
@@ -222,10 +220,7 @@ object EditorFormatBarHelper {
         binding.btnTextColor.setOnClickListener { showTextColorDialog(binding.noteContent, activity, onSaveNeeded) }
         binding.btnBullet.setOnClickListener { insertBulletPoint(binding.noteContent, onSaveNeeded) }
         binding.btnChecklist.setOnClickListener { EditorChecklistHelper.convertToOrToggleChecklist(binding.noteContent, onSaveNeeded) }
-        binding.btnChecklist.setOnLongClickListener {
-            EditorChecklistHelper.showChecklistOptionsMenu(activity, binding.noteContent, onSaveNeeded)
-            true
-        }
+        binding.btnChecklist.setOnLongClickListener { EditorChecklistHelper.showChecklistOptionsMenu(activity, binding.noteContent, onSaveNeeded); true }
         attachAutoBulletWatcher(binding.noteContent, onSaveNeeded)
     }
 
@@ -274,5 +269,29 @@ object EditorFormatBarHelper {
         val chars = s.length
         val mins = ((words + 199) / 200).coerceAtLeast(1)
         return "$words words • ${mins}m read • $chars chars"
+    }
+
+    fun duplicateCurrentLine(editText: EditText, onSaveNeeded: () -> Unit) {
+        val editable = editText.text ?: return
+        val cursor = editText.selectionStart.coerceAtLeast(0)
+        val textStr = editable.toString()
+        val lineStart = textStr.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)).let { if (it == -1) 0 else it + 1 }
+        val lineEnd = textStr.indexOf('\n', cursor).let { if (it == -1) textStr.length else it }
+        editable.insert(lineEnd, "\n" + textStr.substring(lineStart, lineEnd))
+        onSaveNeeded()
+    }
+
+    fun handleFormattingKeyShortcut(keyCode: Int, event: android.view.KeyEvent, activity: android.app.Activity, editText: EditText, onSaveNeeded: () -> Unit): Boolean {
+        if (!event.isCtrlPressed) return false
+        return when {
+            keyCode == android.view.KeyEvent.KEYCODE_B -> { toggleStyleSpan(editText, activity, android.graphics.Typeface.BOLD, onSaveNeeded); true }
+            keyCode == android.view.KeyEvent.KEYCODE_I -> { toggleStyleSpan(editText, activity, android.graphics.Typeface.ITALIC, onSaveNeeded); true }
+            keyCode == android.view.KeyEvent.KEYCODE_U -> { toggleUnderlineSpan(editText, activity, onSaveNeeded); true }
+            keyCode == android.view.KeyEvent.KEYCODE_D -> { duplicateCurrentLine(editText, onSaveNeeded); true }
+            keyCode == android.view.KeyEvent.KEYCODE_C && event.isShiftPressed -> {
+                EditorChecklistHelper.convertToOrToggleChecklist(editText, onSaveNeeded); true
+            }
+            else -> false
+        }
     }
 }
