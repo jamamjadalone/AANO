@@ -162,12 +162,17 @@ function renderNotes() {
         }).length;
         checklistBadge = `<span class="media-pill" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-weight: 600;">☑ ${done}/${checkItems.length}</span>`;
       }
+      const reminderBadge = (note.reminderDate && Number(note.reminderDate) > 0)
+        ? `<span class="media-pill" style="background: rgba(245, 158, 11, 0.15); color: #d97706; font-weight: 600;">⏰ Reminder</span>`
+        : '';
       const mediaBadges = `
         ${checklistBadge}
+        ${reminderBadge}
         ${imageCount > 0 ? `<span class="media-pill">📷 ${imageCount}</span>` : ''}
         ${hasAudio ? `<span class="media-pill">🎙️ Audio</span>` : ''}
       `;
       const localBadge = note.isLocal ? `<span class="badge" style="background: rgba(56, 189, 248, 0.18); color: #0284c7; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px;">⚡ On-Device</span>` : '';
+
 
       // fixmyslop-ignore[sec/raw-html] Dynamic fields sanitized via escapeHtml and formatLinksInHtml
       card.innerHTML = `

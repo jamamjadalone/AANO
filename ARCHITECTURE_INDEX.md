@@ -188,7 +188,7 @@ android/app/src/main/java/app/aa/aano/
 ### `windows/src/` (Python Backend Architecture — PyWebView Bridge & Storage)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `main.py` | 78 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
+| `main.py` | 93 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
 | `api.py` | 28 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
 | `api_notes.py` | 247 | Notes CRUD, search integration, color resolution, folder management, block model conversion. |
 | `api_trash.py` | 97 | Soft-delete, trash recycle bin, note restoration, permanent deletion, and media purge. |
@@ -232,9 +232,9 @@ android/app/src/main/java/app/aa/aano/
 | `app_state.js` | 94 | Global reactive state variables, color palettes, PyWebView bridge accessor, and regex patterns. |
 | `app_utils.js` | 193 | HTML escaping, date formatting, color math, and theme switcher (Dark/Light). |
 | `app_dialogs.js` | 119 | Custom native dialogs (`showNativeConfirm`, `showNativePrompt`, `showNativeAlert`). |
-| `app_notes_render.js` | 256 | Notes grid/masonry card renderer, preview content generator, and link auto-linkify. |
+| `app_notes_render.js` | 261 | Notes grid/masonry card renderer, preview content generator, and link auto-linkify. |
 | `app_notes_filter.js` | 221 | Note list filtering, search queries, folders renderer, and palette filter bar. |
-| `app_editor_core.js` | 163 | Note editor modal lifecycle (open, save, discard, pin, word count, view/edit mode). |
+| `app_editor_core.js` | 168 | Note editor modal lifecycle (open, save, discard, pin, word count, view/edit mode). |
 | `app_editor_toolbar.js` | 203 | Rich text formatting controls, heading blocks, block reordering, and color palette. |
 | `app_editor_checklist.js` | 125 | Interactive Markdown checklist toggle, strikethrough sinking, and checklist actions. |
 | `app_editor_events.js` | 155 | Note editor event listeners (save, pin, delete, archive, folder select, view switch). |

@@ -116,7 +116,8 @@ function updateWordCount() {
   const text = document.getElementById("editorContent").innerText.trim();
   const words = text ? text.split(/\s+/).length : 0;
   const chars = text.length;
-  document.getElementById("editorWordCount").innerText = `${words} words • ${chars} chars`;
+  const readingMins = Math.max(1, Math.ceil(words / 200));
+  document.getElementById("editorWordCount").innerText = `${words} words • ${chars} chars • ~${readingMins}m read`;
 }
 
 async function closeAndSaveEditor() {
@@ -132,8 +133,12 @@ async function closeAndSaveEditor() {
     color: editingColor,
     pinned: editingPinned,
     isLocal: isLocalNote,
+    type: editingNote ? (editingNote.type || 0) : 0,
+    reminderType: editingNote ? (editingNote.reminderType || 0) : 0,
+    reminderDate: editingNote ? (editingNote.reminderDate || 0) : 0,
     images: currentAttachedImages.map(img => img.filename)
   };
+
 
   const isCompletelyEmpty = !title && (!content || content === "<br>") && currentAttachedImages.length === 0;
 

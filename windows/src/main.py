@@ -59,14 +59,29 @@ def main():
     def on_loaded():
         if len(sys.argv) > 1:
             arg_path = sys.argv[1]
-            if os.path.exists(arg_path) and (arg_path.lower().endswith(".aano") or arg_path.lower().endswith(".zip")):
-                import json
-                try:
-                    window.evaluate_js(f"window.importAanoOnStartup && window.importAanoOnStartup({json.dumps(os.path.abspath(arg_path))});")
-                except Exception as e:
-                    logger.warning("Failed to invoke importAanoOnStartup: %s", e)
+            if os.path.exists(arg_path):
+                lower_p = arg_path.lower()
+                if lower_p.endswith((".aano", ".zip")):
+                    import json
+                    try:
+                        window.evaluate_js(f"window.importAanoOnStartup && window.importAanoOnStartup({json.dumps(os.path.abspath(arg_path))});")
+                    except Exception as e:
+                        logger.warning("Failed to invoke importAanoOnStartup: %s", e)
+                elif lower_p.endswith((".txt", ".md", ".json")):
+                    # 250KB safety guard
+                    try:
+                        if os.path.getsize(arg_path) <= 250 * 1024:
+                            with open(arg_path, "r", encoding="utf-8", errors="ignore") as f:
+                                doc_content = f.read()
+                            doc_title = os.path.splitext(os.path.basename(arg_path))[0]
+                            import json
+                            payload = json.dumps({"title": doc_title, "content": doc_content})
+                            window.evaluate_js(f"window.openEditor && window.openEditor({payload});")
+                    except Exception as e:
+                        logger.warning("Failed to ingest text document on launch: %s", e)
 
     window.events.loaded += on_loaded
+
 
     # Launch PyWebView with native Windows Edge WebView2 runtime
     try:
