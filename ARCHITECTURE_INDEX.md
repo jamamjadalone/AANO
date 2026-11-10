@@ -100,7 +100,7 @@ android/app/src/main/java/app/aa/aano/
 | `ColorPillView.kt` | 68 | Circular color swatch indicator with active selection ring. |
 | `CropMathHelper.kt` | 137 | Image matrix transformations, rotation radians, and crop rect calculations. |
 | `LinedNoteEditText.kt` | 166 | High-performance ruled notebook canvas with bottom viewport extension. |
-| `NotesMenuHelper.kt` | 73 | NotesFragment options menu inflation and sort order selection handler. |
+| `NotesMenuHelper.kt` | 79 | NotesFragment options menu inflation and sort order selection handler. |
 | `NotesSearchBarHelper.kt` | 28 | Real-time search query text watcher and clear button coordinator. |
 | `CalendarMonthView.kt` | 180 | Custom 7x6 month grid view rendering colored sticky-note pills with zero allocations in onDraw. |
 
@@ -109,7 +109,7 @@ android/app/src/main/java/app/aa/aano/
 ### `components/adapters/` (List & Grid Bindings)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NotesAdapter.kt` | 225 | Main notes grid adapter with staggered cards, colors, and badge tags. |
+| `NotesAdapter.kt` | 243 | Main notes grid adapter with staggered cards, colors, and badge tags. |
 | `ArchiveAdapter.kt` | 76 | Archived notes list adapter with unarchive action callbacks. |
 | `TrashAdapter.kt` | 59 | Recycled notes list adapter with restore and permanent purge callbacks. |
 | `TasksAdapter.kt` | 126 | Checklist task items adapter with strike-through completion and priority dots. |

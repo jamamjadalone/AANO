@@ -21,7 +21,13 @@ object NotesMenuHelper {
 
     fun applyLayoutManager(recyclerView: androidx.recyclerview.widget.RecyclerView, context: Context, isGridView: Boolean) {
         if (isGridView) {
-            recyclerView.layoutManager = androidx.recyclerview.widget.StaggeredGridLayoutManager(2, androidx.recyclerview.widget.StaggeredGridLayoutManager.VERTICAL).apply {
+            val widthDp = context.resources.configuration.screenWidthDp
+            val spans = when {
+                widthDp >= 900 -> 4
+                widthDp >= 600 -> 3
+                else -> 2
+            }
+            recyclerView.layoutManager = androidx.recyclerview.widget.StaggeredGridLayoutManager(spans, androidx.recyclerview.widget.StaggeredGridLayoutManager.VERTICAL).apply {
                 gapStrategy = androidx.recyclerview.widget.StaggeredGridLayoutManager.GAP_HANDLING_MOVE_ITEMS_BETWEEN_SPANS
             }
         } else {

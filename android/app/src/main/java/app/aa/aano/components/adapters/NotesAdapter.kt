@@ -128,6 +128,7 @@ class NotesAdapter(
             t.startsWith("- [ ] ") || t.startsWith("- [x] ") || t.startsWith("- [X] ") ||
             t.startsWith("☐ ") || t.startsWith("☑ ") || t.startsWith("[ ] ") || t.startsWith("[x] ") || t.startsWith("[X] ")
         }
+        val cleanSnippet = sanitizePreview(plainText)
         if (checklistItems.isNotEmpty() || note.type == Note.TYPE_CHECKLIST) {
             val completed = checklistItems.count { line ->
                 val t = line.trimStart()
@@ -136,9 +137,18 @@ class NotesAdapter(
             }
             val total = checklistItems.size
             val prefix = if (total > 0) "☑ $completed/$total done\n" else ""
-            holder.preview.text = prefix + plainText.ifBlank { "(Empty note)" }
+            holder.preview.text = prefix + cleanSnippet.ifBlank { "(Empty note)" }
         } else {
-            holder.preview.text = plainText.ifBlank { "(Empty note)" }
+            holder.preview.text = cleanSnippet.ifBlank { "(Empty note)" }
+        }
+
+        holder.card.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                v.animate().scaleX(0.985f).scaleY(0.985f).setDuration(80).start()
+            } else if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
+                v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
+            }
+            false
         }
         val remTime = if (note.reminderDate > 0) note.reminderDate else note.reminderAt
         if (note.reminderType == app.aa.aano.data.Note.REMINDER_STATUS_PIN) {
@@ -162,10 +172,11 @@ class NotesAdapter(
         }
         holder.badgeLocal?.visibility = View.GONE
 
-        // Folder pill badge
-        if (note.folder.isNotBlank()) {
+        // Folder pill badge / Color label
+        val labelText = if (note.colorLabel.isNotBlank()) note.colorLabel else note.folder
+        if (labelText.isNotBlank()) {
             holder.folderBadge?.visibility = View.VISIBLE
-            holder.folderBadge?.text = note.folder
+            holder.folderBadge?.text = labelText
         } else {
             holder.folderBadge?.visibility = View.GONE
         }
@@ -216,6 +227,13 @@ class NotesAdapter(
             }
             true
         }
+    }
+
+    private fun sanitizePreview(raw: String): String {
+        return raw.replace(Regex("[#*_~`>]"), "")
+            .replace(Regex("- \\[[ xX]\\] "), "")
+            .replace(Regex("\\n{2,}"), "\n")
+            .trim()
     }
 
     fun submitList(newNotes: List<Note>) {
