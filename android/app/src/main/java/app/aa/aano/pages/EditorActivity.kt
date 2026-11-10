@@ -153,11 +153,10 @@ class EditorActivity : AppCompatActivity() {
             selectedFolder = intent.getStringExtra(EXTRA_FOLDER).orEmpty()
             isLocalNote = intent.getBooleanExtra(EXTRA_IS_LOCAL, false)
             loaded = true; isEditMode = true
+            val calDate = intent.getLongExtra("EXTRA_CALENDAR_DATE", 0L)
+            if (calDate > 0) binding.tvWordCount.text = "📅 " + java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault()).format(java.util.Date(calDate))
             updateFolderChipDisplay(); updateWordCount(); undoRedoManager.pushState(""); applyModeUi()
-            binding.noteTitle.post {
-                binding.noteTitle.requestFocus()
-                (getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager)?.showSoftInput(binding.noteTitle, InputMethodManager.SHOW_IMPLICIT)
-            }
+            binding.noteTitle.post { binding.noteTitle.requestFocus(); (getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager)?.showSoftInput(binding.noteTitle, InputMethodManager.SHOW_IMPLICIT) }
         }
     }
 

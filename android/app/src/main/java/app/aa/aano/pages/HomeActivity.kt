@@ -111,6 +111,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun fragmentFor(itemId: Int): Fragment = when (itemId) {
+        R.id.nav_calendar -> CalendarFragment()
         R.id.nav_folders -> FoldersFragment()
         R.id.nav_tasks -> TasksFragment()
         R.id.nav_more -> MoreFragment()

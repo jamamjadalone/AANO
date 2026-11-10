@@ -27,8 +27,8 @@ android/app/src/main/java/app/aa/aano/
 ### `pages/` (Screens & Fragments — Strictly UI Orchestration)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `HomeActivity.kt` | 119 | Main landing screen, bottom navigation routing, and toolbar coordination. |
-| `EditorActivity.kt` | 298 | Note editor screen orchestrating format bar, audio, checklist, and media. |
+| `HomeActivity.kt` | 120 | Main landing screen, bottom navigation routing, and toolbar coordination. |
+| `EditorActivity.kt` | 297 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
@@ -43,6 +43,7 @@ android/app/src/main/java/app/aa/aano/
 | `ShareReceiverActivity.kt` | 287 | Android system share target intent receiver (text, images, URLs). |
 | `MoreFragment.kt` | 139 | Utility hub fragment (Trash, Archive, Vault, Help, About AANO). |
 | `TasksFragment.kt` | 196 | To-Do checklist and task tracking screen with priority filters. |
+| `CalendarFragment.kt` | 178 | Full-screen interactive month calendar grid with day sticky-note pills and monthly stats. |
 
 ---
 
@@ -84,6 +85,7 @@ android/app/src/main/java/app/aa/aano/
 | `NotesBatchActionHelper.kt` | 124 | Batch selection action sheet coordinator (Archive, Delete, Pin multiple notes). |
 | `SettingsAuthCoordinator.kt` | 65 | Cloudflare / Google sign-in UI coordinator and status delegate. |
 | `SettingsOtpDialogDelegate.kt` | 220 | Password-less email OTP verification code input dialog. |
+| `CalendarDayDetailBottomSheet.kt` | 120 | Bottom sheet dialog displaying notes and reminders scheduled on a specific date. |
 
 ---
 
@@ -100,6 +102,7 @@ android/app/src/main/java/app/aa/aano/
 | `LinedNoteEditText.kt` | 166 | High-performance ruled notebook canvas with bottom viewport extension. |
 | `NotesMenuHelper.kt` | 73 | NotesFragment options menu inflation and sort order selection handler. |
 | `NotesSearchBarHelper.kt` | 28 | Real-time search query text watcher and clear button coordinator. |
+| `CalendarMonthView.kt` | 180 | Custom 7x6 month grid view rendering colored sticky-note pills with zero allocations in onDraw. |
 
 ---
 

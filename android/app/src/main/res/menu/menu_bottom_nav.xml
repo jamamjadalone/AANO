@@ -5,6 +5,10 @@
         android:icon="@drawable/ic_note"
         android:title="@string/tab_notes" />
     <item
+        android:id="@+id/nav_calendar"
+        android:icon="@drawable/ic_calendar"
+        android:title="Calendar" />
+    <item
         android:id="@+id/nav_folders"
         android:icon="@drawable/ic_folder"
         android:title="Folders" />
