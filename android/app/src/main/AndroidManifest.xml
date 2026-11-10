@@ -83,7 +83,7 @@
             android:windowSoftInputMode="stateVisible|adjustResize" />
 
         <activity
-            android:name=".ui.ShareReceiverActivity"
+            android:name=".pages.ShareReceiverActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="true">
             <intent-filter>
