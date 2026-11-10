@@ -138,11 +138,14 @@ class AanoDropHandler(BaseHTTPRequestHandler):
                     name = media.get("name")
                     data_b64 = media.get("data")
                     if name and data_b64:
-                        ext = os.path.splitext(name)[1].lower()
-                        if ext in ALLOWED_IMAGE_EXTS:
-                            target_path = os.path.join(storage.IMAGES_DIR, name)
-                            with open(target_path, "wb") as mf:
-                                mf.write(base64.b64decode(data_b64))
+                        safe_name = os.path.basename(name.replace("\\", "/"))
+                        ext = os.path.splitext(safe_name)[1].lower()
+                        if ext in ALLOWED_IMAGE_EXTS and safe_name:
+                            target_path = os.path.join(storage.IMAGES_DIR, safe_name)
+                            if os.path.abspath(target_path).startswith(os.path.abspath(storage.IMAGES_DIR)):
+                                with open(target_path, "wb") as mf:
+                                    mf.write(base64.b64decode(data_b64))
+
 
                 with storage._storage_lock:
                     existing_notes = storage.load_notes()

@@ -53,11 +53,20 @@ SCOPES = [
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
     auth_code = None
     auth_error = None
+    expected_state = None
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/callback":
             params = urllib.parse.parse_qs(parsed.query)
+            incoming_state = params.get("state", [""])[0]
+            if OAuthCallbackHandler.expected_state and incoming_state != OAuthCallbackHandler.expected_state:
+                OAuthCallbackHandler.auth_error = "Invalid OAuth state parameter (CSRF detected)"
+                self.send_response(400)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"<h3>Authentication Failed: Invalid OAuth state parameter</h3>")
+                return
             if "code" in params:
                 OAuthCallbackHandler.auth_code = params["code"][0]
                 redirect_target = "https://jamamjadalone.github.io/AANO/oauth-success.html"
@@ -89,7 +98,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
 class DriveAuthManager:
     @staticmethod
-    def get_auth_url():
+    def get_auth_url(state=None):
         params = {
             "client_id": CLIENT_ID,
             "redirect_uri": REDIRECT_URI,
@@ -98,12 +107,17 @@ class DriveAuthManager:
             "access_type": "offline",
             "prompt": "consent"
         }
+        if state:
+            params["state"] = state
         return f"{AUTH_ENDPOINT}?{urllib.parse.urlencode(params)}"
 
     @staticmethod
     def start_login_flow(get_config, save_config):
+        import secrets
+        state_token = secrets.token_urlsafe(32)
         OAuthCallbackHandler.auth_code = None
         OAuthCallbackHandler.auth_error = None
+        OAuthCallbackHandler.expected_state = state_token
 
         server = None
         try:
@@ -113,8 +127,9 @@ class DriveAuthManager:
             logger.warning("Could not bind to port %s: %s", REDIRECT_PORT, e)
             return {"success": False, "error": f"Port {REDIRECT_PORT} is in use. Please close any conflicting app."}
 
-        auth_url = DriveAuthManager.get_auth_url()
+        auth_url = DriveAuthManager.get_auth_url(state=state_token)
         webbrowser.open(auth_url)
+
 
         try:
             start_time = time.time()

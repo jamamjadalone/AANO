@@ -199,9 +199,9 @@ android/app/src/main/java/app/aa/aano/
 | `storage.py` | 256 | Notes persistence, config management, color labels, DPAPI encryption, and sync lock. |
 | `storage_vault.py` | 42 | Windows DPAPI encryption/decryption primitives (`CryptProtectData`/`CryptUnprotectData`). |
 | `image_processor.py` | 133 | Media vault image compressor, thumbnail generator, aspect-ratio cropper, and rotation. |
-| `drive_auth.py` | 245 | Google Drive OAuth 2.0 loopback server (port 8085), token refresh, and credentials parser. |
+| `drive_auth.py` | 260 | Google Drive OAuth 2.0 loopback server (port 8085), token refresh, and credentials parser. |
 | `drive_sync.py` | 150 | Google Drive REST API file manager, appData folder lookup, and upload/download coordinator. |
-| `drop_payload_handler.py` | 187 | AANO Drop HTTP request handler (`/aano/info`, `/aano/pair`, `/aano/drop`), chunk verification. |
+| `drop_payload_handler.py` | 190 | AANO Drop HTTP request handler (`/aano/info`, `/aano/pair`, `/aano/drop`), chunk verification. |
 | `aano_drop_server.py` | 160 | Embedded HTTP server (port 8766) and UDP discovery beacon loop (port 8767). |
 | `aano_drop_client.py` | 230 | Outbound P2P payload transmitter, network scanner, and paired peer manager. |
 | `block_model.py` | 134 | Rich text block model, HTML-to-blocks parser, and Markdown/plain-text converters. |
