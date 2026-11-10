@@ -183,17 +183,73 @@ object EditorDialogHelper {
         ).show()
     }
 
+    fun show4TierReminderDialog(
+        context: Context,
+        scope: CoroutineScope,
+        repository: NoteRepository,
+        noteId: String,
+        title: String,
+        onReminderUpdated: (Long, Int) -> Unit
+    ) {
+        val options = arrayOf(
+            "📅 Today (9:00 AM)",
+            "⏰ Exact Date & Time",
+            "🔁 Repeat (Daily)",
+            "📌 Pin to Status Bar",
+            "❌ Clear Reminder"
+        )
+        MaterialAlertDialogBuilder(context)
+            .setTitle("Schedule Reminder")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        val cal = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, 9); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0)
+                            if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+                        }
+                        val at = cal.timeInMillis
+                        scheduleNoteReminder(context, scope, repository, noteId, title, at, app.aa.aano.data.Note.REMINDER_ALL_DAY)
+                        onReminderUpdated(at, app.aa.aano.data.Note.REMINDER_ALL_DAY)
+                    }
+                    1 -> pickReminder(context) { at ->
+                        scheduleNoteReminder(context, scope, repository, noteId, title, at, app.aa.aano.data.Note.REMINDER_TIME)
+                        onReminderUpdated(at, app.aa.aano.data.Note.REMINDER_TIME)
+                    }
+                    2 -> {
+                        val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+                        val at = cal.timeInMillis
+                        scheduleNoteReminder(context, scope, repository, noteId, title, at, app.aa.aano.data.Note.REMINDER_REPEAT)
+                        onReminderUpdated(at, app.aa.aano.data.Note.REMINDER_REPEAT)
+                    }
+                    3 -> {
+                        NoteReminderReceiver.pinToStatusBar(context, noteId, title)
+                        scope.launch { repository.setReminder(noteId, System.currentTimeMillis()) }
+                        onReminderUpdated(System.currentTimeMillis(), app.aa.aano.data.Note.REMINDER_STATUS_PIN)
+                        Toast.makeText(context, "Note pinned to status bar", Toast.LENGTH_SHORT).show()
+                    }
+                    4 -> {
+                        NoteReminderReceiver.cancel(context, noteId)
+                        scope.launch { repository.setReminder(noteId, 0L) }
+                        onReminderUpdated(0L, app.aa.aano.data.Note.REMINDER_NONE)
+                        Toast.makeText(context, "Reminder cleared", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .show()
+    }
+
     fun scheduleNoteReminder(
         context: Context,
         scope: CoroutineScope,
         repository: NoteRepository,
         noteId: String,
         title: String,
-        at: Long
+        at: Long,
+        type: Int = app.aa.aano.data.Note.REMINDER_TIME
     ) {
         scope.launch {
             repository.setReminder(noteId, at)
-            NoteReminderReceiver.schedule(context, noteId, title, at)
+            NoteReminderReceiver.schedule(context, noteId, title, at, type)
             Toast.makeText(context, context.getString(R.string.reminder_set), Toast.LENGTH_SHORT).show()
         }
     }

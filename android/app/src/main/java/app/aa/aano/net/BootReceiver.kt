@@ -32,9 +32,15 @@ class BootReceiver : BroadcastReceiver() {
                 val notes = noteRepo.getAll()
                 var rescheduledNotes = 0
                 for (note in notes) {
-                    if (!note.deleted && !note.archived && note.reminderAt > now) {
-                        NoteReminderReceiver.schedule(context, note.id, note.title, note.reminderAt)
-                        rescheduledNotes++
+                    if (!note.deleted && !note.archived) {
+                        val trigger = if (note.reminderDate > 0) note.reminderDate else note.reminderAt
+                        if (note.reminderType == app.aa.aano.data.Note.REMINDER_STATUS_PIN) {
+                            NoteReminderReceiver.pinToStatusBar(context, note.id, note.title)
+                            rescheduledNotes++
+                        } else if (trigger > now) {
+                            NoteReminderReceiver.schedule(context, note.id, note.title, trigger, note.reminderType)
+                            rescheduledNotes++
+                        }
                     }
                 }
 

@@ -52,7 +52,7 @@ android/app/src/main/java/app/aa/aano/
 | `EditorAudioHelper.kt` | 241 | Voice memo audio recording (M4A/AAC), playback controls, timer, and visualizer. |
 | `EditorChecklistHelper.kt` | 168 | Markdown interactive checklist toggling, batch checked sinking, and item menus. |
 | `EditorColorPickerHelper.kt` | 225 | ARGB note background color picker, preset palettes, and custom hex builder. |
-| `EditorDialogHelper.kt` | 216 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
+| `EditorDialogHelper.kt` | 272 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
 | `EditorDropHelper.kt` | 87 | Direct P2P note drop dispatcher, QR scanner launcher, and peer pairing. |
 | `EditorExportHelper.kt` | 270 | Note export to TXT, MD, PDF, ZIP attachment bundles, and `.aano` packages. |
 | `EditorFormatBarHelper.kt` | 297 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
@@ -106,7 +106,7 @@ android/app/src/main/java/app/aa/aano/
 ### `components/adapters/` (List & Grid Bindings)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NotesAdapter.kt` | 216 | Main notes grid adapter with staggered cards, colors, and badge tags. |
+| `NotesAdapter.kt` | 225 | Main notes grid adapter with staggered cards, colors, and badge tags. |
 | `ArchiveAdapter.kt` | 76 | Archived notes list adapter with unarchive action callbacks. |
 | `TrashAdapter.kt` | 59 | Recycled notes list adapter with restore and permanent purge callbacks. |
 | `TasksAdapter.kt` | 126 | Checklist task items adapter with strike-through completion and priority dots. |
@@ -161,9 +161,9 @@ android/app/src/main/java/app/aa/aano/
 | `CloudSyncManager.kt` | 213 | Google Drive AppData sync coordinator, upload/download triggers, conflict resolve. |
 | `DriveSyncManager.kt` | 168 | Google Drive REST API HTTP client (`https://www.googleapis.com/auth/drive.file`). |
 | `CloudflareSyncManager.kt` | 178 | Standalone Cloudflare Worker backup client (password-less sync bridge). |
-| `NoteReminderReceiver.kt` | 95 | AlarmManager broadcast receiver for scheduled note notifications. |
+| `NoteReminderReceiver.kt` | 162 | AlarmManager broadcast receiver for scheduled note notifications. |
 | `TaskReminderReceiver.kt` | 107 | AlarmManager broadcast receiver for scheduled task reminders. |
-| `BootReceiver.kt` | 65 | AlarmManager notification scheduler re-registration on device boot. |
+| `BootReceiver.kt` | 71 | AlarmManager notification scheduler re-registration on device boot. |
 | `NetworkStateReceiver.kt` | 55 | Connectivity change listener to auto-trigger pending cloud syncs on Wi-Fi. |
 | `NotesSyncCoordinator.kt` | 76 | Periodic and Wi-Fi auto-sync trigger coordinator for notes. |
 | `SettingsAuthHelper.kt` | 152 | Standalone Cloudflare email auth and token storage helper. |

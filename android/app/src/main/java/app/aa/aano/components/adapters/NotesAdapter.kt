@@ -140,7 +140,16 @@ class NotesAdapter(
         } else {
             holder.preview.text = plainText.ifBlank { "(Empty note)" }
         }
-        holder.date.text = formatFriendlyDate(note.updatedAt)
+        val remTime = if (note.reminderDate > 0) note.reminderDate else note.reminderAt
+        if (note.reminderType == app.aa.aano.data.Note.REMINDER_STATUS_PIN) {
+            holder.date.text = "📌 Pinned • " + formatFriendlyDate(note.updatedAt)
+        } else if (remTime > 0) {
+            val overdue = remTime < System.currentTimeMillis()
+            val remPrefix = if (overdue) "⏰ Overdue • " else "⏰ "
+            holder.date.text = remPrefix + formatFriendlyDate(remTime)
+        } else {
+            holder.date.text = formatFriendlyDate(note.updatedAt)
+        }
         holder.pinned.visibility = if (note.pinned) View.VISIBLE else View.GONE
 
         // Media and Local badges
