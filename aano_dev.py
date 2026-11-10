@@ -5,7 +5,7 @@ Copyright (C) 2026 Jam Amjad Rasheed | Licensed under GPL-3.0-or-later
 
 Usage:
   python aano_dev.py stats                     # Show package breakdown & line limits
-  python aano_dev.py check                     # Fast Rule 21 & anti-slop check
+  python aano_dev.py check                     # Fast Rule 21 & anti-slop check (Android + Windows)
   python aano_dev.py doctor                    # Deep health, manifest & ghost import audit
   python aano_dev.py scaffold <type> <Name>    # Generate compliant activity/fragment/helper
   python aano_dev.py map                       # Auto-sync ARCHITECTURE_INDEX.md
@@ -39,6 +39,7 @@ if sys.platform == "win32":
 
 BASE_DIR = Path(__file__).resolve().parent
 KOTLIN_SRC = BASE_DIR / "android" / "app" / "src" / "main" / "java" / "app" / "aa" / "aano"
+WIN_SRC = BASE_DIR / "windows" / "src"
 MANIFEST_FILE = BASE_DIR / "android" / "app" / "src" / "main" / "AndroidManifest.xml"
 ARCH_INDEX = BASE_DIR / "ARCHITECTURE_INDEX.md"
 
@@ -47,21 +48,52 @@ GREEN, RED, YELLOW, CYAN, BOLD, RESET = "\033[92m", "\033[91m", "\033[93m", "\03
 
 
 def scan_files():
-    if not KOTLIN_SRC.exists():
-        return []
     stats = []
-    for f in sorted(list(KOTLIN_SRC.rglob("*.kt"))):
-        rel = f.relative_to(KOTLIN_SRC)
-        pkg = str(rel.parent).replace("\\", "/")
-        lines = len(f.read_text(encoding="utf-8", errors="ignore").splitlines())
-        stats.append({"path": f, "rel": str(rel).replace("\\", "/"), "pkg": pkg if pkg != "." else "root", "name": f.name, "lines": lines})
+
+    # 1. Android Kotlin Sources
+    if KOTLIN_SRC.exists():
+        for f in sorted(list(KOTLIN_SRC.rglob("*.kt"))):
+            rel = f.relative_to(KOTLIN_SRC)
+            pkg = str(rel.parent).replace("\\", "/")
+            pkg_name = f"android/{pkg}" if pkg != "." else "android/root"
+            lines = len(f.read_text(encoding="utf-8", errors="ignore").splitlines())
+            stats.append({"path": f, "rel": f"android/{rel}".replace("\\", "/"), "pkg": pkg_name, "raw_pkg": pkg, "name": f.name, "lines": lines, "platform": "android"})
+
+    # 2. Windows Python Backend Sources
+    if WIN_SRC.exists():
+        for f in sorted(list(WIN_SRC.glob("*.py"))):
+            lines = len(f.read_text(encoding="utf-8", errors="ignore").splitlines())
+            stats.append({"path": f, "rel": f"windows/src/{f.name}", "pkg": "windows/src", "raw_pkg": "src", "name": f.name, "lines": lines, "platform": "windows"})
+
+        # 3. Windows Modular CSS
+        ui_css = WIN_SRC / "ui" / "css"
+        if ui_css.exists():
+            for f in sorted(list(ui_css.glob("*.css"))):
+                lines = len(f.read_text(encoding="utf-8", errors="ignore").splitlines())
+                stats.append({"path": f, "rel": f"windows/src/ui/css/{f.name}", "pkg": "windows/ui/css", "raw_pkg": "ui/css", "name": f.name, "lines": lines, "platform": "windows"})
+        styles_css = WIN_SRC / "ui" / "styles.css"
+        if styles_css.exists():
+            lines = len(styles_css.read_text(encoding="utf-8", errors="ignore").splitlines())
+            stats.append({"path": styles_css, "rel": "windows/src/ui/styles.css", "pkg": "windows/ui/css", "raw_pkg": "ui/css", "name": styles_css.name, "lines": lines, "platform": "windows"})
+
+        # 4. Windows Modular JS
+        ui_js = WIN_SRC / "ui" / "js"
+        if ui_js.exists():
+            for f in sorted(list(ui_js.glob("*.js"))):
+                lines = len(f.read_text(encoding="utf-8", errors="ignore").splitlines())
+                stats.append({"path": f, "rel": f"windows/src/ui/js/{f.name}", "pkg": "windows/ui/js", "raw_pkg": "ui/js", "name": f.name, "lines": lines, "platform": "windows"})
+        app_js = WIN_SRC / "ui" / "app.js"
+        if app_js.exists():
+            lines = len(app_js.read_text(encoding="utf-8", errors="ignore").splitlines())
+            stats.append({"path": app_js, "rel": "windows/src/ui/app.js", "pkg": "windows/ui/js", "raw_pkg": "ui/js", "name": app_js.name, "lines": lines, "platform": "windows"})
+
     return stats
 
 
 def cmd_stats():
     stats = scan_files()
     if not stats:
-        print(f"{RED}[ERROR] Source directory not found: {KOTLIN_SRC}{RESET}")
+        print(f"{RED}[ERROR] Source directories not found.{RESET}")
         return 1
 
     pkg_summary = defaultdict(lambda: {"count": 0, "lines": 0, "max_lines": 0, "max_file": ""})
@@ -76,33 +108,34 @@ def cmd_stats():
         if s["lines"] > LINE_CAP:
             violations.append(s)
 
-    print(f"\n{BOLD}{CYAN}========================================================================{RESET}")
-    print(f"{BOLD}{CYAN} AANO Codebase Statistics & Rule 21 Compliance Dashboard{RESET}")
-    print(f"{BOLD}{CYAN}========================================================================{RESET}")
-    print(f"{'Package':<28} {'Files':>6} {'Lines':>8}   {'Max File':<32} {'Max Lines':>9}")
-    print("-" * 88)
+    print(f"\n{BOLD}{CYAN}========================================================================================{RESET}")
+    print(f"{BOLD}{CYAN} AANO Full-Stack Codebase Statistics & Rule 21 Compliance Dashboard{RESET}")
+    print(f"{BOLD}{CYAN}========================================================================================{RESET}")
+    print(f"{'Platform / Module':<32} {'Files':>6} {'Lines':>8}   {'Max File':<30} {'Max Lines':>9}")
+    print("-" * 92)
     for pkg in sorted(pkg_summary.keys()):
         p = pkg_summary[pkg]
         color = GREEN if p["max_lines"] <= LINE_CAP else RED
-        print(f"{pkg:<28} {p['count']:>6} {p['lines']:>8}   {p['max_file']:<32} {color}{p['max_lines']:>9}{RESET}")
-    print("-" * 88)
-    print(f"{BOLD}{'TOTAL':<28} {len(stats):>6} {sum(s['lines'] for s in stats):>8}   {'Compliance Status':<32} {GREEN if not violations else RED}{'100% CLEAN' if not violations else f'{len(violations)} VIOLATIONS'}{RESET}\n")
+        print(f"{pkg:<32} {p['count']:>6} {p['lines']:>8}   {p['max_file']:<30} {color}{p['max_lines']:>9}{RESET}")
+    print("-" * 92)
+    print(f"{BOLD}{'TOTAL':<32} {len(stats):>6} {sum(s['lines'] for s in stats):>8}   {'Compliance Status':<30} {GREEN if not violations else RED}{'100% CLEAN' if not violations else f'{len(violations)} VIOLATIONS'}{RESET}\n")
     return 0 if not violations else 1
 
 
 def cmd_check(skip_build=False):
-    print(f"\n{BOLD}{CYAN}[AANO Dev] Running fast Rule 21 & Anti-Vibe architectural check...{RESET}")
+    print(f"\n{BOLD}{CYAN}[AANO Dev] Running fast Rule 21 & Anti-Vibe architectural check across Android & Windows...{RESET}")
     stats, errors = scan_files(), []
 
     for s in stats:
         if s["lines"] > LINE_CAP:
             errors.append(f"Line Cap: {s['rel']} has {s['lines']} lines (max allowed: {LINE_CAP})")
-        if (s["name"].endswith("Activity.kt") or s["name"].endswith("Fragment.kt")) and s["pkg"] != "pages":
-            errors.append(f"Placement: Screen '{s['name']}' is in '{s['pkg']}/', but must be located in 'pages/'")
-        if s["name"].endswith("Adapter.kt") and s["pkg"] != "components/adapters":
-            errors.append(f"Placement: Adapter '{s['name']}' is in '{s['pkg']}/', must be in 'components/adapters/'")
-        if s["name"].endswith("DialogHelper.kt") and s["pkg"] not in ("components/dialogs", "components/editor"):
-            errors.append(f"Placement: Dialog helper '{s['name']}' is in '{s['pkg']}/', must be in 'components/dialogs/' or 'components/editor/'")
+        if s["platform"] == "android":
+            if (s["name"].endswith("Activity.kt") or s["name"].endswith("Fragment.kt")) and s["raw_pkg"] != "pages":
+                errors.append(f"Placement: Screen '{s['name']}' is in '{s['raw_pkg']}/', but must be located in 'pages/'")
+            if s["name"].endswith("Adapter.kt") and s["raw_pkg"] != "components/adapters":
+                errors.append(f"Placement: Adapter '{s['name']}' is in '{s['raw_pkg']}/', must be in 'components/adapters/'")
+            if s["name"].endswith("DialogHelper.kt") and s["raw_pkg"] not in ("components/dialogs", "components/editor"):
+                errors.append(f"Placement: Dialog helper '{s['name']}' is in '{s['raw_pkg']}/', must be in 'components/dialogs/' or 'components/editor/'")
         content = s["path"].read_text(encoding="utf-8", errors="ignore")
         if re.search(r"catch\s*\(\s*_\s*:\s*Exception\s*\)\s*\{\s*\}", content):
             errors.append(f"Anti-Slop: {s['rel']} contains empty catch block without logging")
@@ -113,11 +146,21 @@ def cmd_check(skip_build=False):
             print(f"  {RED}[X]{RESET} {e}")
         return 1
 
-    print(f" {GREEN}[ PASS ]{RESET} Rule 21 line limits (<={LINE_CAP} lines) verified across {len(stats)} files")
-    print(f" {GREEN}[ PASS ]{RESET} Component topology verified (screens in pages, dialogs in components, storage in data)")
+    android_cnt = sum(1 for s in stats if s["platform"] == "android")
+    windows_cnt = sum(1 for s in stats if s["platform"] == "windows")
+    print(f" {GREEN}[ PASS ]{RESET} Rule 21 line limits (<={LINE_CAP} lines) verified across {android_cnt} Android and {windows_cnt} Windows files")
+    print(f" {GREEN}[ PASS ]{RESET} Component topology verified across Android and Windows subsystems")
     print(f" {GREEN}[ PASS ]{RESET} Anti-slop code pattern audit clean")
 
     if not skip_build:
+        print(f"\n{CYAN}[AANO Dev] Verifying Windows Python compilation...{RESET}")
+        py_files = [str(s["path"]) for s in stats if s["path"].suffix == ".py"]
+        res_py = subprocess.run([sys.executable, "-m", "py_compile"] + py_files, capture_output=True, text=True)
+        if res_py.returncode != 0:
+            print(f"{RED}{BOLD}[FAIL] Windows Python Compilation FAILED:{RESET}\n{res_py.stderr or res_py.stdout}")
+            return 1
+        print(f" {GREEN}[ PASS ]{RESET} Windows Python backend syntax verified ({len(py_files)} modules)")
+
         print(f"\n{CYAN}[AANO Dev] Verifying offline Kotlin compilation...{RESET}")
         gradle_cmd = str(BASE_DIR / "android" / "gradlew.bat") if sys.platform == "win32" else "./gradlew"
         res = subprocess.run([gradle_cmd, ":app:compileDebugKotlin", "--offline"], cwd=str(BASE_DIR / "android"), capture_output=True, text=True)
@@ -136,15 +179,16 @@ def cmd_doctor():
 
     # 1. Ghost import check
     for s in stats:
-        content = s["path"].read_text(encoding="utf-8", errors="ignore")
-        if "app.aa.aano.ui" in content:
-            issues.append(f"Ghost Import: {s['rel']} imports obsolete deleted package 'app.aa.aano.ui'")
+        if s["platform"] == "android":
+            content = s["path"].read_text(encoding="utf-8", errors="ignore")
+            if "app.aa.aano.ui" in content:
+                issues.append(f"Ghost Import: {s['rel']} imports obsolete deleted package 'app.aa.aano.ui'")
 
     # 2. AndroidManifest activity registration check
     if MANIFEST_FILE.exists():
         manifest_text = MANIFEST_FILE.read_text(encoding="utf-8")
         for s in stats:
-            if s["pkg"] == "pages" and s["name"].endswith("Activity.kt"):
+            if s["platform"] == "android" and s["raw_pkg"] == "pages" and s["name"].endswith("Activity.kt"):
                 act_name = s["name"][:-3]
                 if f".pages.{act_name}" not in manifest_text and f"{act_name}" not in manifest_text:
                     issues.append(f"Manifest Missing: Activity '{act_name}' in pages/ is not registered in AndroidManifest.xml")
@@ -164,7 +208,7 @@ def cmd_doctor():
 
     print(f" {GREEN}[ PASS ]{RESET} Zero ghost imports detected (ui package 100% purged)")
     print(f" {GREEN}[ PASS ]{RESET} All activities in pages/ properly registered in AndroidManifest.xml")
-    print(f" {GREEN}[ PASS ]{RESET} All source files mapped in ARCHITECTURE_INDEX.md")
+    print(f" {GREEN}[ PASS ]{RESET} All {len(stats)} source files (Android + Windows) mapped in ARCHITECTURE_INDEX.md")
     print(f"\n{GREEN}{BOLD}[OK] Codebase is in pristine health!{RESET}\n")
     return 0
 
@@ -187,7 +231,7 @@ def cmd_map():
         else:
             updated.append(line_item)
     ARCH_INDEX.write_text("\n".join(updated) + "\n", encoding="utf-8")
-    print(f"{GREEN}[OK] ARCHITECTURE_INDEX.md synchronized ({cnt} line count(s) updated).{RESET}")
+    print(f"{GREEN}[OK] ARCHITECTURE_INDEX.md synchronized ({cnt} line count(s) updated across Android & Windows).{RESET}")
     return 0
 
 

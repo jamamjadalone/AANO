@@ -1,0 +1,262 @@
+/* Notes Grid / Masonry */
+.notes-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  align-content: start;
+  padding-bottom: 40px;
+  contain: layout paint;
+}
+
+.notes-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.note-card {
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 130px;
+}
+
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(13, 148, 136, 0.25);
+}
+
+.note-card-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin-bottom: 6px;
+  padding-right: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.note-card-preview {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.note-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--card-border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.folder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--brand-light);
+  color: var(--brand);
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.media-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+[data-theme="dark"] .media-pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94A3B8;
+}
+
+.btn-editor-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  color: var(--on-surface);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-editor-sync:hover {
+  border-color: var(--brand);
+}
+.btn-editor-sync.local {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #0284c7;
+}
+
+
+/* Empty State */
+.empty-state {
+  margin: auto;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+
+/* Dark note cards & contrast adaptation */
+.note-card.dark-card {
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .note-card-title {
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .note-card-preview {
+  color: #E2E8F0;
+}
+
+.note-card.dark-card .note-card-footer {
+  border-top-color: rgba(255, 255, 255, 0.12);
+  color: #94A3B8;
+}
+
+.note-card.dark-card .folder-badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+}
+
+.note-card.dark-card .folder-badge svg {
+  stroke: #FFFFFF;
+}
+
+.editor-card.dark-card {
+  color: #FFFFFF;
+}
+
+.editor-card.dark-card .editor-title-input {
+  color: #FFFFFF;
+}
+
+.editor-card.dark-card .editor-title-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-card.dark-card .editor-content-area {
+  color: #F8FAFC;
+}
+
+.editor-card.dark-card .editor-content-area:empty::before {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.editor-card.dark-card .formatting-toolbar {
+  background: rgba(255, 255, 255, 0.05);
+  border-top-color: rgba(255, 255, 255, 0.1);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.editor-card.dark-card .color-palette-bar {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.editor-card.dark-card .palette-label,
+.editor-card.dark-card .word-counter {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.editor-title-input {
+  border: none;
+  /* fixmyslop-ignore[a11y/focus-removed] Borderless studio title input styled via typography */
+  outline: none;
+
+  font-size: 24px;
+  font-weight: 700;
+  padding: 16px 20px 8px 20px;
+  background: transparent;
+  color: var(--on-surface);
+}
+
+
+/* Note Card Selection Checkbox & Selected State */
+.note-card.selectable {
+  cursor: pointer;
+}
+
+.note-card.selected {
+  outline: 2.5px solid var(--brand);
+  box-shadow: 0 0 0 4px rgba(0, 105, 92, 0.15);
+}
+
+.card-select-checkbox {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  z-index: 5;
+}
+
+/* Clickable Links in Notes & Cards */
+.note-link, a.note-link, .note-card-preview a {
+  color: var(--link);
+  text-decoration: underline;
+  cursor: pointer;
+  pointer-events: auto;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.note-link:hover, .note-card-preview a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+.dark-card .note-link, .dark-card .note-card-preview a {
+  color: var(--link-dark);
+}
+
+.dark-card .note-link:hover, .dark-card .note-card-preview a:hover {
+  color: var(--link-dark-hover);
+}
+
+#editorContent[contenteditable="true"] .note-link,
+#editorContent[contenteditable="true"] a {
+  cursor: text;
+}

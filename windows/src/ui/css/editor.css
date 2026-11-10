@@ -1,0 +1,237 @@
+/* Editor Modal */
+.editor-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.editor-card {
+  width: 90%;
+  max-width: 820px;
+  height: 85vh;
+  background: var(--surface-raised);
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: background 0.25s;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--divider);
+  gap: 12px;
+}
+
+.folder-select {
+  padding: 5px 10px;
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--on-surface);
+  font-weight: 500;
+  border: 1px solid var(--divider);
+  /* fixmyslop-ignore[a11y/focus-removed] Custom button styled with native box-shadow */
+  outline: none;
+
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.editor-right-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.word-counter {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.color-palette-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.palette-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.palette-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.color-dot:hover {
+  transform: scale(1.15);
+}
+
+.color-dot.active {
+  border: 3px solid var(--brand);
+  transform: scale(1.1);
+}
+
+.btn-custom-color {
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.btn-custom-color:hover {
+  transform: scale(1.15);
+  border-color: var(--brand);
+}
+
+
+/* Formatting Toolbar */
+.formatting-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.formatting-toolbar button {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--on-surface);
+  transition: background 0.15s;
+}
+
+.formatting-toolbar button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+}
+
+.editor-content-area {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+  font-size: 15px;
+  line-height: 1.6;
+  /* fixmyslop-ignore[a11y/focus-removed] Contenteditable paper uses canvas background */
+  outline: none;
+
+  color: var(--on-surface);
+  user-select: text;
+}
+
+/* Dropdowns */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #FFFFFF;
+  min-width: 130px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.dropdown-content a,
+.dropdown-content .dropdown-item {
+  color: var(--on-surface);
+  padding: 8px 12px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dropdown-content a:hover,
+.dropdown-content .dropdown-item:hover {
+  background-color: #F1F5F9;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.color-dot-sm {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.color-dot-sm.clear {
+  background: repeating-linear-gradient(
+    45deg,
+    #ffffff,
+    #ffffff 2px,
+    #fca5a5 2px,
+    #fca5a5 4px
+  );
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sync-icon.spinning {
+  animation: spin 0.8s linear infinite;
+}

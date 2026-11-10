@@ -2,245 +2,20 @@
 # Copyright (C) 2026 Jam Amjad Rasheed
 # Licensed under GPL-3.0-or-later.
 
-import os
 import json
 import time
-import base64
 import random
 import socket
-import hashlib
 import logging
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from socketserver import ThreadingMixIn
 
 import storage
+from drop_payload_handler import (
+    ThreadedHTTPServer, AanoDropHandler, get_local_ip,
+    DROP_PORT, DISCOVERY_PORT, PROTOCOL_VERSION
+)
 
 logger = logging.getLogger("AANO.DropServer")
-
-DROP_PORT = 8765
-DISCOVERY_PORT = 8767
-PROTOCOL_VERSION = "aano-drop-v1"
-ALLOWED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
-
-def get_local_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.connect(('10.255.255.255', 1))
-        ip = s.getsockname()[0]
-    except Exception:
-        try:
-            ip = socket.gethostbyname(socket.gethostname())
-        except Exception:
-            ip = "127.0.0.1"
-    finally:
-        s.close()
-    return ip
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-class AanoDropHandler(BaseHTTPRequestHandler):
-    def log_message(self, format, *args):
-        logger.debug("%s - - [%s] %s" % (self.address_string(), self.log_date_time_string(), format % args))
-
-    def _send_cors_headers(self):
-        # fixmyslop-ignore[sec/cors-wildcard] Local private Wi-Fi P2P daemon bounded to LAN subnet
-        origin = self.headers.get("Origin") or "*"
-        self.send_header("Access-Control-Allow-Origin", origin)
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-AANO-TOKEN")
-
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self._send_cors_headers()
-        self.end_headers()
-
-    def do_GET(self):
-        if self.path == "/aano/info" or self.path == "/aano/info/":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self._send_cors_headers()
-            self.end_headers()
-            info = {
-                "protocol": PROTOCOL_VERSION,
-                "device": "Windows Desktop",
-                "hostname": socket.gethostname(),
-                "ip": get_local_ip(),
-                "port": DROP_PORT,
-                "status": "ready"
-            }
-            self.wfile.write(json.dumps(info).encode("utf-8"))
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def do_POST(self):
-        if self.path == "/aano/drop" or self.path == "/aano/drop/":
-            try:
-                content_len = int(self.headers.get("Content-Length", 0))
-                if content_len == 0 or content_len > 25 * 1024 * 1024:  # 25 MB safety cap
-                    self.send_response(400)
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Invalid payload size"}')
-                    return
-
-                raw_body = self.rfile.read(content_len)
-                payload = json.loads(raw_body.decode("utf-8"))
-
-                # Validate PIN or Token strictly
-                incoming_token = payload.get("token") or self.headers.get("X-AANO-TOKEN")
-                server = self.server.app_server
-                client_ip = self.client_address[0]
-                paired_peer = server.get_paired_peer()
-                is_paired_ip = bool(paired_peer and paired_peer.get("ip") == client_ip)
-                pin_matches = bool(
-                    incoming_token and str(incoming_token).strip() in (str(server.pin).strip(), str(server.token).strip())
-                )
-
-                if server.pin and not is_paired_ip and not pin_matches:
-                    self.send_response(403)
-                    self._send_cors_headers()
-                    self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Invalid or missing PIN or Token"}')
-                    return
-
-                if payload.get("encrypted"):
-                    iv_b64 = payload.get("iv_b64")
-                    data_b64 = payload.get("data_b64")
-                    if iv_b64 and data_b64:
-                        try:
-                            from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-                            dec_pin = str(server.pin or incoming_token or "").strip()
-                            key = hashlib.sha256(f"AANO_DROP_TRANSPORT_KEY_V1:{dec_pin}".encode("utf-8")).digest()
-                            iv = base64.b64decode(iv_b64)
-                            ct = base64.b64decode(data_b64)
-                            aesgcm = AESGCM(key)
-                            inner_bytes = aesgcm.decrypt(iv, ct, None)
-                            inner_obj = json.loads(inner_bytes.decode("utf-8"))
-                            incoming_notes = inner_obj.get("notes", [])
-                            incoming_images = inner_obj.get("images", [])
-                        except Exception as dec_err:
-                            logger.warning("Decryption of incoming drop payload failed: %s", dec_err)
-                            self.send_response(403)
-                            self._send_cors_headers()
-                            self.end_headers()
-                            self.wfile.write(b'{"success":false,"error":"Payload decryption failed. Invalid PIN or tampering detected."}')
-                            return
-                    else:
-                        incoming_notes = []
-                        incoming_images = []
-                else:
-                    incoming_notes = payload.get("notes", [])
-                    incoming_images = payload.get("images", [])
-
-                # 1. Save incoming images to local images directory with extension whitelisting
-                saved_images = 0
-                for img in incoming_images:
-                    name = os.path.basename(img.get("name", ""))
-                    ext = os.path.splitext(name)[1].lower()
-                    if ext not in ALLOWED_IMAGE_EXTS:
-                        logger.warning("Rejected non-image drop upload: %s", name)
-                        continue
-                    b64_data = img.get("data_base64") or img.get("bytes_base64", "")
-                    if name and b64_data:
-                        try:
-                            if "," in b64_data:
-                                b64_data = b64_data.split(",", 1)[1]
-                            raw_bytes = base64.b64decode(b64_data)
-                            target_path = os.path.join(storage.IMAGES_DIR, name)
-                            with open(target_path, "wb") as f:
-                                f.write(raw_bytes)
-                            saved_images += 1
-                        except Exception as e:
-                            logger.warning("Failed to save dropped image %s: %s", name, e)
-
-                # 2. Save incoming notes to local notes database
-                with storage._storage_lock:
-                    existing_notes = storage.load_notes()
-                    existing_map = {n["id"]: n for n in existing_notes}
-                    saved_notes = 0
-
-                    for n in incoming_notes:
-                        note_id = n.get("id")
-                        if not note_id:
-                            continue
-                        n["isLocal"] = True
-                        n["updatedAt"] = max(n.get("updatedAt", 0), int(time.time() * 1000))
-                        existing_map[note_id] = n
-                        saved_notes += 1
-
-                    storage.save_notes(list(existing_map.values()))
-
-                # 3. Auto-pair with sender if sender provided info
-                sender_name = payload.get("sender_name") or "Android Phone"
-                sender_ip = payload.get("sender_ip") or self.client_address[0]
-                sender_port = int(payload.get("sender_port", 8766))
-                server.set_paired_peer(sender_name, sender_ip, sender_port)
-
-                if server.on_receive_callback:
-                    try:
-                        server.on_receive_callback(saved_notes, saved_images)
-                    except Exception as e:
-                        logger.warning("Receiver callback error: %s", e)
-
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self._send_cors_headers()
-                self.end_headers()
-                res = {
-                    "success": True,
-                    "count": saved_notes,
-                    "images": saved_images,
-                    "message": f"Successfully received {saved_notes} notes and {saved_images} photos"
-                }
-                self.wfile.write(json.dumps(res).encode("utf-8"))
-            except Exception as e:
-                logger.exception("Error processing drop payload: %s", e)
-                self.send_response(500)
-                self._send_cors_headers()
-                self.end_headers()
-                err_res = {"success": False, "error": str(e)}
-                self.wfile.write(json.dumps(err_res).encode("utf-8"))
-        elif self.path == "/aano/pair" or self.path == "/aano/pair/":
-            try:
-                content_len = int(self.headers.get("Content-Length", 0))
-                raw_body = self.rfile.read(content_len) if content_len > 0 else b"{}"
-                payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-                server = self.server.app_server
-                incoming_pin = payload.get("pin")
-                if server.pin:
-                    if not incoming_pin or str(incoming_pin).strip() != str(server.pin).strip():
-                        self.send_response(403)
-                        self._send_cors_headers()
-                        self.end_headers()
-                        self.wfile.write(b'{"success":false,"error":"Invalid or missing PIN"}')
-                        return
-                peer_name = payload.get("name", "Android Device")
-                peer_ip = payload.get("ip") or self.client_address[0]
-                peer_port = int(payload.get("port", 8766))
-                server.set_paired_peer(peer_name, peer_ip, peer_port)
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self._send_cors_headers()
-                self.end_headers()
-                res = {
-                    "success": True,
-                    "name": f"Desktop PC ({socket.gethostname()})",
-                    "ip": get_local_ip(),
-                    "port": server.port
-                }
-                self.wfile.write(json.dumps(res).encode("utf-8"))
-            except Exception as e:
-                self.send_response(500)
-                self._send_cors_headers()
-                self.end_headers()
-                self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode("utf-8"))
-        else:
-            self.send_response(404)
-            self.end_headers()
 
 class AanoDropServer:
     def __init__(self, port=DROP_PORT, on_receive_callback=None):
@@ -250,9 +25,22 @@ class AanoDropServer:
         self.thread = None
         self.udp_sock = None
         self.udp_thread = None
-        self.pin = str(random.randint(100000, 999999))
-        self.token = f"drop_sec_{int(time.time())}_{random.randint(1000, 9999)}"
         self._running = False
+        self.pin = self._generate_pin()
+        self.token = self._generate_token()
+        self.last_receive_time = 0
+        self.last_receive_info = None
+
+    def _generate_pin(self):
+        return str(random.randint(100000, 999999))
+
+    def _generate_token(self):
+        return "%06d" % random.randint(100000, 999999)
+
+    def regenerate_pin(self):
+        self.pin = self._generate_pin()
+        self.token = self._generate_token()
+        return self.pin
 
     def _start_udp_beacon(self):
         def _beacon_loop():
@@ -320,99 +108,53 @@ class AanoDropServer:
             try:
                 self.server.shutdown()
                 self.server.server_close()
-            except Exception as e:
-                logger.warning("Error stopping drop server: %s", e)
+            except Exception as err:
+                logger.debug("Server shutdown notice: %s", err)
+        logger.info("AANO Drop server stopped")
+
+    def record_received(self, count, sender_name):
+        self.last_receive_time = time.time()
+        self.last_receive_info = {
+            "count": count,
+            "sender": sender_name,
+            "time": self.last_receive_time
+        }
+        if self.on_receive_callback:
+            try:
+                self.on_receive_callback(count, sender_name)
+            except Exception as cb_err:
+                logger.warning("Receive callback error: %s", cb_err)
+
+    def get_status(self):
+        paired_peer = self.get_paired_peer()
+        return {
+            "running": self._running,
+            "port": self.port,
+            "ip": get_local_ip(),
+            "pin": self.pin,
+            "token": self.token,
+            "device": socket.gethostname(),
+            "protocol": PROTOCOL_VERSION,
+            "last_receive": self.last_receive_info,
+            "paired_peer": paired_peer
+        }
 
     def get_paired_peer(self):
         cfg = storage.load_config()
-        return cfg.get("drop_paired_peer")
+        return cfg.get("aano_drop_paired_peer")
 
-    def set_paired_peer(self, name, ip, port=8766):
+    def set_paired_peer(self, ip, device_name):
         cfg = storage.load_config()
-        cfg["drop_paired_peer"] = {
-            "name": name,
+        cfg["aano_drop_paired_peer"] = {
             "ip": ip,
-            "port": int(port or 8766),
-            "connected_at": int(time.time())
+            "device": device_name,
+            "timestamp": int(time.time() * 1000)
         }
         storage.save_config(cfg)
-        logger.info("AANO Drop paired with peer: %s (%s:%s)", name, ip, port)
+        return True
 
-    def unpair(self):
+    def unpair_peer(self):
         cfg = storage.load_config()
-        cfg.pop("drop_paired_peer", None)
+        cfg["aano_drop_paired_peer"] = None
         storage.save_config(cfg)
-
-    def get_info(self):
-        qr_uri = f"aano://drop?ip={get_local_ip()}&port={self.port}&pin={self.pin}&token={self.token}"
-        qr_data_url = None
-        try:
-            import cv2
-            import base64
-            encoder = cv2.QRCodeEncoder_create()
-            mat = encoder.encode(qr_uri)
-            bordered = cv2.copyMakeBorder(mat, 4, 4, 4, 4, cv2.BORDER_CONSTANT, value=255)
-            resized = cv2.resize(bordered, (280, 280), interpolation=cv2.INTER_NEAREST)
-            _, png_bytes = cv2.imencode(".png", resized)
-            qr_data_url = "data:image/png;base64," + base64.b64encode(png_bytes).decode("ascii")
-        except Exception as e:
-            logger.warning("Could not generate OpenCV QR code: %s", e)
-
-        return {
-            "running": self._running,
-            "ip": get_local_ip(),
-            "port": self.port,
-            "pin": self.pin,
-            "token": self.token,
-            "paired_peer": self.get_paired_peer(),
-            "qr_data": qr_uri,
-            "qr_data_url": qr_data_url
-        }
-
-def discover_peers(timeout_sec=0.4):
-    """
-    Broadcasts UDP ping on DISCOVERY_PORT to quickly discover active AANO devices on LAN.
-    Returns list of discovered peers: [{"name": ..., "ip": ..., "port": ..., "type": ...}].
-    """
-    peers = []
-    seen = set()
-    my_ip = get_local_ip()
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(timeout_sec)
-        msg = json.dumps({"action": "ping", "app": "aano", "device": socket.gethostname()}).encode("utf-8")
-        sock.sendto(msg, ("255.255.255.255", DISCOVERY_PORT))
-        if "." in my_ip and my_ip != "127.0.0.1":
-            subnet_bcast = my_ip.rsplit(".", 1)[0] + ".255"
-            try:
-                sock.sendto(msg, (subnet_bcast, DISCOVERY_PORT))
-            except Exception as err:
-                logger.debug("Subnet bcast notice: %s", err)
-        start_t = time.time()
-        while time.time() - start_t < timeout_sec:
-            try:
-                data, addr = sock.recvfrom(2048)
-                peer_ip = addr[0]
-                if peer_ip == my_ip or peer_ip == "127.0.0.1":
-                    continue
-                info = json.loads(data.decode("utf-8", errors="ignore"))
-                if info.get("app") == "aano" and info.get("action") == "pong":
-                    key = (peer_ip, int(info.get("port", DROP_PORT)))
-                    if key not in seen:
-                        seen.add(key)
-                        peers.append({
-                            "name": info.get("device", peer_ip),
-                            "ip": peer_ip,
-                            "port": int(info.get("port", DROP_PORT)),
-                            "type": info.get("type", "device")
-                        })
-            except socket.timeout:
-                break
-            except Exception:
-                break
-        sock.close()
-    except Exception as e:
-        logger.debug("discover_peers notice: %s", e)
-    return peers
-
+        return True

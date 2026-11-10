@@ -1,0 +1,220 @@
+/* Dialogs */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.dialog-box {
+  background: var(--surface-raised);
+  color: var(--on-surface);
+  border: 1px solid var(--card-border);
+  width: 90%;
+  max-width: 440px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 22px;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-box h3 {
+  margin-bottom: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.dialog-box p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.dialog-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  color: var(--on-surface);
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  outline: none;
+  font-size: 13.5px;
+  transition: all 0.15s ease;
+}
+
+.dialog-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.error-msg {
+  color: var(--danger);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.btn-danger-filled {
+  background: var(--danger);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-danger-filled:hover {
+  background: var(--danger-hover);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.modal-backdrop:not(.hidden) {
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-backdrop:not(.hidden) .dialog-box {
+  animation: scaleIn 0.15s ease-out;
+}
+
+
+/* Google Sign-in Button */
+.btn-google-signin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 20px;
+  background: #ffffff;
+  color: #3c4043;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #dadce0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+}
+
+.btn-google-signin:hover {
+  background: #f8fafd;
+  border-color: #d2e3fc;
+  box-shadow: 0 1px 3px 1px rgba(66, 133, 244, 0.15);
+}
+
+.btn-google-signin:active {
+  background: #f1f3f4;
+  transform: scale(0.99);
+}
+
+
+/* Image Quality Toggle Badge */
+.quality-badge-btn {
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid var(--brand);
+  background: rgba(0, 121, 107, 0.08);
+  color: var(--brand);
+  cursor: pointer;
+  line-height: 16px;
+  transition: all 0.15s ease;
+}
+
+.quality-badge-btn.hd-mode {
+  border-color: #D97706;
+  background: rgba(217, 119, 6, 0.12);
+  color: #D97706;
+}
+
+/* Attached Images Strip */
+.editor-images-container {
+  display: flex;
+  gap: 10px;
+  padding: 10px 18px;
+  overflow-x: auto;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.editor-image-thumb {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editor-image-thumb:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.editor-image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.editor-image-thumb .thumb-del-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.editor-image-thumb:hover .thumb-del-btn {
+  opacity: 1;
+}
+
+.editor-image-thumb .thumb-del-btn:hover {
+  background: #dc2626;
+}

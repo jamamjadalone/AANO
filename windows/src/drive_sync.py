@@ -1,261 +1,29 @@
-# Google Drive OAuth 2.0 loopback authentication & REST API sync for AANO Windows.
+# Google Drive REST API note synchronization for AANO Windows.
 # Copyright (C) 2026 Jam Amjad Rasheed
 # Licensed under GPL-3.0-or-later.
 
-import os
 import json
-import time
-import webbrowser
 import urllib.request
 import urllib.parse
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import threading
-import sys
 import logging
 import merge_engine
+from drive_auth import DriveAuthManager, DRIVE_FILES_ENDPOINT, DRIVE_UPLOAD_ENDPOINT
 
 logger = logging.getLogger("AANO.DriveSync")
-
-def _load_credentials():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(base_dir, "google_credentials.json"),
-        os.path.join(base_dir, "..", "google_credentials.json")
-    ]
-    if hasattr(sys, "_MEIPASS"):
-        candidates.append(os.path.join(sys._MEIPASS, "google_credentials.json"))
-        candidates.append(os.path.join(sys._MEIPASS, "src", "google_credentials.json"))
-    for p in candidates:
-        if p and os.path.exists(p):
-            try:
-                with open(p, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    return data.get("client_id", ""), data.get("client_secret", "")
-            except (json.JSONDecodeError, OSError):
-                pass
-    return "", ""
-
-CLIENT_ID, CLIENT_SECRET = _load_credentials()
-REDIRECT_PORT = 8085
-REDIRECT_URI = f"http://localhost:{REDIRECT_PORT}/callback"
-
-AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo"
-DRIVE_FILES_ENDPOINT = "https://www.googleapis.com/drive/v3/files"
-DRIVE_UPLOAD_ENDPOINT = "https://www.googleapis.com/upload/drive/v3/files"
-
-SCOPES = [
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "openid"
-]
-
-class OAuthCallbackHandler(BaseHTTPRequestHandler):
-    auth_code = None
-    auth_error = None
-
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == "/callback":
-            params = urllib.parse.parse_qs(parsed.query)
-            if "code" in params:
-                OAuthCallbackHandler.auth_code = params["code"][0]
-                redirect_target = "https://jamamjadalone.github.io/AANO/oauth-success.html"
-                self.send_response(302)
-                self.send_header("Location", redirect_target)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.end_headers()
-                fallback_html = f"""<!DOCTYPE html>
-<html><head>
-<meta http-equiv="refresh" content="0; url={redirect_target}">
-<title>Redirecting...</title>
-</head><body>
-<p>Authentication successful. <a href="{redirect_target}">Click here to continue</a>.</p>
-<script>window.location.href = "{redirect_target}";</script>
-</body></html>"""
-                self.wfile.write(fallback_html.encode("utf-8"))
-            else:
-                OAuthCallbackHandler.auth_error = params.get("error", ["Unknown error"])[0]
-                self.send_response(400)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(f"<h3>Authentication Failed: {OAuthCallbackHandler.auth_error}</h3><p>Please close this tab and try again from the AANO app.</p>".encode("utf-8"))
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def log_message(self, format, *args):
-        pass  # Quiet logging
 
 class GoogleDriveSync:
     def __init__(self, config_getter, config_saver):
         self.get_config = config_getter
         self.save_config = config_saver
 
-    def get_auth_url(self):
-        params = {
-            "client_id": CLIENT_ID,
-            "redirect_uri": REDIRECT_URI,
-            "response_type": "code",
-            "scope": " ".join(SCOPES),
-            "access_type": "offline",
-            "prompt": "consent"
-        }
-        return f"{AUTH_ENDPOINT}?{urllib.parse.urlencode(params)}"
-
     def start_login_flow(self):
-        OAuthCallbackHandler.auth_code = None
-        OAuthCallbackHandler.auth_error = None
-
-        server = None
-        try:
-            server = HTTPServer(("localhost", REDIRECT_PORT), OAuthCallbackHandler)
-        except OSError:
-            # Port might be in use or bound
-            return {"success": False, "error": f"Port {REDIRECT_PORT} busy. Please try again."}
-
-        server_thread = threading.Thread(target=self._run_server, args=(server,), daemon=True)
-        server_thread.start()
-
-        auth_url = self.get_auth_url()
-        webbrowser.open(auth_url)
-
-        # Wait up to 120 seconds for user authorization
-        start_time = time.time()
-        while time.time() - start_time < 120:
-            if OAuthCallbackHandler.auth_code:
-                break
-            if OAuthCallbackHandler.auth_error:
-                server.server_close()
-                return {"success": False, "error": f"OAuth Error: {OAuthCallbackHandler.auth_error}"}
-            time.sleep(0.5)
-
-        try:
-            server.server_close()
-        except OSError:
-            pass
-
-        code = OAuthCallbackHandler.auth_code
-        if not code:
-            return {"success": False, "error": "Login timed out or was cancelled."}
-
-        return self._exchange_code_for_tokens(code)
-
-    def _run_server(self, server):
-        try:
-            server.handle_request()
-        except (OSError, ValueError) as e:
-            logger.debug("Server request error: %s", e)
-
-    def _exchange_code_for_tokens(self, code):
-        data = urllib.parse.urlencode({
-            "code": code,
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "redirect_uri": REDIRECT_URI,
-            "grant_type": "authorization_code"
-        }).encode("utf-8")
-
-        req = urllib.request.Request(TOKEN_ENDPOINT, data=data, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                token_data = json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
-            logger.warning("Token exchange failed: %s", e)
-            return {"success": False, "error": f"Token exchange failed: {e}"}
-
-        access_token = token_data.get("access_token")
-        refresh_token = token_data.get("refresh_token")
-        expires_in = token_data.get("expires_in", 3600)
-
-        user_info = self._fetch_user_info(access_token)
-        email = user_info.get("email", "")
-        name = user_info.get("name", "")
-
-        cfg = self.get_config()
-        cfg["google_access_token"] = access_token
-        if refresh_token:
-            cfg["google_refresh_token"] = refresh_token
-        cfg["google_token_expiry"] = int(time.time()) + expires_in
-        cfg["google_email"] = email
-        cfg["google_name"] = name
-        cfg["google_connected"] = True
-        self.save_config(cfg)
-
-        # Automatically bring AANO Notes window to front so user doesn't need to manually switch
-        self._bring_app_to_front()
-
-        return {"success": True, "email": email, "name": name}
-
-    def _bring_app_to_front(self):
-        try:
-            import ctypes
-            user32 = ctypes.windll.user32
-            hwnd = user32.FindWindowW(None, "AANO Notes")
-            if hwnd:
-                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-                user32.SetForegroundWindow(hwnd)
-                user32.BringWindowToTop(hwnd)
-        except Exception as e:
-            logger.debug("Bring window to front: %s", e)
-
-    def _fetch_user_info(self, access_token):
-        req = urllib.request.Request(USERINFO_ENDPOINT, headers={"Authorization": f"Bearer {access_token}"})
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
-            logger.warning("Failed to fetch user info: %s", e)
-            return {}
+        return DriveAuthManager.start_login_flow(self.get_config, self.save_config)
 
     def get_valid_access_token(self):
-        cfg = self.get_config()
-        access_token = cfg.get("google_access_token")
-        refresh_token = cfg.get("google_refresh_token")
-        expiry = cfg.get("google_token_expiry", 0)
-
-        # If token is still valid for at least 60 seconds
-        if access_token and time.time() < (expiry - 60):
-            return access_token
-
-        if not refresh_token:
-            return None
-
-        # Refresh the token
-        data = urllib.parse.urlencode({
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "refresh_token": refresh_token,
-            "grant_type": "refresh_token"
-        }).encode("utf-8")
-
-        req = urllib.request.Request(TOKEN_ENDPOINT, data=data, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                token_data = json.loads(resp.read().decode("utf-8"))
-                new_token = token_data.get("access_token")
-                expires_in = token_data.get("expires_in", 3600)
-                cfg["google_access_token"] = new_token
-                cfg["google_token_expiry"] = int(time.time()) + expires_in
-                self.save_config(cfg)
-                return new_token
-        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
-            logger.warning("Token refresh failed: %s", e)
-            return None
+        return DriveAuthManager.get_valid_access_token(self.get_config, self.save_config)
 
     def logout(self):
-        cfg = self.get_config()
-        cfg["google_access_token"] = None
-        cfg["google_refresh_token"] = None
-        cfg["google_token_expiry"] = 0
-        cfg["google_email"] = ""
-        cfg["google_name"] = ""
-        cfg["google_connected"] = False
-        cfg["google_drive_file_id"] = None
-        self.save_config(cfg)
-        return {"success": True}
+        return DriveAuthManager.logout(self.get_config, self.save_config)
 
     def find_remote_file(self, token, filename="aano-notes.json"):
         query = f"name = '{filename}' and trashed = false"
@@ -292,22 +60,17 @@ class GoogleDriveSync:
             except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
                 logger.warning("Download remote notes failed: %s", e)
 
-        # Merge local and remote notes
         merged_notes = self._merge_notes(local_notes, remote_notes)
-
-        # Upload merged notes back to Google Drive (Exclude local-only notes from cloud)
         cloud_payload = [n for n in merged_notes if not n.get("isLocal", False)]
         json_data = json.dumps(cloud_payload, ensure_ascii=False, indent=2).encode("utf-8")
 
         if remote_file:
-            # Update existing file
             upload_url = f"{DRIVE_UPLOAD_ENDPOINT}/{remote_file['id']}?uploadType=media"
             req = urllib.request.Request(upload_url, data=json_data, headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json; charset=UTF-8"
             }, method="PATCH")
         else:
-            # Create new file using simple multipart upload
             meta = json.dumps({"name": filename, "mimeType": "application/json"}).encode("utf-8")
             boundary = "-------314159265358979323846"
             delimiter = f"\r\n--{boundary}\r\n".encode("utf-8")
@@ -318,11 +81,10 @@ class GoogleDriveSync:
                 b"Content-Type: application/json; charset=UTF-8\r\n\r\n" +
                 meta +
                 delimiter +
-                b"Content-Type: application/json\r\n\r\n" +
+                b"Content-Type: application/json; charset=UTF-8\r\n\r\n" +
                 json_data +
                 close_delim
             )
-
             upload_url = f"{DRIVE_UPLOAD_ENDPOINT}?uploadType=multipart"
             req = urllib.request.Request(upload_url, data=body, headers={
                 "Authorization": f"Bearer {token}",
@@ -330,92 +92,59 @@ class GoogleDriveSync:
             }, method="POST")
 
         try:
-            with urllib.request.urlopen(req, timeout=25) as resp:
-                resp.read()
-        except (urllib.error.URLError, TimeoutError) as e:
-            logger.error("Drive upload failed: %s", e)
-            return {"success": False, "error": f"Drive upload failed: {e}"}
-
-        return {"success": True, "merged_notes": merged_notes, "count": len(merged_notes)}
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                upload_res = json.loads(resp.read().decode("utf-8"))
+                new_file_id = upload_res.get("id")
+                if new_file_id:
+                    cfg = self.get_config()
+                    cfg["google_drive_file_id"] = new_file_id
+                    self.save_config(cfg)
+                return {"success": True, "count": len(merged_notes), "merged_notes": merged_notes}
+        except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+            logger.warning("Upload merged notes failed: %s", e)
+            return {"success": False, "error": f"Failed to upload to Google Drive: {e}"}
 
     def _merge_notes(self, local_notes, remote_notes):
-        local_map = {n["id"]: n for n in local_notes}
-        for rn in remote_notes:
-            rid = rn.get("id")
-            if not rid:
-                continue
-            existing = local_map.get(rid)
-            if existing and existing.get("isLocal"):
-                continue
+        local_map = {n["id"]: n for n in local_notes if "id" in n}
+        remote_map = {n["id"]: n for n in remote_notes if "id" in n}
 
-            rn_updated = rn.get("updatedAt", 0)
-            ex_updated = existing.get("updatedAt", 0) if existing else 0
-            is_purged = bool(rn.get("purged", False) or (existing and existing.get("purged", False)))
+        all_ids = set(local_map.keys()).union(set(remote_map.keys()))
+        merged = []
 
-            if is_purged:
-                del_at = max(existing.get("deletedAt", 0) if existing else 0, rn.get("deletedAt", 0), rn_updated, ex_updated)
-                up_at = max(rn_updated, ex_updated)
-                base = dict(existing if existing else rn)
-                base["title"] = ""
-                base["content"] = ""
-                base["images"] = []
-                base["audioUri"] = None
-                base["deleted"] = True
-                base["purged"] = True
-                base["deletedAt"] = del_at
-                base["updatedAt"] = up_at
-                base["isLocal"] = False
-                local_map[rid] = base
-                continue
+        for nid in all_ids:
+            loc = local_map.get(nid)
+            rem = remote_map.get(nid)
 
-            if not existing:
-                local_map[rid] = rn
+            if loc and not rem:
+                merged.append(loc)
+            elif rem and not loc:
+                merged.append(rem)
             else:
-                is_archived = bool(existing.get("archived", False) or rn.get("archived", False))
+                loc_del = loc.get("deleted", False)
+                rem_del = rem.get("deleted", False)
+                if loc_del or rem_del:
+                    winner = loc if loc.get("updatedAt", 0) >= rem.get("updatedAt", 0) else rem
+                    merged.append(winner)
+                    continue
 
-                if rn_updated >= ex_updated:
-                    if rn.get("deleted", False):
-                        is_deleted = True
-                    else:
-                        is_deleted = bool(existing.get("deleted", False) and existing.get("deletedAt", 0) > rn_updated)
+                loc_updated = loc.get("updatedAt", 0)
+                rem_updated = rem.get("updatedAt", 0)
 
-                    merged = dict(rn)
-                    merged["deleted"] = is_deleted
-                    merged["archived"] = is_archived
-                    if is_deleted:
-                        merged["deletedAt"] = max(existing.get("deletedAt", 0), rn.get("deletedAt", 0), rn_updated)
-                    else:
-                        # 3-way line/block merge to prevent overwriting paragraphs
-                        merged_content, _ = merge_engine.merge_note_contents(
-                            existing.get("content", ""),
-                            rn.get("content", "")
-                        )
-                        merged["content"] = merged_content
-                        # Merge tags & images union
-                        merged["tags"] = list(dict.fromkeys(existing.get("tags", []) + rn.get("tags", [])))
-                        merged["images"] = list(dict.fromkeys(existing.get("images", []) + rn.get("images", [])))
-
-                    local_map[rid] = merged
+                if loc_updated == rem_updated:
+                    merged.append(loc)
                 else:
-                    if existing.get("deleted", False):
-                        is_deleted = True
-                    else:
-                        is_deleted = bool(rn.get("deleted", False) and rn.get("deletedAt", 0) > ex_updated)
-
-                    existing["deleted"] = is_deleted
-                    existing["archived"] = is_archived
-                    if is_deleted:
-                        existing["deletedAt"] = max(existing.get("deletedAt", 0), rn.get("deletedAt", 0), ex_updated)
-                    else:
-                        # 3-way line/block merge
-                        merged_content, _ = merge_engine.merge_note_contents(
-                            existing.get("content", ""),
-                            rn.get("content", "")
+                    try:
+                        merged_content = merge_engine.merge_note_content(
+                            loc.get("content", ""),
+                            rem.get("content", "")
                         )
-                        existing["content"] = merged_content
-                        existing["tags"] = list(dict.fromkeys(existing.get("tags", []) + rn.get("tags", [])))
-                        existing["images"] = list(dict.fromkeys(existing.get("images", []) + rn.get("images", [])))
+                        winner = dict(loc if loc_updated > rem_updated else rem)
+                        winner["content"] = merged_content
+                        winner["updatedAt"] = max(loc_updated, rem_updated)
+                        merged.append(winner)
+                    except Exception as me:
+                        logger.warning("3-way merge fallback for note %s: %s", nid, me)
+                        winner = loc if loc_updated > rem_updated else rem
+                        merged.append(winner)
 
-                    local_map[rid] = existing
-
-        return list(local_map.values())
+        return merged

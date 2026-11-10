@@ -178,3 +178,72 @@ android/app/src/main/java/app/aa/aano/
 | :--- | :--- | :--- |
 | `AanoApp.kt` | 67 | Application class: dynamic color themes, notification channels, unhandled crash log. |
 | `AanoTileService.kt` | 35 | Android Quick Settings Tile to open QuickNoteActivity with single tap. |
+| `NoteWidgetProvider.kt` | 78 | Android Home Screen AppWidget provider with dynamic list view and quick capture shortcut. |
+
+
+---
+
+## 3. Windows Desktop Architecture (Python & Web UI)
+
+### `windows/src/` (Python Backend Architecture — PyWebView Bridge & Storage)
+| File | Lines | Responsibility |
+| :--- | :--- | :--- |
+| `main.py` | 78 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
+| `api.py` | 28 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
+| `api_notes.py` | 247 | Notes CRUD, search integration, color resolution, folder management, block model conversion. |
+| `api_trash.py` | 97 | Soft-delete, trash recycle bin, note restoration, permanent deletion, and media purge. |
+| `api_sync.py` | 71 | Google Drive sync trigger, cloud login/status delegation, and auto-sync worker. |
+| `api_drop.py` | 53 | AANO Drop 2.0 P2P transfer bridge, radar scan triggers, and peer pairing. |
+| `api_media.py` | 169 | Image attachment dialogs, cropping, WebP encoding, and media path resolution. |
+| `api_export.py` | 209 | Note export to TXT, MD, PDF, ZIP bundles, `.aano` package unpacker, and URL handler. |
+| `storage.py` | 256 | Notes persistence, config management, color labels, DPAPI encryption, and sync lock. |
+| `storage_vault.py` | 42 | Windows DPAPI encryption/decryption primitives (`CryptProtectData`/`CryptUnprotectData`). |
+| `image_processor.py` | 133 | Media vault image compressor, thumbnail generator, aspect-ratio cropper, and rotation. |
+| `drive_auth.py` | 245 | Google Drive OAuth 2.0 loopback server (port 8085), token refresh, and credentials parser. |
+| `drive_sync.py` | 150 | Google Drive REST API file manager, appData folder lookup, and upload/download coordinator. |
+| `drop_payload_handler.py` | 187 | AANO Drop HTTP request handler (`/aano/info`, `/aano/pair`, `/aano/drop`), chunk verification. |
+| `aano_drop_server.py` | 160 | Embedded HTTP server (port 8766) and UDP discovery beacon loop (port 8767). |
+| `aano_drop_client.py` | 230 | Outbound P2P payload transmitter, network scanner, and paired peer manager. |
+| `block_model.py` | 134 | Rich text block model, HTML-to-blocks parser, and Markdown/plain-text converters. |
+| `fts_index.py` | 142 | SQLite Full-Text Search (FTS5) local indexer and search query parser. |
+| `hotkey_daemon.py` | 70 | Global Windows keyboard hook daemon (Win+Alt+N quick note launcher). |
+| `merge_engine.py` | 92 | 3-way note reconciliation and conflict resolution engine for cloud and drop sync. |
+
+---
+
+### `windows/src/ui/css/` (Modular Desktop Stylesheets)
+| File | Lines | Responsibility |
+| :--- | :--- | :--- |
+| `styles.css` | 12 | Main CSS aggregator importing modular style sheets under Rule 21. |
+| `base.css` | 263 | Design tokens, CSS variables, dark/light themes, reset, scrollbars, and main frame layout. |
+| `sidebar.css` | 298 | Sidebar navigation, search bar container, folders list, tag filters, and sync status footer. |
+| `cards.css` | 262 | Notes grid, masonry card layout, card themes, contrast adaptation, selection checkboxes. |
+| `toolbar.css` | 260 | Live color palette filter bar, multi-select batch action bar, and export dropdown menu. |
+| `editor.css` | 237 | Note editor modal, title header, lined notebook paper canvas, and formatting toolbar. |
+| `modals.css` | 220 | Settings dialog, confirmation prompts, folder modal, and Google sign-in button. |
+| `media_drop.css` | 234 | Attached image preview modal, interactive image cropper, and PC Drop QR scanner card. |
+
+---
+
+### `windows/src/ui/js/` (Modular Desktop JavaScript Frontend)
+| File | Lines | Responsibility |
+| :--- | :--- | :--- |
+| `app.js` | 67 | Desktop frontend entrypoint, boot sequence, periodic sync/peer polling, and bridge listeners. |
+| `app_state.js` | 94 | Global reactive state variables, color palettes, PyWebView bridge accessor, and regex patterns. |
+| `app_utils.js` | 193 | HTML escaping, date formatting, color math, and theme switcher (Dark/Light). |
+| `app_dialogs.js` | 119 | Custom native dialogs (`showNativeConfirm`, `showNativePrompt`, `showNativeAlert`). |
+| `app_notes_render.js` | 256 | Notes grid/masonry card renderer, preview content generator, and link auto-linkify. |
+| `app_notes_filter.js` | 221 | Note list filtering, search queries, folders renderer, and palette filter bar. |
+| `app_editor_core.js` | 163 | Note editor modal lifecycle (open, save, discard, pin, word count, view/edit mode). |
+| `app_editor_toolbar.js` | 203 | Rich text formatting controls, heading blocks, block reordering, and color palette. |
+| `app_editor_checklist.js` | 125 | Interactive Markdown checklist toggle, strikethrough sinking, and checklist actions. |
+| `app_editor_events.js` | 155 | Note editor event listeners (save, pin, delete, archive, folder select, view switch). |
+| `app_media.js` | 168 | Image attachment loading, thumbnails strip rendering, and full-screen image preview. |
+| `app_cropper.js` | 250 | Interactive HTML5 canvas image cropper with aspect-ratio locking and rotation. |
+| `app_sync.js` | 274 | Google Drive OAuth modal, manual/auto-sync heartbeat, and backup export/import. |
+| `app_drop.js` | 270 | AANO Drop 2.0 P2P discovery modal, paired peer status, and standard QR generation. |
+| `app_scanner.js` | 164 | Web camera QR code scanner, pairing URI paste, and pairing handshake. |
+| `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
+| `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
+| `app_events.js` | 231 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+

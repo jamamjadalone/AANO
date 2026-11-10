@@ -8,64 +8,26 @@ import uuid
 import time
 import urllib.request
 import urllib.error
+import threading
+import logging
 from drive_sync import GoogleDriveSync
+
+from storage_vault import _dpapi_encrypt, _dpapi_decrypt, VAULT_HEADER  # noqa: F401
+from image_processor import process_and_save_image, crop_and_rotate_image, IMAGES_DIR  # noqa: F401
+
+logger = logging.getLogger("AANO.Storage")
 
 APPDATA_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "AANO")
 os.makedirs(APPDATA_DIR, exist_ok=True)
 
 NOTES_FILE = os.path.join(APPDATA_DIR, "notes.json")
 CONFIG_FILE = os.path.join(APPDATA_DIR, "config.json")
-IMAGES_DIR = os.path.join(APPDATA_DIR, "images")
-os.makedirs(IMAGES_DIR, exist_ok=True)
 
 BASE_URL = "https://aano-api.jamamjadalone.workers.dev"
 APP_KEY = "aano_shield_key_2026_pk_sec"
 
-import threading
-import logging
-logger = logging.getLogger("AANO.Storage")
-
 _storage_lock = threading.RLock()
 _sync_lock = threading.Lock()
-
-import ctypes
-from ctypes import wintypes
-
-class _DATA_BLOB(ctypes.Structure):
-    _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
-
-VAULT_HEADER = b"AANO_VAULT_DPAPI_V1\n"
-
-def _dpapi_encrypt(data: bytes, descr: str = "AANO Secure Vault") -> bytes:
-    """Encrypts plaintext bytes using Windows built-in DPAPI."""
-    if os.name != "nt" or not hasattr(ctypes, "windll") or not hasattr(ctypes.windll, "crypt32"):
-        raise OSError("DPAPI is only supported on Windows NT platforms")
-    in_blob = _DATA_BLOB(len(data), ctypes.cast(ctypes.c_char_p(data), ctypes.POINTER(ctypes.c_char)))
-    out_blob = _DATA_BLOB()
-    if not ctypes.windll.crypt32.CryptProtectData(
-        ctypes.byref(in_blob), descr, None, None, None, 0, ctypes.byref(out_blob)
-    ):
-        raise ctypes.WinError()
-    try:
-        return ctypes.string_at(out_blob.pbData, out_blob.cbData)
-    finally:
-        ctypes.windll.kernel32.LocalFree(out_blob.pbData)
-
-def _dpapi_decrypt(encrypted: bytes) -> bytes:
-    """Decrypts DPAPI-encrypted bytes for the current logged-in Windows user."""
-    if os.name != "nt" or not hasattr(ctypes, "windll") or not hasattr(ctypes.windll, "crypt32"):
-        raise OSError("DPAPI is only supported on Windows NT platforms")
-    in_blob = _DATA_BLOB(len(encrypted), ctypes.cast(ctypes.c_char_p(encrypted), ctypes.POINTER(ctypes.c_char)))
-    out_blob = _DATA_BLOB()
-    if not ctypes.windll.crypt32.CryptUnprotectData(
-        ctypes.byref(in_blob), None, None, None, None, 0, ctypes.byref(out_blob)
-    ):
-        raise ctypes.WinError()
-    try:
-        return ctypes.string_at(out_blob.pbData, out_blob.cbData)
-    finally:
-        ctypes.windll.kernel32.LocalFree(out_blob.pbData)
-
 
 def load_config():
     with _storage_lock:
@@ -98,20 +60,23 @@ def save_config(cfg):
 
 def get_color_labels():
     cfg = load_config()
-    return cfg.get("color_labels", {})
+    default_labels = {
+        "0": "Default", "1": "Yellow", "2": "Green", "3": "Teal",
+        "4": "Blue", "5": "Purple", "6": "Magenta", "7": "Red",
+        "8": "Orange", "9": "Coral", "10": "Sand", "11": "Slate", "12": "Dark"
+    }
+    custom = cfg.get("color_labels", {})
+    default_labels.update(custom)
+    return default_labels
 
 def set_color_label(color_index, label):
-    cfg = load_config()
-    labels = cfg.get("color_labels", {})
-    key = str(color_index)
-    clean = (label or "").strip()
-    if clean:
-        labels[key] = clean
-    else:
-        labels.pop(key, None)
-    cfg["color_labels"] = labels
-    save_config(cfg)
-    return labels
+    with _storage_lock:
+        cfg = load_config()
+        if "color_labels" not in cfg:
+            cfg["color_labels"] = {}
+        cfg["color_labels"][str(color_index)] = label.strip() if label else ""
+        save_config(cfg)
+        return get_color_labels()
 
 def load_notes():
     with _storage_lock:
@@ -127,16 +92,14 @@ def load_notes():
                     return json.loads(raw.decode("utf-8"))
             except (json.JSONDecodeError, OSError, Exception) as e:
                 backup_path = f"{NOTES_FILE}.corrupt.{int(time.time())}.bak"
-                logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving corrupt file at %s", e, backup_path)
+                logger.error("CRITICAL: Failed to parse notes.json (%s). Preserving at %s", e, backup_path)
                 try:
                     import shutil
                     shutil.copy2(NOTES_FILE, backup_path)
                 except OSError as copy_err:
-                    logger.error("Failed to create backup of corrupt notes: %s", copy_err)
-                # Never overwrite damaged notes with welcome templates; return empty to preserve on-disk backup
+                    logger.error("Failed to backup corrupt notes: %s", copy_err)
                 return []
 
-        # First-time clean launch only: initialize workspace with welcome note
         now = int(time.time() * 1000)
         welcome_notes = [
             {
@@ -243,8 +206,6 @@ def sync_with_cloud():
 
     try:
         cfg = load_config()
-        
-        # Priority 1: Google Drive Sync (15GB Lifetime Free, zero 500MB DB ceiling)
         if cfg.get("google_connected"):
             notes = load_notes()
             res = drive_sync_instance.sync_notes(notes)
@@ -284,144 +245,12 @@ def sync_with_cloud():
                         save_config(cfg)
                 return res
 
-        # Google Drive is the sole and authoritative cloud sync provider
-        return {"success": False, "error": "Google Drive sync is not connected. Sign in with your Google Account to sync."}
+        return {"success": False, "error": "Google Drive sync is not connected. Sign in with your Google Account."}
     finally:
         _sync_lock.release()
 
 def subscribe_newsletter(email: str, source: str = "windows_app") -> dict:
-    """Subscribes an email to the AANO product newsletter via Cloudflare Worker."""
     return post_json("/api/newsletter/subscribe", {"email": email, "source": source})
 
 def unsubscribe_newsletter(email: str) -> dict:
-    """Unsubscribes an email from the AANO product newsletter via Cloudflare Worker."""
     return post_json("/api/newsletter/unsubscribe", {"email": email})
-
-
-
-def process_and_save_image(src_path, quality_hd=False):
-    """
-    Copies or converts an image into %APPDATA%/AANO/images/
-    Standard: Resized to max 1280px dimension, saved as WebP (quality 80) ~100-150KB.
-    HD: Original resolution and quality preserved.
-    """
-    import random
-    from PIL import Image, ImageOps
-
-    if not os.path.exists(src_path):
-        return {"success": False, "error": "Source file not found"}
-
-    try:
-        ts = int(time.time() * 1000)
-        rand = random.randint(100, 999)
-        with Image.open(src_path) as im:
-            im = ImageOps.exif_transpose(im)
-            if quality_hd:
-                ext = os.path.splitext(src_path)[1].lower()
-                if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-                    ext = ".jpg"
-                dest_fn = f"img_{ts}_{rand}{ext}"
-                dest_path = os.path.join(IMAGES_DIR, dest_fn)
-                if ext in [".jpg", ".jpeg"]:
-                    if im.mode in ("RGBA", "P"):
-                        im = im.convert("RGB")
-                    im.save(dest_path, "JPEG", quality=95)
-                elif ext == ".png":
-                    im.save(dest_path, "PNG", optimize=True)
-                else:
-                    im.save(dest_path, "WEBP", quality=95)
-            else:
-                dest_fn = f"img_{ts}_{rand}.webp"
-                dest_path = os.path.join(IMAGES_DIR, dest_fn)
-                max_dim = 1280
-                w, h = im.size
-                if w > max_dim or h > max_dim:
-                    ratio = w / h
-                    if w > h:
-                        new_w = max_dim
-                        new_h = int(max_dim / ratio)
-                    else:
-                        new_h = max_dim
-                        new_w = int(max_dim * ratio)
-                    im = im.resize((new_w, new_h), Image.Resampling.LANCZOS)
-                if im.mode not in ("RGB", "RGBA"):
-                    im = im.convert("RGB")
-                im.save(dest_path, "WEBP", quality=80)
-
-            return {
-                "success": True,
-                "filename": dest_fn,
-                "path": dest_path,
-                "size": os.path.getsize(dest_path),
-                "width": im.width,
-                "height": im.height
-            }
-    except Exception as e:
-        logger.warning("Failed to process image %s: %s", src_path, e)
-        return {"success": False, "error": str(e)}
-
-
-def crop_and_rotate_image(filename, crop_box=None, rotation_deg=0, quality_hd=False):
-    """
-    Applies crop and/or rotation to an image in %APPDATA%/AANO/images/
-    crop_box: [left, top, right, bottom] in original image pixel space
-    rotation_deg: Clockwise rotation in degrees (e.g. 90, 180, 270)
-    """
-    import random
-    from PIL import Image
-
-    src_path = os.path.join(IMAGES_DIR, filename)
-    if not os.path.exists(src_path):
-        return {"success": False, "error": "Target image not found"}
-
-    try:
-        ts = int(time.time() * 1000)
-        rand = random.randint(100, 999)
-        dest_fn = f"img_crop_{ts}_{rand}.webp"
-        dest_path = os.path.join(IMAGES_DIR, dest_fn)
-
-        with Image.open(src_path) as im:
-            if rotation_deg and (rotation_deg % 360 != 0):
-                im = im.rotate(-rotation_deg, expand=True)
-
-            if crop_box and len(crop_box) == 4:
-                left, top, right, bottom = crop_box
-                w, h = im.size
-                left = max(0, min(int(left), w - 1))
-                top = max(0, min(int(top), h - 1))
-                right = max(left + 1, min(int(right), w))
-                bottom = max(top + 1, min(int(bottom), h))
-                im = im.crop((left, top, right, bottom))
-
-            if not quality_hd:
-                max_dim = 1280
-                w, h = im.size
-                if w > max_dim or h > max_dim:
-                    ratio = w / h
-                    if w > h:
-                        new_w = max_dim
-                        new_h = int(max_dim / ratio)
-                    else:
-                        new_h = max_dim
-                        new_w = int(max_dim * ratio)
-                    im = im.resize((new_w, new_h), Image.Resampling.LANCZOS)
-
-            if im.mode not in ("RGB", "RGBA"):
-                im = im.convert("RGB")
-
-            q = 95 if quality_hd else 80
-            im.save(dest_path, "WEBP", quality=q)
-
-        return {
-            "success": True,
-            "filename": dest_fn,
-            "path": dest_path,
-            "size": os.path.getsize(dest_path),
-            "width": im.width,
-            "height": im.height
-        }
-    except Exception as e:
-        logger.warning("Failed to crop image %s: %s", filename, e)
-        return {"success": False, "error": str(e)}
-
-
