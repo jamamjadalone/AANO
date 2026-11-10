@@ -61,17 +61,10 @@ class EditorActivity : AppCompatActivity() {
     private lateinit var audioHelper: EditorAudioHelper
     private lateinit var imageCoordinator: EditorImageCoordinator
     private val undoRedoManager = EditorUndoRedoManager()
-    private var noteId: String? = null
-    private var loaded = false
-    private var selectedColor = 0
-    private var selectedFolder = ""
-    private var selectedTags = mutableListOf<String>()
-    private var isLocalNote: Boolean = false
-    private val attachedImages = mutableListOf<String>()
-    private var attachedAudioUri: String? = null
-    private var attachedAudioDuration: Long = 0L
-    private var isDeleted = false
-    private var isEditMode = true
+    private var noteId: String? = null; private var loaded = false; private var isDeleted = false; private var isEditMode = true
+    private var selectedColor = 0; private var selectedFolder = ""; private var isLocalNote: Boolean = false
+    private var selectedTags = mutableListOf<String>(); private val attachedImages = mutableListOf<String>()
+    private var attachedAudioUri: String? = null; private var attachedAudioDuration: Long = 0L
     private val saveHandler = Handler(Looper.getMainLooper())
     private val autoSaveRunnable = Runnable { if (loaded) saveSilently() }
 
@@ -195,15 +188,20 @@ class EditorActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                updateWordCount(); undoRedoManager.pushState(s?.toString().orEmpty())
+                updateWordCount()
+                val cursor = binding.noteContent.selectionStart.coerceAtLeast(0)
+                undoRedoManager.pushState(s?.toString().orEmpty(), cursor)
             }
         })
     }
 
     private fun updateWordCount() {
-        val text = binding.noteContent.text?.toString().orEmpty().trim()
-        val words = if (text.isBlank()) 0 else text.split(Regex("\\s+")).count { it.isNotBlank() }
-        binding.tvWordCount.text = "$words words • ${text.length} chars"
+        binding.tvWordCount.text = EditorFormatBarHelper.formatReadingMetrics(binding.noteContent.text)
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (undoRedoManager.handleKeyEvent(event, this, binding.noteContent) { triggerAutoSave() }) return true
+        return super.dispatchKeyEvent(event)
     }
 
     private fun attachAutoSave(view: EditText) {

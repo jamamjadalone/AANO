@@ -266,4 +266,13 @@ object EditorFormatBarHelper {
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
     }
+
+    fun formatReadingMetrics(text: CharSequence?): String {
+        val s = text?.toString()?.trim().orEmpty()
+        if (s.isEmpty()) return "0 words • 0 chars"
+        val words = s.split(Regex("\\s+")).count { it.isNotBlank() }
+        val chars = s.length
+        val mins = ((words + 199) / 200).coerceAtLeast(1)
+        return "$words words • ${mins}m read • $chars chars"
+    }
 }

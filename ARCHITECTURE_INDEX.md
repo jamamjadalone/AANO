@@ -28,7 +28,7 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `HomeActivity.kt` | 119 | Main landing screen, bottom navigation routing, and toolbar coordination. |
-| `EditorActivity.kt` | 299 | Note editor screen orchestrating format bar, audio, checklist, and media. |
+| `EditorActivity.kt` | 297 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
@@ -55,13 +55,13 @@ android/app/src/main/java/app/aa/aano/
 | `EditorDialogHelper.kt` | 216 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
 | `EditorDropHelper.kt` | 87 | Direct P2P note drop dispatcher, QR scanner launcher, and peer pairing. |
 | `EditorExportHelper.kt` | 270 | Note export to TXT, MD, PDF, ZIP attachment bundles, and `.aano` packages. |
-| `EditorFormatBarHelper.kt` | 269 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
+| `EditorFormatBarHelper.kt` | 278 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
 | `EditorImageCoordinator.kt` | 96 | Image picker contracts, crop launchers, replace triggers, and image container render. |
 | `EditorImageHelper.kt` | 279 | Fullscreen image lightbox preview, crop dialog, and gallery exporter. |
 | `EditorMediaHelper.kt` | 86 | Image downsampling (1280px), JPEG compression, and local sandbox caching. |
 | `EditorMenuHelper.kt` | 37 | Editor options menu inflation and navigation item click routing. |
 | `EditorTouchHelper.kt` | 118 | Text selection touch coordinates, URL linkify navigation, and view/edit modes. |
-| `EditorUndoRedoManager.kt` | 62 | Stack-based undo/redo text history buffer for editor content. |
+| `EditorUndoRedoManager.kt` | 100 | Stack-based undo/redo text history buffer for editor content. |
 
 ---
 
