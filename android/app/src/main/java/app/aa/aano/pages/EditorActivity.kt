@@ -76,14 +76,11 @@ class EditorActivity : AppCompatActivity() {
     private val autoSaveRunnable = Runnable { if (loaded) saveSilently() }
 
     private val qrScannerLauncher = registerForActivityResult(ScanContract()) { res ->
-        res.contents?.takeIf { it.isNotBlank() }?.let {
-            EditorDropHelper.handleScannedQr(this, lifecycleScope, prefs, it, buildCurrentNote())
-        }
+        res.contents?.takeIf { it.isNotBlank() }?.let { EditorDropHelper.handleScannedQr(this, lifecycleScope, prefs, it, buildCurrentNote()) }
     }
 
     private val requestAudioPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) audioHelper.startVoiceRecording()
-        else Toast.makeText(this, "Microphone permission required for voice memo", Toast.LENGTH_SHORT).show()
+        if (isGranted) audioHelper.startVoiceRecording() else Toast.makeText(this, "Microphone permission required for voice memo", Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -186,6 +183,14 @@ class EditorActivity : AppCompatActivity() {
     }
 
     private fun setupWordCounter() {
+        binding.noteTitle.setOnEditorActionListener { _, a, _ ->
+            if (a == android.view.inputmethod.EditorInfo.IME_ACTION_NEXT) {
+                binding.noteContent.requestFocus(); binding.noteContent.setSelection(0); true
+            } else false
+        }
+        binding.noteContent.onBackspaceAtStartListener = {
+            binding.noteTitle.requestFocus(); binding.noteTitle.setSelection(binding.noteTitle.text?.length ?: 0)
+        }
         binding.noteContent.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
             override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -263,30 +268,26 @@ class EditorActivity : AppCompatActivity() {
         lifecycleScope.launch {
             persist()
             if (prefs.autoSync && cloudSyncManager.isLoggedIn) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try { cloudSyncManager.syncNow() } catch (e: Exception) { Log.d("EditorActivity", "Auto-sync skipped: ${e.message}") }
-                }
+                CoroutineScope(Dispatchers.IO).launch { runCatching { cloudSyncManager.syncNow() } }
             }
             finish()
         }
     }
 
     private fun saveSilently() {
-        if (isDeleted || (EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri) && noteId == null)) return
-        lifecycleScope.launch { persist() }
+        if (!isDeleted && !(EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri) && noteId == null)) {
+            lifecycleScope.launch { persist() }
+        }
     }
     override fun onPause() {
-        super.onPause()
-        audioHelper.onPauseCleanup()
+        super.onPause(); audioHelper.onPauseCleanup()
         if (!isDeleted && loaded && !EditorPersistenceDelegate.isNoteEmpty(binding.noteTitle.text, binding.noteContent.text, attachedImages, attachedAudioUri)) {
             lifecycleScope.launch { persist() }
         }
     }
 
     override fun onDestroy() {
-        super.onDestroy()
-        saveHandler.removeCallbacksAndMessages(null)
-        audioHelper.onDestroyCleanup()
+        super.onDestroy(); saveHandler.removeCallbacksAndMessages(null); audioHelper.onDestroyCleanup()
     }
 
     private suspend fun persist() {

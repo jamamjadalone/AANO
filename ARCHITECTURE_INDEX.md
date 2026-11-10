@@ -28,7 +28,7 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `HomeActivity.kt` | 119 | Main landing screen, bottom navigation routing, and toolbar coordination. |
-| `EditorActivity.kt` | 298 | Note editor screen orchestrating format bar, audio, checklist, and media. |
+| `EditorActivity.kt` | 299 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
@@ -51,11 +51,11 @@ android/app/src/main/java/app/aa/aano/
 | :--- | :--- | :--- |
 | `EditorAudioHelper.kt` | 241 | Voice memo audio recording (M4A/AAC), playback controls, timer, and visualizer. |
 | `EditorChecklistHelper.kt` | 158 | Markdown interactive checklist toggling, batch checked sinking, and item menus. |
-| `EditorColorPickerHelper.kt` | 292 | ARGB note background color picker, preset palettes, and custom hex builder. |
+| `EditorColorPickerHelper.kt` | 225 | ARGB note background color picker, preset palettes, and custom hex builder. |
 | `EditorDialogHelper.kt` | 216 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
 | `EditorDropHelper.kt` | 87 | Direct P2P note drop dispatcher, QR scanner launcher, and peer pairing. |
 | `EditorExportHelper.kt` | 270 | Note export to TXT, MD, PDF, ZIP attachment bundles, and `.aano` packages. |
-| `EditorFormatBarHelper.kt` | 230 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
+| `EditorFormatBarHelper.kt` | 269 | Rich text format toolbar (Bold, Italic, Strikethrough, Underline, Spans). |
 | `EditorImageCoordinator.kt` | 96 | Image picker contracts, crop launchers, replace triggers, and image container render. |
 | `EditorImageHelper.kt` | 279 | Fullscreen image lightbox preview, crop dialog, and gallery exporter. |
 | `EditorMediaHelper.kt` | 86 | Image downsampling (1280px), JPEG compression, and local sandbox caching. |
@@ -79,6 +79,7 @@ android/app/src/main/java/app/aa/aano/
 | `TaskDialogHelper.kt` | 203 | Task create / edit dialog with priority, due date, and subtask editor. |
 | `PasscodeDialogHelper.kt` | 104 | PIN creation and verification dialog for private folders and notes. |
 | `LocalVaultDialogHelper.kt` | 81 | Local offline vault unlock and passcode prompt dialog. |
+| `CustomColorPickerDialogHelper.kt` | 104 | Hex ARGB color picker dialog with RGB sliders, live preview, and recent swatches. |
 | `NoteActionDialogHelper.kt` | 215 | Notes feed long-press action menu (Pin, Color, Move, Archive, Delete). |
 | `NotesBatchActionHelper.kt` | 124 | Batch selection action sheet coordinator (Archive, Delete, Pin multiple notes). |
 | `SettingsAuthCoordinator.kt` | 65 | Cloudflare / Google sign-in UI coordinator and status delegate. |
@@ -96,7 +97,7 @@ android/app/src/main/java/app/aa/aano/
 | `ChecklistSpanView.kt` | 92 | Custom clickable checkbox view embedded inside Spannable text. |
 | `ColorPillView.kt` | 68 | Circular color swatch indicator with active selection ring. |
 | `CropMathHelper.kt` | 137 | Image matrix transformations, rotation radians, and crop rect calculations. |
-| `LinedNoteEditText.kt` | 142 | High-performance ruled notebook canvas with bottom viewport extension. |
+| `LinedNoteEditText.kt` | 166 | High-performance ruled notebook canvas with bottom viewport extension. |
 | `NotesMenuHelper.kt` | 73 | NotesFragment options menu inflation and sort order selection handler. |
 | `NotesSearchBarHelper.kt` | 28 | Real-time search query text watcher and clear button coordinator. |
 

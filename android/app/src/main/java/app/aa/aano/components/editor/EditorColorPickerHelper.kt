@@ -178,86 +178,7 @@ object EditorColorPickerHelper {
     }
 
     fun showCustomColorPickerDialog(activity: Activity, currentColorVal: Int, onColorApplied: (color: Int) -> Unit) {
-        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_color_picker, null)
-        val swatchesGrid = dialogView.findViewById<GridLayout>(R.id.swatchesGrid)
-        val livePreview = dialogView.findViewById<View>(R.id.liveColorPreview)
-        val hexInput = dialogView.findViewById<EditText>(R.id.hexInput)
-
-        val swatches = listOf(
-            "#FFFFFF", "#FFF9C4", "#FFF59D", "#FFE082", "#FFCC80",
-            "#FFAB91", "#FFCDD2", "#F8BBD0", "#E1BEE7", "#D1C4E9",
-            "#C5CAE9", "#BBDEFB", "#B3E5FC", "#B2EBF2", "#B2DFDB",
-            "#C8E6C9", "#DCEDC8", "#EFEBE9", "#CFD8DC", "#37474F"
-        )
-
-        var currentColor = resolveNoteColor(activity, currentColorVal)
-        val density = activity.resources.displayMetrics.density
-
-        fun updatePreview(color: Int) {
-            currentColor = color
-            livePreview.background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(color)
-                setStroke((1 * density).toInt(), 0x33000000.toInt())
-            }
-        }
-
-        updatePreview(currentColor)
-        val hexStr = String.format("#%06X", 0xFFFFFF and currentColor)
-        hexInput.setText(hexStr)
-
-        swatches.forEach { hex ->
-            val swatchColor = Color.parseColor(hex)
-            val dot = View(activity).apply {
-                val size = (34 * density).toInt()
-                val params = GridLayout.LayoutParams().apply {
-                    width = size
-                    height = size
-                    setMargins((4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt(), (4 * density).toInt())
-                }
-                layoutParams = params
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(swatchColor)
-                    setStroke((1 * density).toInt(), 0x33000000.toInt())
-                }
-                isClickable = true
-                setOnClickListener {
-                    updatePreview(swatchColor)
-                    hexInput.setText(hex)
-                }
-            }
-            swatchesGrid.addView(dot)
-        }
-
-        hexInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {
-                val text = s?.toString()?.trim() ?: ""
-                if (text.startsWith("#") && (text.length == 7 || text.length == 9)) {
-                    try {
-                        val parsed = Color.parseColor(text)
-                        updatePreview(parsed)
-                    } catch (e: IllegalArgumentException) {
-                        Log.d("EditorColorPickerHelper", "Incomplete hex: ${e.message}")
-                    }
-                }
-            }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-
-        MaterialAlertDialogBuilder(activity)
-            .setTitle("Custom Note Color")
-            .setView(dialogView)
-            .setPositiveButton("Apply") { _, _ ->
-                val inputHex = hexInput.text.toString().trim()
-                val finalColor = runCatching {
-                    Color.parseColor(if (inputHex.startsWith("#")) inputHex else "#$inputHex")
-                }.getOrDefault(currentColor)
-                onColorApplied(finalColor)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        app.aa.aano.components.dialogs.CustomColorPickerDialogHelper.show(activity, currentColorVal, onColorApplied)
     }
 
     fun applyNoteColorTheme(
@@ -282,6 +203,18 @@ object EditorColorPickerHelper {
             val lineColor = if (isDark) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
             contentView.setLineColor(lineColor)
         }
+        if (context is Activity) {
+            applySystemBarTheming(context, bgColor, isDark)
+        }
+    }
+
+    private fun applySystemBarTheming(activity: Activity, bgColor: Int, isDark: Boolean) {
+        val window = activity.window
+        window.statusBarColor = bgColor
+        window.navigationBarColor = bgColor
+        val insetsController = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = !isDark
+        insetsController.isAppearanceLightNavigationBars = !isDark
     }
 }
 

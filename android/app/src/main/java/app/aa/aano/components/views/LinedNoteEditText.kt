@@ -41,7 +41,10 @@ class LinedNoteEditText @JvmOverloads constructor(
     private var isBatchEditingActive = false
     private var customLineColor: Int? = null
 
+    var onBackspaceAtStartListener: (() -> Unit)? = null
+
     init {
+        includeFontPadding = false
         updateDefaultLineColor()
     }
 
@@ -91,6 +94,27 @@ class LinedNoteEditText @JvmOverloads constructor(
     override fun onEndBatchEdit() {
         isBatchEditingActive = false
         super.onEndBatchEdit()
+    }
+
+    override fun onCreateInputConnection(outAttrs: android.view.inputmethod.EditorInfo): android.view.inputmethod.InputConnection? {
+        val baseConnection = super.onCreateInputConnection(outAttrs) ?: return null
+        return object : android.view.inputmethod.InputConnectionWrapper(baseConnection, true) {
+            override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+                if (beforeLength == 1 && afterLength == 0 && selectionStart == 0 && selectionEnd == 0) {
+                    onBackspaceAtStartListener?.invoke()
+                    return true
+                }
+                return super.deleteSurroundingText(beforeLength, afterLength)
+            }
+
+            override fun sendKeyEvent(event: android.view.KeyEvent): Boolean {
+                if (event.action == android.view.KeyEvent.ACTION_DOWN && event.keyCode == android.view.KeyEvent.KEYCODE_DEL && selectionStart == 0 && selectionEnd == 0) {
+                    onBackspaceAtStartListener?.invoke()
+                    return true
+                }
+                return super.sendKeyEvent(event)
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {

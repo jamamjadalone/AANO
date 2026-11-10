@@ -226,5 +226,44 @@ object EditorFormatBarHelper {
             EditorChecklistHelper.showChecklistOptionsMenu(activity, binding.noteContent, onSaveNeeded)
             true
         }
+        attachAutoBulletWatcher(binding.noteContent, onSaveNeeded)
+    }
+
+    private fun attachAutoBulletWatcher(editText: EditText, onSaveNeeded: () -> Unit) {
+        editText.addTextChangedListener(object : android.text.TextWatcher {
+            private var isModifying = false
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (isModifying || s == null) return
+                if (before == 0 && count == 1 && start < s.length && s[start] == '\n') {
+                    val textBefore = s.subSequence(0, start).toString()
+                    val lineStart = textBefore.lastIndexOf('\n') + 1
+                    val prevLine = textBefore.substring(lineStart)
+                    val bullet = listOf("- [ ] ", "- [x] ", "- ", "* ", "• ").firstOrNull { prevLine.startsWith(it) }
+                    val numMatch = Regex("^(\\d+)\\.\\s+").find(prevLine)
+
+                    if (bullet != null) {
+                        if (prevLine.trim() == bullet.trim()) {
+                            isModifying = true; editText.text?.delete(lineStart, start + 1); isModifying = false
+                            onSaveNeeded(); return
+                        }
+                        isModifying = true
+                        val insert = if (bullet.startsWith("- [")) "- [ ] " else bullet
+                        editText.text?.insert(start + 1, insert)
+                        isModifying = false; onSaveNeeded()
+                    } else if (numMatch != null) {
+                        val num = numMatch.groupValues[1].toIntOrNull() ?: 1
+                        if (prevLine.trim() == "$num.") {
+                            isModifying = true; editText.text?.delete(lineStart, start + 1); isModifying = false
+                            onSaveNeeded(); return
+                        }
+                        isModifying = true; editText.text?.insert(start + 1, "${num + 1}. ")
+                        isModifying = false; onSaveNeeded()
+                    }
+                }
+            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
     }
 }
