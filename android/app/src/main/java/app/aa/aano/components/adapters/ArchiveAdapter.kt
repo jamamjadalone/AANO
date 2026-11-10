@@ -4,7 +4,6 @@
 
 package app.aa.aano.components.adapters
 
-import app.aa.aano.ui.*
 import app.aa.aano.pages.*
 
 import android.view.LayoutInflater

@@ -4,7 +4,6 @@
 
 package app.aa.aano.pages
 
-import app.aa.aano.ui.*
 
 import android.os.Bundle
 import android.text.InputType

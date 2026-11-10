@@ -5,7 +5,6 @@
 
 package app.aa.aano.pages
 
-import app.aa.aano.ui.*
 
 import android.content.Intent
 import android.os.Bundle

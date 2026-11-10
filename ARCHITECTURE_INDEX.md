@@ -27,21 +27,21 @@ android/app/src/main/java/app/aa/aano/
 ### `pages/` (Screens & Fragments — Strictly UI Orchestration)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `HomeActivity.kt` | 99 | Main landing screen, bottom navigation routing, and toolbar coordination. |
+| `HomeActivity.kt` | 98 | Main landing screen, bottom navigation routing, and toolbar coordination. |
 | `EditorActivity.kt` | 299 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
-| `FoldersFragment.kt` | 240 | Folder navigation grid, custom folder creation, and folder counts. |
-| `SearchFragment.kt` | 115 | Fast SQLite FTS note search screen with real-time result highlighting. |
-| `FocusFragment.kt` | 184 | Distraction-free zen reading and single-note contemplation mode. |
-| `ArchiveActivity.kt` | 98 | Archived notes list with batch unarchive, delete, and search actions. |
+| `FoldersFragment.kt` | 239 | Folder navigation grid, custom folder creation, and folder counts. |
+| `SearchFragment.kt` | 114 | Fast SQLite FTS note search screen with real-time result highlighting. |
+| `FocusFragment.kt` | 183 | Distraction-free zen reading and single-note contemplation mode. |
+| `ArchiveActivity.kt` | 97 | Archived notes list with batch unarchive, delete, and search actions. |
 | `TrashActivity.kt` | 114 | Deleted notes recycle bin with 30-day auto-purge and restore controls. |
-| `LockActivity.kt` | 233 | AppLock PIN / biometric authentication prompt screen. |
-| `CropActivity.kt` | 159 | Image cropping screen with custom aspect ratios and rotation controls. |
-| `QuickNoteActivity.kt` | 68 | Floating/quick note creation dialog activity launched from quick settings. |
-| `ShareReceiverActivity.kt` | 288 | Android system share target intent receiver (text, images, URLs). |
-| `MoreFragment.kt` | 140 | Utility hub fragment (Trash, Archive, Vault, Help, About AANO). |
+| `LockActivity.kt` | 232 | AppLock PIN / biometric authentication prompt screen. |
+| `CropActivity.kt` | 158 | Image cropping screen with custom aspect ratios and rotation controls. |
+| `QuickNoteActivity.kt` | 67 | Floating/quick note creation dialog activity launched from quick settings. |
+| `ShareReceiverActivity.kt` | 287 | Android system share target intent receiver (text, images, URLs). |
+| `MoreFragment.kt` | 139 | Utility hub fragment (Trash, Archive, Vault, Help, About AANO). |
 | `TasksFragment.kt` | 196 | To-Do checklist and task tracking screen with priority filters. |
 
 ---
@@ -78,6 +78,11 @@ android/app/src/main/java/app/aa/aano/
 | `NotesChipBarHelper.kt` | 204 | Filter chips bar (All, Folders, Tags, Color pills) on NotesFragment. |
 | `TaskDialogHelper.kt` | 203 | Task create / edit dialog with priority, due date, and subtask editor. |
 | `PasscodeDialogHelper.kt` | 104 | PIN creation and verification dialog for private folders and notes. |
+| `LocalVaultDialogHelper.kt` | 81 | Local offline vault unlock and passcode prompt dialog. |
+| `NoteActionDialogHelper.kt` | 215 | Notes feed long-press action menu (Pin, Color, Move, Archive, Delete). |
+| `NotesBatchActionHelper.kt` | 124 | Batch selection action sheet coordinator (Archive, Delete, Pin multiple notes). |
+| `SettingsAuthCoordinator.kt` | 65 | Cloudflare / Google sign-in UI coordinator and status delegate. |
+| `SettingsOtpDialogDelegate.kt` | 220 | Password-less email OTP verification code input dialog. |
 
 ---
 
@@ -90,17 +95,21 @@ android/app/src/main/java/app/aa/aano/
 | `AudioVisualizerView.kt` | 85 | Real-time audio amplitude wave rendering view during voice memo recording. |
 | `ChecklistSpanView.kt` | 92 | Custom clickable checkbox view embedded inside Spannable text. |
 | `ColorPillView.kt` | 68 | Circular color swatch indicator with active selection ring. |
+| `CropMathHelper.kt` | 137 | Image matrix transformations, rotation radians, and crop rect calculations. |
+| `NotesMenuHelper.kt` | 73 | NotesFragment options menu inflation and sort order selection handler. |
+| `NotesSearchBarHelper.kt` | 28 | Real-time search query text watcher and clear button coordinator. |
 
 ---
 
 ### `components/adapters/` (List & Grid Bindings)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NotesAdapter.kt` | 215 | Main notes grid adapter with staggered cards, colors, and badge tags. |
-| `ArchiveAdapter.kt` | 77 | Archived notes list adapter with unarchive action callbacks. |
-| `TrashAdapter.kt` | 60 | Recycled notes list adapter with restore and permanent purge callbacks. |
-| `TasksAdapter.kt` | 100 | Checklist task items adapter with strike-through completion and priority dots. |
+| `NotesAdapter.kt` | 214 | Main notes grid adapter with staggered cards, colors, and badge tags. |
+| `ArchiveAdapter.kt` | 76 | Archived notes list adapter with unarchive action callbacks. |
+| `TrashAdapter.kt` | 59 | Recycled notes list adapter with restore and permanent purge callbacks. |
+| `TasksAdapter.kt` | 99 | Checklist task items adapter with strike-through completion and priority dots. |
 | `FoldersAdapter.kt` | 85 | Folder grid card adapter with note count badges. |
+| `FocusAdapter.kt` | 52 | FocusFragment reading cards list adapter. |
 
 ---
 
@@ -152,8 +161,10 @@ android/app/src/main/java/app/aa/aano/
 | `CloudflareSyncManager.kt` | 178 | Standalone Cloudflare Worker backup client (password-less sync bridge). |
 | `NoteReminderReceiver.kt` | 95 | AlarmManager broadcast receiver for scheduled note notifications. |
 | `TaskReminderReceiver.kt` | 107 | AlarmManager broadcast receiver for scheduled task reminders. |
-| `BootCompletedReceiver.kt` | 78 | Re-registers all active note and task alarms upon device system boot. |
+| `BootReceiver.kt` | 65 | AlarmManager notification scheduler re-registration on device boot. |
 | `NetworkStateReceiver.kt` | 55 | Connectivity change listener to auto-trigger pending cloud syncs on Wi-Fi. |
+| `NotesSyncCoordinator.kt` | 76 | Periodic and Wi-Fi auto-sync trigger coordinator for notes. |
+| `SettingsAuthHelper.kt` | 152 | Standalone Cloudflare email auth and token storage helper. |
 
 ---
 
