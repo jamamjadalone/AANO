@@ -109,10 +109,9 @@ class EditorActivity : AppCompatActivity() {
         EditorTouchHelper.setupSeamlessTouch(binding, { isEditMode }, { ft, off ->
             EditorTouchHelper.switchToEditMode(this, binding, ft, off) { isEditMode = true }
         })
-        attachAutoSave(binding.noteTitle)
-        attachAutoSave(binding.noteContent)
-
+        attachAutoSave(binding.noteTitle); attachAutoSave(binding.noteContent)
         loadInitialNote()
+        if (intent.getBooleanExtra("EXTRA_START_VOICE", false)) binding.btnRecordVoice.performClick()
     }
 
     private fun setupHelpers() {

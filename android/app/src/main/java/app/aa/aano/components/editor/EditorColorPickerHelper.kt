@@ -278,6 +278,10 @@ object EditorColorPickerHelper {
         contentView.setHintTextColor(hintColor)
         val linkColor = if (isDark) 0xFF80D8FF.toInt() else ContextCompat.getColor(context, R.color.brand)
         contentView.setLinkTextColor(linkColor)
+        if (contentView is app.aa.aano.components.views.LinedNoteEditText) {
+            val lineColor = if (isDark) 0x33FFFFFF.toInt() else 0x1A000000.toInt()
+            contentView.setLineColor(lineColor)
+        }
     }
 }
 

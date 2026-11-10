@@ -47,6 +47,27 @@ class HomeActivity : AppCompatActivity() {
         dropMgr.onNotesReceivedListener = { count, images ->
             android.widget.Toast.makeText(applicationContext, "⚡ AANO Drop: Received $count notes ($images images)!", android.widget.Toast.LENGTH_LONG).show()
         }
+        handleShortcutIntents(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handleShortcutIntents(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        intent?.let { handleShortcutIntents(it) }
+    }
+
+    private fun handleShortcutIntents(inIntent: Intent) {
+        if (inIntent.getBooleanExtra("EXTRA_OPEN_SEARCH", false)) {
+            inIntent.removeExtra("EXTRA_OPEN_SEARCH")
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, SearchFragment())
+                .addToBackStack(null)
+                .commit()
+        }
     }
 
     override fun onDestroy() {

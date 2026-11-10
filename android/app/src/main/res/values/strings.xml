@@ -150,4 +150,10 @@
     <string name="channel_note_reminders">Note reminders</string>
     <string name="reminder_set">Reminder set</string>
     <string name="reminder_past">Reminder time is in the past</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_new_note">New Note</string>
+    <string name="shortcut_voice_memo">Voice Memo</string>
+    <string name="shortcut_aano_drop">Direct Drop</string>
+    <string name="shortcut_search">Search Notes</string>
 </resources>

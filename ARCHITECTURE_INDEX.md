@@ -27,8 +27,8 @@ android/app/src/main/java/app/aa/aano/
 ### `pages/` (Screens & Fragments — Strictly UI Orchestration)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `HomeActivity.kt` | 98 | Main landing screen, bottom navigation routing, and toolbar coordination. |
-| `EditorActivity.kt` | 299 | Note editor screen orchestrating format bar, audio, checklist, and media. |
+| `HomeActivity.kt` | 119 | Main landing screen, bottom navigation routing, and toolbar coordination. |
+| `EditorActivity.kt` | 298 | Note editor screen orchestrating format bar, audio, checklist, and media. |
 | `NotesFragment.kt` | 296 | Active notes grid/staggered feed, search filter bar, and selection toolbar. |
 | `LocalFragment.kt` | 288 | Encrypted offline local vault notes screen with P2P drop pairing actions. |
 | `SettingsActivity.kt` | 274 | App preferences screen (theme, font, auto-lock, cloud accounts, backup). |
@@ -51,7 +51,7 @@ android/app/src/main/java/app/aa/aano/
 | :--- | :--- | :--- |
 | `EditorAudioHelper.kt` | 241 | Voice memo audio recording (M4A/AAC), playback controls, timer, and visualizer. |
 | `EditorChecklistHelper.kt` | 158 | Markdown interactive checklist toggling, batch checked sinking, and item menus. |
-| `EditorColorPickerHelper.kt` | 288 | ARGB note background color picker, preset palettes, and custom hex builder. |
+| `EditorColorPickerHelper.kt` | 292 | ARGB note background color picker, preset palettes, and custom hex builder. |
 | `EditorDialogHelper.kt` | 216 | Folder selection, note deletion, reminder scheduling, and share dialogs. |
 | `EditorDropHelper.kt` | 87 | Direct P2P note drop dispatcher, QR scanner launcher, and peer pairing. |
 | `EditorExportHelper.kt` | 270 | Note export to TXT, MD, PDF, ZIP attachment bundles, and `.aano` packages. |
@@ -96,6 +96,7 @@ android/app/src/main/java/app/aa/aano/
 | `ChecklistSpanView.kt` | 92 | Custom clickable checkbox view embedded inside Spannable text. |
 | `ColorPillView.kt` | 68 | Circular color swatch indicator with active selection ring. |
 | `CropMathHelper.kt` | 137 | Image matrix transformations, rotation radians, and crop rect calculations. |
+| `LinedNoteEditText.kt` | 142 | High-performance ruled notebook canvas with bottom viewport extension. |
 | `NotesMenuHelper.kt` | 73 | NotesFragment options menu inflation and sort order selection handler. |
 | `NotesSearchBarHelper.kt` | 28 | Real-time search query text watcher and clear button coordinator. |
 

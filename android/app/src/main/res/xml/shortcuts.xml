@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_note"
+        android:enabled="true"
+        android:icon="@drawable/ic_note"
+        android:shortcutShortLabel="@string/shortcut_new_note"
+        android:shortcutLongLabel="@string/shortcut_new_note">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.aa.aano"
+            android:targetClass="app.aa.aano.pages.EditorActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="voice_memo"
+        android:enabled="true"
+        android:icon="@drawable/ic_mic"
+        android:shortcutShortLabel="@string/shortcut_voice_memo"
+        android:shortcutLongLabel="@string/shortcut_voice_memo">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.aa.aano"
+            android:targetClass="app.aa.aano.pages.EditorActivity">
+            <extra android:name="EXTRA_START_VOICE" android:value="true" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="aano_drop"
+        android:enabled="true"
+        android:icon="@drawable/ic_aano_drop"
+        android:shortcutShortLabel="@string/shortcut_aano_drop"
+        android:shortcutLongLabel="@string/shortcut_aano_drop">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.aa.aano"
+            android:targetClass="app.aa.aano.pages.HomeActivity">
+            <extra android:name="EXTRA_OPEN_DROP" android:value="true" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="search_notes"
+        android:enabled="true"
+        android:icon="@drawable/ic_search"
+        android:shortcutShortLabel="@string/shortcut_search"
+        android:shortcutLongLabel="@string/shortcut_search">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="app.aa.aano"
+            android:targetClass="app.aa.aano.pages.HomeActivity">
+            <extra android:name="EXTRA_OPEN_SEARCH" android:value="true" />
+        </intent>
+    </shortcut>
+</shortcuts>
