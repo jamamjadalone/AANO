@@ -82,7 +82,7 @@ android/app/src/main/java/app/aa/aano/
 | `LocalVaultDialogHelper.kt` | 81 | Local offline vault unlock and passcode prompt dialog. |
 | `CustomColorPickerDialogHelper.kt` | 104 | Hex ARGB color picker dialog with RGB sliders, live preview, and recent swatches. |
 | `NoteActionDialogHelper.kt` | 215 | Notes feed long-press action menu (Pin, Color, Move, Archive, Delete). |
-| `NotesBatchActionHelper.kt` | 124 | Batch selection action sheet coordinator (Archive, Delete, Pin multiple notes). |
+| `NotesBatchActionHelper.kt` | 250 | Batch selection action sheet coordinator (Archive, Delete, Pin multiple notes). |
 | `SettingsAuthCoordinator.kt` | 65 | Cloudflare / Google sign-in UI coordinator and status delegate. |
 | `SettingsOtpDialogDelegate.kt` | 220 | Password-less email OTP verification code input dialog. |
 | `CalendarDayDetailBottomSheet.kt` | 120 | Bottom sheet dialog displaying notes and reminders scheduled on a specific date. |
@@ -109,7 +109,7 @@ android/app/src/main/java/app/aa/aano/
 ### `components/adapters/` (List & Grid Bindings)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NotesAdapter.kt` | 243 | Main notes grid adapter with staggered cards, colors, and badge tags. |
+| `NotesAdapter.kt` | 259 | Main notes grid adapter with staggered cards, colors, and badge tags. |
 | `ArchiveAdapter.kt` | 76 | Archived notes list adapter with unarchive action callbacks. |
 | `TrashAdapter.kt` | 59 | Recycled notes list adapter with restore and permanent purge callbacks. |
 | `TasksAdapter.kt` | 126 | Checklist task items adapter with strike-through completion and priority dots. |
@@ -121,10 +121,10 @@ android/app/src/main/java/app/aa/aano/
 ### `data/` (Storage, Models, Keystore Cipher, & Repositories)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `NoteRepository.kt` | 194 | Clean facade exposing all 39 note operations to activities (0 breaking changes). |
+| `NoteRepository.kt` | 202 | Clean facade exposing all 39 note operations to activities (0 breaking changes). |
 | `NoteStorageDelegate.kt` | 217 | Low-level JSON read/write, Keystore AES-256 cipher, and memory cache. |
 | `NoteQueryDelegate.kt` | 110 | SQLite FTS search, sorting algorithms, visibility filters, and aggregations. |
-| `NoteCrudDelegate.kt` | 268 | Note mutations (create, update, pin, reminder, delete, archive, folders). |
+| `NoteCrudDelegate.kt` | 294 | Note mutations (create, update, pin, reminder, delete, archive, folders). |
 | `NoteSyncTrashDelegate.kt` | 218 | Multi-device 3-way merge, trash purge lifecycle, and cloud JSON export/import. |
 | `Note.kt` | 110 | Core Note data model, JSON serialization, and immutable copy methods. |
 | `NoteCipher.kt` | 97 | Hardware-backed Android Keystore AES-256-GCM cipher wrapper. |

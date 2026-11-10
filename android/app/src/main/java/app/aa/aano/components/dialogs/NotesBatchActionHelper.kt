@@ -28,6 +28,18 @@ object NotesBatchActionHelper {
     ) {
         binding.btnCancelSelection.setOnClickListener { adapter.clearSelection() }
         binding.btnSelectAll.setOnClickListener { adapter.selectAll() }
+        binding.btnBatchColor.setOnClickListener {
+            handleBatchColor(context, scope, adapter.getSelectedIds(), repository, prefs, cloudSyncManager) {
+                adapter.clearSelection()
+                onRefreshAll()
+            }
+        }
+        binding.btnBatchFolder.setOnClickListener {
+            handleBatchFolder(context, scope, adapter.getSelectedIds(), repository, prefs, cloudSyncManager) {
+                adapter.clearSelection()
+                onRefreshAll()
+            }
+        }
         binding.btnBatchArchive.setOnClickListener {
             handleBatchArchive(context, scope, adapter.getSelectedIds(), repository, prefs, cloudSyncManager) {
                 adapter.clearSelection()
@@ -120,5 +132,119 @@ object NotesBatchActionHelper {
                 )
             }
         }
+    }
+
+    fun handleBatchColor(
+        context: Context,
+        scope: CoroutineScope,
+        selectedIds: Set<String>,
+        repository: NoteRepository,
+        prefs: Prefs,
+        cloudSyncManager: CloudSyncManager,
+        onComplete: () -> Unit
+    ) {
+        if (selectedIds.isEmpty()) return
+        val colorNames = arrayOf(
+            "Default Card", "Pastel Lemon", "Pastel Mint", "Pastel Teal",
+            "Pastel Sky", "Pastel Indigo", "Pastel Lavender", "Pastel Rose",
+            "Pastel Peach", "Pastel Coral", "Muted Sand", "Muted Slate", "Charcoal Dark"
+        )
+        AlertDialog.Builder(context)
+            .setTitle("Set Color for ${selectedIds.size} Notes")
+            .setItems(colorNames) { _, which ->
+                scope.launch {
+                    repository.setColorMultiple(selectedIds, which, which)
+                    onComplete()
+                    Toast.makeText(context, "${selectedIds.size} notes updated to ${colorNames[which]}", Toast.LENGTH_SHORT).show()
+                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) cloudSyncManager.syncNow()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    fun handleBatchFolder(
+        context: Context,
+        scope: CoroutineScope,
+        selectedIds: Set<String>,
+        repository: NoteRepository,
+        prefs: Prefs,
+        cloudSyncManager: CloudSyncManager,
+        onComplete: () -> Unit
+    ) {
+        if (selectedIds.isEmpty()) return
+        scope.launch {
+            val folders = repository.folders().filter { it.isNotBlank() }
+            val folderOptions = mutableListOf("None (Root)")
+            folderOptions.addAll(folders)
+            folderOptions.add("+ New Folder...")
+
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                AlertDialog.Builder(context)
+                    .setTitle("Move ${selectedIds.size} Notes to Folder")
+                    .setItems(folderOptions.toTypedArray()) { _, which ->
+                        when (which) {
+                            0 -> {
+                                scope.launch {
+                                    repository.setFolderMultiple(selectedIds, "")
+                                    onComplete()
+                                    Toast.makeText(context, "Moved to Root", Toast.LENGTH_SHORT).show()
+                                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) cloudSyncManager.syncNow()
+                                }
+                            }
+                            folderOptions.lastIndex -> {
+                                promptNewFolderForBatch(context, scope, selectedIds, repository, prefs, cloudSyncManager, onComplete)
+                            }
+                            else -> {
+                                val target = folderOptions[which]
+                                scope.launch {
+                                    repository.setFolderMultiple(selectedIds, target)
+                                    onComplete()
+                                    Toast.makeText(context, "Moved to $target", Toast.LENGTH_SHORT).show()
+                                    if (prefs.autoSync && cloudSyncManager.isLoggedIn) cloudSyncManager.syncNow()
+                                }
+                            }
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun promptNewFolderForBatch(
+        context: Context,
+        scope: CoroutineScope,
+        selectedIds: Set<String>,
+        repository: NoteRepository,
+        prefs: Prefs,
+        cloudSyncManager: CloudSyncManager,
+        onComplete: () -> Unit
+    ) {
+        val input = android.widget.EditText(context).apply {
+            hint = "Folder Name"
+            setSingleLine()
+        }
+        val container = android.widget.FrameLayout(context).apply {
+            setPadding(48, 16, 48, 16)
+            addView(input)
+        }
+        AlertDialog.Builder(context)
+            .setTitle("New Folder")
+            .setView(container)
+            .setPositiveButton("Create & Move") { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotBlank()) {
+                    scope.launch {
+                        repository.addFolder(name)
+                        repository.setFolderMultiple(selectedIds, name)
+                        onComplete()
+                        Toast.makeText(context, "Moved to $name", Toast.LENGTH_SHORT).show()
+                        if (prefs.autoSync && cloudSyncManager.isLoggedIn) cloudSyncManager.syncNow()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 }

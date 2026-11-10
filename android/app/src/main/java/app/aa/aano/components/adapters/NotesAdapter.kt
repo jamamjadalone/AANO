@@ -89,6 +89,22 @@ class NotesAdapter(
         onSelectionChanged?.invoke(0)
     }
 
+    fun selectRange(targetId: String) {
+        val targetIdx = notes.indexOfFirst { it.id == targetId }
+        val lastSelectedIdx = notes.indexOfLast { selectedIds.contains(it.id) }
+        if (targetIdx != -1 && lastSelectedIdx != -1) {
+            val start = minOf(targetIdx, lastSelectedIdx)
+            val end = maxOf(targetIdx, lastSelectedIdx)
+            for (i in start..end) {
+                selectedIds.add(notes[i].id)
+            }
+            notifyDataSetChanged()
+            onSelectionChanged?.invoke(selectedIds.size)
+        } else {
+            toggleSelection(targetId)
+        }
+    }
+
     fun getSelectedIds(): Set<String> = selectedIds.toSet()
 
     class NoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -221,7 +237,7 @@ class NotesAdapter(
         }
         holder.itemView.setOnLongClickListener {
             if (isSelectionMode) {
-                toggleSelection(note.id)
+                selectRange(note.id)
             } else {
                 onLongClick(note)
             }

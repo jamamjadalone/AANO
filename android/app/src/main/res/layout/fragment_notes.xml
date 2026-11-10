@@ -60,6 +60,30 @@
             app:tint="@color/surface" />
 
         <ImageView
+            android:id="@+id/btnBatchColor"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_palette"
+            android:contentDescription="Color Selected"
+            app:tint="@color/surface" />
+
+        <ImageView
+            android:id="@+id/btnBatchFolder"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_folder"
+            android:contentDescription="Move Selected"
+            app:tint="@color/surface" />
+
+        <ImageView
             android:id="@+id/btnBatchArchive"
             android:layout_width="40dp"
             android:layout_height="40dp"

@@ -265,4 +265,30 @@ class NoteCrudDelegate(
         }
         if (modified) storage.writeNotes(notes)
     }
+
+    fun setColorMultiple(ids: Set<String>, color: Int, colorIndex: Int = 0) {
+        val notes = storage.readNotes().toMutableList()
+        var modified = false
+        for (i in notes.indices) {
+            if (ids.contains(notes[i].id)) {
+                val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
+                notes[i] = notes[i].copy(color = color, colorIndex = colorIndex, updatedAt = now)
+                modified = true
+            }
+        }
+        if (modified) storage.writeNotes(notes)
+    }
+
+    fun setFolderMultiple(ids: Set<String>, folder: String) {
+        val notes = storage.readNotes().toMutableList()
+        var modified = false
+        for (i in notes.indices) {
+            if (ids.contains(notes[i].id)) {
+                val now = maxOf(System.currentTimeMillis(), notes[i].updatedAt + 1000L)
+                notes[i] = notes[i].copy(folder = folder, updatedAt = now)
+                modified = true
+            }
+        }
+        if (modified) storage.writeNotes(notes)
+    }
 }

@@ -160,6 +160,14 @@ class NoteRepository(context: Context) {
         crudDelegate.unarchiveMultiple(ids)
     }
 
+    suspend fun setColorMultiple(ids: Set<String>, color: Int, colorIndex: Int = 0) = withContext(Dispatchers.IO) {
+        crudDelegate.setColorMultiple(ids, color, colorIndex)
+    }
+
+    suspend fun setFolderMultiple(ids: Set<String>, folder: String) = withContext(Dispatchers.IO) {
+        crudDelegate.setFolderMultiple(ids, folder)
+    }
+
     suspend fun purge(id: String) = withContext(Dispatchers.IO) {
         syncTrashDelegate.purge(id)
     }
