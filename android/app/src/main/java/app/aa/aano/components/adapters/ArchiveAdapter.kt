@@ -2,7 +2,10 @@
 // Copyright (C) 2026 Jam Amjad Rasheed
 // Licensed under GPL-3.0-or-later.
 
-package app.aa.aano.ui
+package app.aa.aano.components.adapters
+
+import app.aa.aano.ui.*
+import app.aa.aano.pages.*
 
 import android.view.LayoutInflater
 import android.view.View

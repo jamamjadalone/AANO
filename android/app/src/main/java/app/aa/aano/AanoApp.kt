@@ -4,12 +4,14 @@
 
 package app.aa.aano
 
+import app.aa.aano.pages.*
+
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import app.aa.aano.data.AppLock
-import app.aa.aano.ui.LockActivity
+import app.aa.aano.pages.LockActivity
 
 class AanoApp : Application(), Application.ActivityLifecycleCallbacks {
 

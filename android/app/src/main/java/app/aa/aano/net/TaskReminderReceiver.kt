@@ -15,7 +15,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import app.aa.aano.R
 import app.aa.aano.data.TaskRepository
-import app.aa.aano.ui.TasksFragment
+import app.aa.aano.pages.TasksFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

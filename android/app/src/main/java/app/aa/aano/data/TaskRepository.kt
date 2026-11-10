@@ -193,7 +193,7 @@ class TaskRepository(private val context: Context) {
 
     suspend fun importJson(json: String) {
         withContext(Dispatchers.IO) {
-            val remote = deserializeTasks(json)
+            val remote = TaskSerializer.deserializeTasks(json, cipher)
             writeTasks(merge(readTasks(), remote))
         }
     }
@@ -224,43 +224,8 @@ class TaskRepository(private val context: Context) {
         put("enc", false)
     }
 
-    private fun merge(local: List<Task>, remote: List<Task>): List<Task> {
-        val byId = local.associateBy { it.id }.toMutableMap()
-        remote.forEach { task ->
-            val existing = byId[task.id]
-            when {
-                existing == null -> byId[task.id] = task
-                task.updatedAt > existing.updatedAt -> {
-                    val isDeleted = if (task.deleted) true else (existing.deleted && existing.deletedAt > task.updatedAt)
-                    val delAt = if (isDeleted) maxOf(existing.deletedAt, task.deletedAt, if (existing.deleted) existing.updatedAt else task.updatedAt) else 0L
-                    byId[task.id] = task.copy(
-                        deleted = isDeleted,
-                        deletedAt = delAt
-                    )
-                }
-                task.updatedAt == existing.updatedAt -> {
-                    val isDeleted = existing.deleted || task.deleted
-                    val delAt = if (isDeleted) maxOf(existing.deletedAt, task.deletedAt) else 0L
-                    byId[task.id] = task.copy(
-                        completed = existing.completed || task.completed,
-                        deleted = isDeleted,
-                        deletedAt = delAt
-                    )
-                }
-                else -> {
-                    // Local is strictly newer: preserve local task, but honor deletion if remote was deleted AFTER local update
-                    if (task.deleted && !existing.deleted && task.deletedAt > existing.updatedAt) {
-                        byId[task.id] = existing.copy(
-                            deleted = true,
-                            deletedAt = task.deletedAt,
-                            updatedAt = task.updatedAt
-                        )
-                    }
-                }
-            }
-        }
-        return byId.values.sortedByDescending { it.updatedAt }
-    }
+    private fun merge(local: List<Task>, remote: List<Task>): List<Task> =
+        TaskMergeEngine.merge(local, remote)
 
     private val activeComparator = compareBy<Task>(
         { task -> task.dueAt == null },
@@ -272,7 +237,7 @@ class TaskRepository(private val context: Context) {
     private fun readTasks(): List<Task> {
         if (!tasksFile.exists()) return emptyList()
         return try {
-            deserializeTasks(tasksFile.readText())
+            TaskSerializer.deserializeTasks(tasksFile.readText(), cipher)
         } catch (e: Exception) {
             Log.e("AANO", "Failed to deserialize tasks. Preserving corrupted backup file.", e)
             try {
@@ -285,78 +250,10 @@ class TaskRepository(private val context: Context) {
         }
     }
 
-    private fun deserializeTasks(json: String): List<Task> {
-        val tasks = mutableListOf<Task>()
-        val array = JSONArray(json)
-        for (i in 0 until array.length()) {
-            tasks.add(deserializeTask(array.getJSONObject(i)))
-        }
-        return tasks
-    }
-
-    private fun deserializeTask(obj: JSONObject): Task {
-        val encrypted = obj.optBoolean("enc", false)
-        fun field(name: String): String {
-            val raw = obj.optString(name, "")
-            return if (encrypted && raw.isNotEmpty()) {
-                try {
-                    cipher.decrypt(raw)
-                } catch (e: Exception) {
-                    Log.e("AANO", "Failed to decrypt task field '$name': ${e.message}")
-                    raw
-                }
-            } else raw
-        }
-
-        val subs = obj.optJSONArray("subtasks") ?: JSONArray()
-        val subtasks = mutableListOf<SubTask>()
-        for (i in 0 until subs.length()) {
-            val s = subs.getJSONObject(i)
-            val titleRaw = s.optString("title", "")
-            val decTitle = if (encrypted && titleRaw.isNotEmpty()) {
-                try {
-                    cipher.decrypt(titleRaw)
-                } catch (e: Exception) {
-                    Log.e("AANO", "Failed to decrypt subtask title: ${e.message}")
-                    titleRaw
-                }
-            } else titleRaw
-            subtasks.add(
-                SubTask(
-                    id = s.getString("id"),
-                    title = decTitle,
-                    completed = s.optBoolean("completed", false)
-                )
-            )
-        }
-
-        return Task(
-            id = obj.getString("id"),
-            title = field("title"),
-            notes = field("notes"),
-            completed = obj.optBoolean("completed", false),
-            priority = runCatching {
-                TaskPriority.valueOf(obj.optString("priority", "MEDIUM"))
-            }.getOrDefault(TaskPriority.MEDIUM),
-            dueAt = if (obj.has("dueAt") && !obj.isNull("dueAt")) obj.optLong("dueAt") else null,
-            reminderAt = if (obj.has("reminderAt") && !obj.isNull("reminderAt")) obj.optLong("reminderAt")
-            else null,
-            recurrence = runCatching {
-                Recurrence.valueOf(obj.optString("recurrence", "NONE"))
-            }.getOrDefault(Recurrence.NONE),
-            subtasks = subtasks,
-            focusHidden = obj.optBoolean("focusHidden", false),
-            deleted = obj.optBoolean("deleted", false),
-            deletedAt = obj.optLong("deletedAt", 0L),
-            createdAt = obj.optLong("createdAt", System.currentTimeMillis()),
-            updatedAt = obj.optLong("updatedAt", System.currentTimeMillis())
-        )
-    }
-
     private fun writeTasks(tasks: List<Task>): Boolean {
         return try {
             val array = JSONArray()
-            tasks.forEach { array.put(serializeTask(it)) }
+            tasks.forEach { array.put(TaskSerializer.serializeTask(it, cipher)) }
             val tmpFile = File(tasksFile.parentFile, "tasks.json.tmp")
             tmpFile.writeText(array.toString())
             val renamed = if (tmpFile.renameTo(tasksFile)) {
@@ -374,31 +271,5 @@ class TaskRepository(private val context: Context) {
             Log.e("AANO", "writeTasks failed: ${e.message}", e)
             false
         }
-    }
-
-    private fun serializeTask(task: Task): JSONObject = JSONObject().apply {
-        put("id", task.id)
-        put("title", cipher.encrypt(task.title))
-        put("notes", cipher.encrypt(task.notes))
-        put("completed", task.completed)
-        put("priority", task.priority.name)
-        if (task.dueAt != null) put("dueAt", task.dueAt)
-        if (task.reminderAt != null) put("reminderAt", task.reminderAt)
-        put("recurrence", task.recurrence.name)
-        put("subtasks", JSONArray().apply {
-            task.subtasks.forEach {
-                put(JSONObject().apply {
-                    put("id", it.id)
-                    put("title", cipher.encrypt(it.title))
-                    put("completed", it.completed)
-                })
-            }
-        })
-        put("focusHidden", task.focusHidden)
-        put("deleted", task.deleted)
-        put("deletedAt", task.deletedAt)
-        put("createdAt", task.createdAt)
-        put("updatedAt", task.updatedAt)
-        put("enc", true)
     }
 }

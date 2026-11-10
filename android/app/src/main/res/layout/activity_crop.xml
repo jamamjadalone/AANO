@@ -66,7 +66,7 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <app.aa.aano.ui.CropOverlayView
+        <app.aa.aano.components.views.CropOverlayView
             android:id="@+id/cropOverlayView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />

@@ -4,6 +4,9 @@
 
 package app.aa.aano.ui
 
+import app.aa.aano.components.adapters.*
+import app.aa.aano.components.views.*
+
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout

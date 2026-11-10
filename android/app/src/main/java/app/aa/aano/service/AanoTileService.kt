@@ -4,11 +4,13 @@
 
 package app.aa.aano.service
 
+import app.aa.aano.pages.*
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.TileService
-import app.aa.aano.ui.QuickNoteActivity
+import app.aa.aano.pages.QuickNoteActivity
 
 class AanoTileService : TileService() {
 

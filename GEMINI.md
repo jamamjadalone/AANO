@@ -122,3 +122,14 @@
 - **Mandatory Remote Log Inspection First**: Agent ka sab se pehla aur fori qadam remote runner/job ke exact failure logs inspect karna hoga (`gh run view --log-failed` ya direct workflow job logs) taake exact remote failure point aur runner context pata chal sake.
 - **Surgical Remote/Environment Diagnosis**: Failure ka root cause remote runner context (jaise network timeouts, missing runner secrets, Ubuntu/runner toolchain version, caching, ProGuard, ya workflow YAML steps) ke mutabiq identify aur fix kiya jayega.
 - **Loop Until Remote Verified**: Fix commit aur push karne ke baad verification hamesha remote CI workflow (`gh run list` / `gh run view`) ke live passing status (`conclusion: success`) se confirm hogi.
+
+## 21. Beginner-Friendly Architecture & Modular Organization Protocol
+- **Keep Organized for Beginners**: Codebase structure clear aur readable hona chahiye taake beginner bhi asaani se navigate kar sake.
+- **Directory Roles**:
+  - Screens go in `pages` (or `ui/pages`).
+  - Shared pieces / reusable UI elements go in `components`.
+  - Saving, loading, persistence, and storage logic goes in `data`.
+- **Single Responsibility Principle**: One job per file. Monolithic files strictly prohibited.
+- **Strict File Size Cap**: Maximum 300 lines per file (`No file over 300 lines`). Agar file 300 lines cross kare toh use focused modular sub-components ya helper files mein split karo.
+- **Check Existing First**: Before writing anything new, check if it already exists to prevent duplication and bloat.
+- **Folder-by-Folder Safe Refactoring**: Cleanup one folder at a time, strictly verifying that behavior does not break and without changing what the app does.

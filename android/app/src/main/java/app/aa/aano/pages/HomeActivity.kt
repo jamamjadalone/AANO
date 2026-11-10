@@ -2,7 +2,9 @@
 // Copyright (C) 2026 Jam Amjad Rasheed
 // Licensed under GPL-3.0-or-later.
 
-package app.aa.aano.ui
+package app.aa.aano.pages
+
+import app.aa.aano.ui.*
 
 import android.content.Intent
 import android.os.Bundle

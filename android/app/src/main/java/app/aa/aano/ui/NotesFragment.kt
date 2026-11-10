@@ -4,6 +4,11 @@
 
 package app.aa.aano.ui
 
+import app.aa.aano.components.adapters.*
+import app.aa.aano.components.views.*
+
+import app.aa.aano.pages.*
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
