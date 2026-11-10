@@ -614,6 +614,41 @@
 
   </div>
 
+  <!-- Full Screen Vault Lock Overlay -->
+  <div id="lockOverlay">
+    <div class="lock-card">
+      <div class="lock-shield-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <div class="lock-title">AANO Vault</div>
+      <div class="lock-subtitle">Enter PIN to unlock your notes</div>
+      <div class="lock-dots-row">
+        <div class="lock-dot"></div>
+        <div class="lock-dot"></div>
+        <div class="lock-dot"></div>
+        <div class="lock-dot"></div>
+      </div>
+      <div class="lock-keypad">
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('1')">1</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('2')">2</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('3')">3</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('4')">4</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('5')">5</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('6')">6</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('7')">7</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('8')">8</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('9')">9</button>
+        <button type="button" class="lock-key action-key" onclick="AppLockManager.clearAll()">Clear</button>
+        <button type="button" class="lock-key" onclick="AppLockManager.enterDigit('0')">0</button>
+        <button type="button" class="lock-key action-key" onclick="AppLockManager.backspace()">⌫</button>
+      </div>
+      <div id="lockErrorMsg" class="lock-error-msg"></div>
+    </div>
+  </div>
+
   <script src="jsQR.min.js"></script>
   <script src="qrcode.min.js"></script>
   <script src="qr.js"></script>
@@ -634,6 +669,7 @@
   <script src="js/app_export.js"></script>
   <script src="js/app_batch_events.js"></script>
   <script src="js/app_events.js"></script>
+  <script src="js/app_lock.js"></script>
   <script src="app.js"></script>
 
 </body>

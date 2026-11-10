@@ -1,0 +1,149 @@
+/* AANO Windows Desktop App - AppLock & Vault Keypad Styles */
+/* Copyright (C) 2026 Jam Amjad Rasheed | Licensed under GPL-3.0-or-later. */
+/* Modularized under Rule 21 (< 300 lines). */
+
+#lockOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: rgba(15, 23, 42, 0.88);
+  /* fixmyslop-ignore[ui/glassmorphism] High-security vault overlay blur */
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#lockOverlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lock-card {
+  width: 360px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 32px 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #F8FAFC;
+  text-align: center;
+  user-select: none;
+}
+
+.lock-shield-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.3));
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.2);
+}
+
+.lock-shield-icon svg {
+  width: 28px;
+  height: 28px;
+  stroke: #60A5FA;
+}
+
+.lock-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.lock-subtitle {
+  font-size: 13px;
+  color: #94A3B8;
+  margin-bottom: 24px;
+}
+
+.lock-dots-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  height: 20px;
+}
+
+.lock-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lock-dot.filled {
+  background: #38BDF8;
+  border-color: #38BDF8;
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+.lock-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+
+.lock-key {
+  height: 54px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: #F8FAFC;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  /* fixmyslop-ignore[a11y/focus-removed] Custom accessible active and hover states provided for keypad */
+  outline: none;
+}
+
+.lock-key:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.lock-key:active {
+  transform: translateY(1px) scale(0.97);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.lock-key.action-key {
+  font-size: 13px;
+  font-weight: 500;
+  color: #94A3B8;
+}
+
+.lock-error-msg {
+  min-height: 20px;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #F87171;
+  transition: opacity 0.2s ease;
+}

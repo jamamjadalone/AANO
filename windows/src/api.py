@@ -8,8 +8,9 @@ from api_sync import SyncApiMixin
 from api_drop import DropApiMixin
 from api_media import MediaApiMixin
 from api_export import ExportApiMixin
+from api_lock import LockApiMixin
 
-class DesktopApi(NotesApiMixin, TrashApiMixin, SyncApiMixin, DropApiMixin, MediaApiMixin, ExportApiMixin):
+class DesktopApi(NotesApiMixin, TrashApiMixin, SyncApiMixin, DropApiMixin, MediaApiMixin, ExportApiMixin, LockApiMixin):
     """
     Composite PyWebView JavaScript Bridge facade delegating across single-responsibility modules:
     - NotesApiMixin: Notes CRUD, blocks, markdown/plain conversion, pinning, folders.
@@ -18,6 +19,7 @@ class DesktopApi(NotesApiMixin, TrashApiMixin, SyncApiMixin, DropApiMixin, Media
     - DropApiMixin: AANO Drop 2.0 P2P send/receive, nearby discovery radar.
     - MediaApiMixin: Image attachment dialogs, cropping, WebP encoding.
     - ExportApiMixin: Formatted note exports (TXT, MD, PDF, ZIP, .aano package).
+    - LockApiMixin: AppLock PIN protection, inactivity auto-lock, exponential backoff.
     """
     def __init__(self):
         self._last_url = ""

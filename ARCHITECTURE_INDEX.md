@@ -188,8 +188,8 @@ android/app/src/main/java/app/aa/aano/
 ### `windows/src/` (Python Backend Architecture — PyWebView Bridge & Storage)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `main.py` | 93 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
-| `api.py` | 28 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
+| `main.py` | 139 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
+| `api.py` | 30 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
 | `api_notes.py` | 247 | Notes CRUD, search integration, color resolution, folder management, block model conversion. |
 | `api_trash.py` | 97 | Soft-delete, trash recycle bin, note restoration, permanent deletion, and media purge. |
 | `api_sync.py` | 71 | Google Drive sync trigger, cloud login/status delegation, and auto-sync worker. |
@@ -208,13 +208,16 @@ android/app/src/main/java/app/aa/aano/
 | `fts_index.py` | 142 | SQLite Full-Text Search (FTS5) local indexer and search query parser. |
 | `hotkey_daemon.py` | 70 | Global Windows keyboard hook daemon (Win+Alt+N quick note launcher). |
 | `merge_engine.py` | 92 | 3-way note reconciliation and conflict resolution engine for cloud and drop sync. |
+| `api_lock.py` | 51 | PyWebView DesktopApi mixin exposing AppLock PIN protection and auto-lock endpoints. |
+| `app_lock.py` | 128 | AppLock PIN PBKDF2-HMAC-SHA256 hasher, DPAPI persistence, and exponential lockout. |
+| `tray_manager.py` | 100 | Windows System Tray icon daemon, minimize-to-tray handling, and scratchpad/lock triggers. |
 
 ---
 
 ### `windows/src/ui/css/` (Modular Desktop Stylesheets)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `styles.css` | 12 | Main CSS aggregator importing modular style sheets under Rule 21. |
+| `styles.css` | 13 | Main CSS aggregator importing modular style sheets under Rule 21. |
 | `base.css` | 263 | Design tokens, CSS variables, dark/light themes, reset, scrollbars, and main frame layout. |
 | `sidebar.css` | 298 | Sidebar navigation, search bar container, folders list, tag filters, and sync status footer. |
 | `cards.css` | 262 | Notes grid, masonry card layout, card themes, contrast adaptation, selection checkboxes. |
@@ -222,6 +225,7 @@ android/app/src/main/java/app/aa/aano/
 | `editor.css` | 237 | Note editor modal, title header, lined notebook paper canvas, and formatting toolbar. |
 | `modals.css` | 220 | Settings dialog, confirmation prompts, folder modal, and Google sign-in button. |
 | `media_drop.css` | 234 | Attached image preview modal, interactive image cropper, and PC Drop QR scanner card. |
+| `lock.css` | 149 | Glassmorphic full-screen lock screen overlay, PIN dots animation, and keypad styling. |
 
 ---
 
@@ -246,4 +250,5 @@ android/app/src/main/java/app/aa/aano/
 | `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
 | `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
 | `app_events.js` | 231 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+| `app_lock.js` | 215 | User inactivity detector, PIN entrypad logic, dot animations, and lockout timer. |
 

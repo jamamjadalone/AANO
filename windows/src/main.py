@@ -44,6 +44,7 @@ def main():
     )
 
     from hotkey_daemon import HotkeyDaemon
+    from tray_manager import TrayManager
 
     def on_scratchpad_hotkey():
         try:
@@ -55,6 +56,50 @@ def main():
 
     hotkey = HotkeyDaemon(on_scratchpad_hotkey)
     hotkey.start()
+
+    is_quitting = False
+
+    def on_tray_open():
+        try:
+            window.show()
+            window.restore()
+        except Exception as e:
+            logger.debug("Tray on_open error: %s", e)
+
+    def on_tray_lock():
+        try:
+            window.show()
+            window.restore()
+            window.evaluate_js("window.lockAppNow && window.lockAppNow()")
+        except Exception as e:
+            logger.debug("Tray on_lock error: %s", e)
+
+    def on_tray_exit():
+        nonlocal is_quitting
+        is_quitting = True
+        try:
+            window.destroy()
+        except Exception as e:
+            logger.debug("Tray on_exit window destroy error: %s", e)
+
+    tray = TrayManager(
+        on_open=on_tray_open,
+        on_scratchpad=on_scratchpad_hotkey,
+        on_lock=on_tray_lock,
+        on_exit=on_tray_exit
+    )
+    tray.start()
+
+    def on_closing():
+        if not is_quitting:
+            try:
+                window.hide()
+                return False
+            except Exception as e:
+                logger.debug("Failed to hide window to tray: %s", e)
+        return True
+
+    window.events.closing += on_closing
 
     def on_loaded():
         if len(sys.argv) > 1:
@@ -88,6 +133,7 @@ def main():
         webview.start(debug=False)
     finally:
         hotkey.stop()
+        tray.stop()
 
 if __name__ == "__main__":
     main()
