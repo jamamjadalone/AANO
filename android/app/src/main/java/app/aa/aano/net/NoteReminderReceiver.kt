@@ -14,7 +14,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import app.aa.aano.R
-import app.aa.aano.ui.EditorActivity
+import app.aa.aano.pages.EditorActivity
 
 class NoteReminderReceiver : BroadcastReceiver() {
 

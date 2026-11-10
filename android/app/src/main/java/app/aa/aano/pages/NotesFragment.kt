@@ -38,7 +38,6 @@ import app.aa.aano.data.TaskRepository
 import app.aa.aano.databinding.FragmentNotesBinding
 import app.aa.aano.net.CloudSyncManager
 import app.aa.aano.net.NotesSyncCoordinator
-import app.aa.aano.ui.EditorActivity
 
 class NotesFragment : Fragment() {
 

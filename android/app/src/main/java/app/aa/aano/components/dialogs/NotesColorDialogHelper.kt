@@ -24,7 +24,7 @@ import app.aa.aano.data.Note
 import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
 import app.aa.aano.net.CloudSyncManager
-import app.aa.aano.ui.EditorActivity
+import app.aa.aano.pages.EditorActivity
 
 object NotesColorDialogHelper {
 

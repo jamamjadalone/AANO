@@ -30,7 +30,6 @@ import app.aa.aano.data.NoteRepository
 import app.aa.aano.data.Prefs
 import app.aa.aano.databinding.FragmentLocalBinding
 import app.aa.aano.drop.AanoDropManager
-import app.aa.aano.ui.EditorActivity
 
 class LocalFragment : Fragment() {
 
