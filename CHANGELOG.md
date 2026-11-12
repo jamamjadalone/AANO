@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0-rc.1] - 2026-11-12
+
+### Added
+- **Windows Inactivity Auto-Lock & Vault PIN Protection**: Full parity with Android Pillar 8 using PBKDF2-HMAC-SHA256 (100,000 iterations), DPAPI encryption at rest, configurable auto-lock timeout, and exponential brute-force lockout.
+- **Windows System Tray Resident Daemon**: Minimize-to-tray background daemon (`tray_manager.py`) keeping embedded AANO Drop receiver and global `Ctrl+Alt+N` scratchpad hotkey running quietly.
+- **Android Scoped Network Security Config**: Enforced strict HTTPS for all external cloud synchronization domains while permitting scoped P2P cleartext for local Wi-Fi transfers.
+- **Automated Windows Unit Test Suite**: Comprehensive pytest test battery covering AppLock lifecycle, AST BlockModel parsing, 3-way conflict-free MergeEngine, SQLite FTS5 indexing, and DesktopApi wiring.
+- **Android Home Screen Resizable Widget**: Dynamic list view AppWidget with 1-tap quick note launcher.
+- **Batch Operations Engine**: Multi-card selection, bulk color re-tagging, and bulk folder relocation.
+- **Calendar Navigation & Day Indicators**: Month grid view with note indicators and day detail sheet.
+
+### Changed
+- Modularized entire Windows Python backend and Web UI into single-responsibility modules strictly `<= 300 lines` (Rule 21 compliant).
+- Elevated desktop interface to modern minimalist standards with clean 24px vector SVGs, glassmorphic modal overlays, and responsive card layouts.
+
+### Fixed
+- **Path Traversal Security Hardening (CWE-22)**: Enforced strict basename extraction and directory traversal verification for incoming AANO Drop attachments.
+- **OAuth CSRF State Verification**: Added cryptographically secure state tokens to loopback OAuth callback server.
+
 ## [1.2.0-beta.4] - 2026-11-08
 
 ### Added
