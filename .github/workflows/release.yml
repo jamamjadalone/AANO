@@ -156,9 +156,18 @@ jobs:
 
       - name: Generate SHA-256 Checksums
         run: |
-          cd release-assets
-          sha256sum * > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          find release-assets -type f -exec sha256sum {} + > raw_sums.txt
+          python3 -c "
+          import os
+          with open('raw_sums.txt', 'r') as f:
+              lines = f.readlines()
+          with open('release-assets/SHA256SUMS.txt', 'w') as f:
+              for line in lines:
+                  parts = line.strip().split()
+                  if len(parts) >= 2:
+                      f.write(f'{parts[0]}  {os.path.basename(parts[1])}\n')
+          "
+          cat release-assets/SHA256SUMS.txt
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
