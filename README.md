@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--beta.2-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-beta.2"></a>
+  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--rc.1-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-rc.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-00796B.svg?style=flat-square" alt="License: GPL-3.0"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Installer)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
@@ -41,6 +41,7 @@
 - **Offline-First Storage:** Fully functional with zero internet connectivity. Notes, folders, tags, and media are stored locally on your device.
 - **Hardware-Protected Encryption:** Encrypted notes and sensitive credentials are safeguarded with AES-256-GCM cryptography.
 - **P2P Local Sharing (AANO Drop):** Direct high-speed note transfers over local Wi-Fi without internet or cloud intermediaries.
+- **Vault PIN & Inactivity Auto-Lock:** Bank-grade privacy protection across both Android (Biometrics) and Windows (PBKDF2-HMAC-SHA256).
 
 ---
 
@@ -50,24 +51,25 @@ Download pre-built, production-ready releases directly from [GitHub Releases](ht
 
 | Platform | Download Package | Requirements | Setup Guide |
 | :--- | :--- | :--- | :--- |
-| **Windows** | [`AANO-Setup-v1.2.0-beta.2.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
-| **Android** | [`AANO-v1.2.0-beta.2.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+| **Windows** | [`AANO-Setup-v1.2.0-rc.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
+| **Android** | [`AANO-v1.2.0-rc.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+| **Checksums** | [`SHA256SUMS.txt`](https://github.com/jamamjadalone/AANO/releases/latest) | Cryptographic Verification | Optional Hash Audit |
 
 ### First-Time Installation Guide
 
-Because AANO is a free, independent open-source project without expensive corporate enterprise certificates, Windows and Android may show a standard safety prompt on the very first install. AANO is 100% clean, open source (GPL-3.0), and contains zero trackers or advertisements.
+Because AANO is an independent open-source project without expensive corporate code-signing certificates, Windows and Android may show a standard safety prompt on the first install. AANO is 100% clean, open source (GPL-3.0), and contains zero trackers or advertisements.
 
 #### Windows PC / Laptop
 
-1. Download and run `AANO-Setup-v1.2.0-beta.1.exe`.
+1. Download and run `AANO-Setup-v1.2.0-rc.1.exe`.
 2. When the blue **"Windows protected your PC"** screen appears:
-   - Click **"More info"** (link under the text).
+   - Click **"More info"** (link under the message text).
    - Click the **"Run anyway"** button at the bottom.
 3. Follow the setup wizard. Once installed, AANO opens directly from your Desktop or Start Menu with no further prompts.
 
 #### Android Phone / Tablet
 
-1. Download `AANO-v1.2.0-beta.1.apk` on your device and tap to open it.
+1. Download `AANO-v1.2.0-rc.1.apk` on your device and tap to open it.
 2. If prompted *"For your security, your phone is not allowed to install unknown apps"*:
    - Tap **Settings** and enable **"Allow from this source"**.
 3. If Google Play Protect displays *"Unrecognized app"*:
@@ -78,124 +80,110 @@ Because AANO is a free, independent open-source project without expensive corpor
 
 ## Why Choose AANO?
 
-If you are searching for a privacy-focused, zero-telemetry alternative to **Google Keep**, **Standard Notes**, **Simplenote**, or **Obsidian**, AANO delivers complete data sovereignty with zero monthly subscriptions:
+AANO delivers complete data sovereignty with zero monthly subscriptions compared to conventional cloud note platforms:
 
-| Feature | AANO Notes | Google Keep | Standard Notes (Free) | Simplenote |
-| :--- | :---: | :---: | :---: | :---: |
-| **Price & Licensing** | **100% Free & Open Source (GPL-3.0)** | Proprietary | Freemium (Paid features) | Free (Proprietary cloud) |
-| **Telemetry & Trackers** | **Zero (0 Trackers)** | Google Ad & Analytics | Minimal | Automattic Telemetry |
-| **Hardware Encryption** | **AES-256-GCM Hardware-Backed** | No | Text only | No |
-| **Offline-First Storage** | **100% Offline Capable** | Limited web cache | Yes | Limited |
-| **Direct Wi-Fi Beam (P2P)** | **Built-in (AANO Drop)** | No | No | No |
-| **Cloud Sync Ownership** | **User-Owned Google Drive** | Proprietary cloud | Standard Notes cloud | Automattic cloud |
-| **Cross-Platform** | **Android + Windows Desktop** | Web / Mobile | Mobile / Desktop / Web | Mobile / Desktop / Web |
+| Feature | AANO Notes | Standard Cloud Notes | Proprietary Commercial Apps |
+| :--- | :---: | :---: | :---: |
+| **Price & Licensing** | **100% Free & Open Source (GPL-3.0)** | Free / Subscription | Subscription Tier |
+| **Telemetry & Trackers** | **Zero (0 Trackers)** | Ad / Analytics Trackers | Telemetry Trackers |
+| **Vault & Hardware Encryption** | **AES-256-GCM Hardware-Backed** | Server-side only | Plaintext in cloud |
+| **Offline-First Reliability** | **100% Offline Capable** | Limited web cache | Partial Offline Cache |
+| **Local P2P Direct Beam** | **Built-in (AANO Drop 2.0)** | No | No |
+| **Cloud Storage Ownership** | **User-Owned Google Drive (`drive.file`)** | Vendor-locked Cloud | Proprietary Database |
+| **Cross-Platform Sync** | **Android + Windows Desktop** | Web / Mobile | Mobile / Web / Desktop |
 
 ---
 
 ## Key Features Across Platforms
 
-### AANO Drop (Peer-to-Peer Local Network Sharing)
-- **Local Wi-Fi Radar:** Instantly discovers active AANO devices (Android phones & Windows PCs) on your local subnet (ports 8765/8766).
-- **Direct P2P Note Beam:** Transfer individual or multiple notes—including formatted text, inline images, voice recordings, and tags—in milliseconds.
-- **QR Code Pairing & Web Fallback:** Display a dynamic QR code on Windows or Android; any device with a camera can scan to receive or connect.
-- **100% Zero-Cloud Transfer:** Traffic stays entirely on your local home or office network with zero third-party relay servers.
+### AANO Drop 2.0 (Peer-to-Peer Local Network Sharing)
+- **Local Wi-Fi Radar:** Zero-configuration UDP discovery on `239.255.52.52:52528` for instant peer detection.
+- **Direct P2P Note Beam:** High-speed chunked HTTP streaming on port `52529` for notes, formatted text, inline images, and voice recordings.
+- **QR Code Pairing:** Dynamic pairing exchange with device token, local IP, and dynamic encryption keys.
+- **100% Zero-Cloud Transfer:** Traffic stays entirely on your local Wi-Fi with zero third-party relay servers.
+
+### Windows System Tray & Quick Scratchpad
+- **Minimize-to-Tray Resident Daemon:** Background tray manager keeping embedded AANO Drop receiver and global hotkeys active.
+- **System-Wide Quick Hotkey:** Press `Ctrl+Alt+N` from any application or game on Windows to instantly bring up the scratchpad.
+- **Single-Click Quick Actions:** Open notes, lock vault immediately, or gracefully exit from the system tray context menu.
+
+### Bank-Grade AppLock & Inactivity Vault
+- **Multi-Factor Vault:** Salted PBKDF2-HMAC-SHA256 (100,000 iterations) PIN lock + Android Biometrics (Fingerprint / Face Unlock).
+- **Inactivity Auto-Lock:** Configurable timeout (1–30 minutes) automatically hiding notes when leaving your workstation or phone.
+- **Brute-Force Protection:** Exponential backoff lockout timer preventing unauthorized access attempts.
+- **Screen Protection:** Android `FLAG_SECURE` prevents unauthorized screenshots and hides task switcher previews.
 
 ### Interactive Image Crop & Transform Toolkit
 - **Touch-Crop Overlay:** Crop attached images directly inside the app with interactive touch handles and corner controls.
 - **Aspect Ratio Presets:** 1-tap switching between **Freeform**, **1:1 (Square)**, **4:3 (Photo)**, and **16:9 (Widescreen)** framing.
 - **90° Lossless Rotation:** Quick rotation button to fix sideways or upside-down document and receipt captures.
 - **Ultra-Efficient WebP Compression:** Automatic optimization (max 1280px resolution, 80% WebP quality), slashing 4–8 MB smartphone photos down to **~100–150 KB** with zero visible quality loss.
-- **Replace & Remove Actions:** Swap an existing photo with a newly cropped one, or permanently delete unwanted photos with instant on-disk file purges.
 
 ### Local Media Vault .zip Backup & Restore
 - **All-in-One Portable Archive:** Bundles all local on-device notes (`notes.json`) along with attached media files (`media/images/`, `media/audio/`) into a single `.zip` file in `Downloads/AANO/`.
 - **Zero-Cloud Device Migration:** Easily transfer your private notes and attachments to a new phone or PC without using cloud services.
 - **1-Click Restore:** Seamlessly unpacks the vault archive, automatically remapping local file paths into the app storage.
-- **Quick UI Access:** Direct *Backup (.zip)* and *Restore (.zip)* actions integrated into the `LocalFragment` header banner and `Settings`.
 
-### Dual Synchronization Architecture
-1. **User-Owned Google Drive Sync (Primary)**:
-   - Direct peer-to-peer cloud sync between Android and Windows using your own Google Drive.
-   - Minimal permissions: uses restricted `drive.file` scope (AANO can only access its own `aano-notes.json` sync file).
-   - Clean OAuth 2.0 flow with local loopback listener and branded GitHub Pages redirect (`docs/oauth-success.html`).
-2. **Cloudflare Edge D1 Sync & Gmail OTP (Standalone)**:
-   - Distributed low-latency SQLite synchronization powered by Cloudflare Workers and Cloudflare D1.
-   - Official 6-digit Gmail OTP verification bridge via Google Apps Script.
-
-### Super-Responsiveness Engine
-- **Android In-Memory Cache:** Decrypted notes are cached in RAM (`memoryCache`) for instantaneous (0ms) folder filtering, tag extraction, and search queries.
-- **Zero-Stutter Mobile Typing:** Removed network sync from the typing auto-save loop; cloud sync executes cleanly upon closing the editor or app switching.
-- **Windows Zero-Latency Modal Dismissal:** Editor modal dismisses immediately on Save/Close (`0ms`); synchronization runs asynchronously in background threads.
-- **GPU Layer Acceleration & Search Debounce:** 120ms debounce prevents DOM thrashing during rapid typing; CSS GPU compositing (`transform: translateZ(0)`) provides smooth 60 FPS scrolling on integrated Intel graphics.
-
-### Visual & Editor Experience
-- **Emerald Luxury Palette:** Material 3 design centered on deep teal obsidian (`#004D40`) and emerald green (`#00796B`).
-- **12 Aesthetic Paper Themes & Custom Color Palette:**
-  - Dynamic paper background shades: Lemon, Mint, Teal, Sky, Indigo, Lavender, Rose, Peach, Coral, Sand, Slate, and Charcoal Dark.
-  - Custom Color Palette (`🎨`) with live Hex input (`#RRGGBB`) and a 20-color swatch palette grid.
-  - Dynamic contrast adaptation for dark paper backgrounds.
-- **Rich Text Formatting Toolbar:**
-  - Headings: **H1** and **H2**.
-  - Styling: **Bold**, *Italic*, <u>Underline</u>, <s>Strikethrough</s>.
-  - Pastel highlighters: Yellow, Mint, Pink, Blue, Peach.
-  - Palette text colors: Emerald, Blue, Crimson, Purple, and Obsidian.
-  - Automatic bullet lists, Undo / Redo history, and real-time word counter.
-
-### AppLock & Privacy Shield
-- Salted PBKDF2 PIN lock + Biometric authentication (Fingerprint / Face Unlock).
-- Android `FLAG_SECURE` prevents screenshots and hides previews in recent apps.
+### 3-Way Conflict-Free MergeEngine & Cloud Sync
+- **User-Owned Google Drive Sync:** Direct synchronization using restricted `DriveScopes.DRIVE_FILE` scope.
+- **Conflict Resolution:** 3-way AST merge engine preventing note overwrites when editing simultaneously on desktop and mobile.
+- **Zero OAuth Warnings:** Strict bounded scope eliminates unverified app review barriers and guarantees total user privacy.
 
 ---
 
-## Offline-First Quality System
+## Offline-First Architecture & Quality System
 
-AANO comes equipped with a unified, **100% offline-first coding quality system** powered by Rust tools and offline rule engines:
+AANO is engineered under **Rule 21 (< 300 lines per file)** with modular separation of concerns:
+
+- `pages/` (Android) / `ui/` (Windows): Screen controllers & presentation.
+- `components/`: Modular reusable helpers, dialog delegates, adapters.
+- `data/`: DAO, persistence, migrations, and local state management.
+- `ARCHITECTURE_INDEX.md`: Single source of truth mapping all 144 source files.
+
+### Developer CLI (`aano_dev.py`)
 
 ```bash
-# Run all quality checks across Python, Web, Security, and Android
-quality.bat --check
+# Check Rule 21 line limits, Kotlin build, Python syntax & JavaScript syntax
+python aano_dev.py check
 
-# Run fast pre-commit check (<3 seconds)
-quality.bat --quick
+# Run deep health audit (ghost imports, manifests, and index mapping)
+python aano_dev.py doctor
 
-# Check system specs and installed tooling
-quality.bat --audit
+# Inspect package lines and architecture statistics
+python aano_dev.py stats
+
+# Synchronize ARCHITECTURE_INDEX.md line counts automatically
+python aano_dev.py map
+
+# Install automated Git pre-commit hook in 1 click
+python aano_dev.py init-hooks
 ```
-
-Tools integrated:
-- **Python**: `ruff` (<15ms linter, formatter, security) + `pytest`
-- **Web**: `@biomejs/biome` (<80ms JS/CSS/JSON static analysis)
-- **Security / Anti-Slop**: `fixmyslop` (Grade A quality guardrail)
-- **Android**: `gradlew.bat` offline unit tests & compilation verification
 
 ---
 
-## Repository Architecture
+## Repository Structure
 
 ```text
 AANO/
-├── .github/workflows/   # Automated CI/CD (Android APK + Windows Setup installer)
-├── android/             # Android Studio Kotlin Project (Android 8.0+)
-│   ├── app/             # Application source, Material 3 layouts, vector drawables
-│   └── gradle/          # Gradle version catalog and official wrapper
-├── windows/             # Windows Desktop Application
-│   ├── src/             # Python-Edge WebView2 bridge, AANO Drop server/client, Web UI
-│   ├── assets/          # Multi-resolution aano.ico & branding assets
-│   ├── installer/       # Inno Setup scripts (aano.iss) & build_installer.py
+├── .gemini/skills/aano/ # AANO Core Architecture & Diagnostics Skill
+├── .github/workflows/   # CI/CD Workflows (ci.yml + release.yml)
+├── android/             # Android Studio Kotlin Subsystem (Android 8.0+)
+│   ├── app/             # Application source, Material 3 layouts, Room SQLite
+│   └── gradle/          # Gradle wrapper and version catalog
+├── windows/             # Windows Desktop Subsystem
+│   ├── src/             # Python-Edge WebView2 bridge, AANO Drop server, Web UI
+│   ├── assets/          # High-resolution vector and icon branding assets
+│   ├── installer/       # Inno Setup installer scripts (aano.iss)
 │   └── AANO.spec        # PyInstaller specification
 ├── backend/             # Cloudflare Edge Worker API (D1 SQLite + Mail OTP Bridge)
-│   ├── worker.js        # Hardened Cloudflare Worker (Rate limiter + OTP)
-│   └── schema.sql       # Cloudflare D1 SQL table definitions
 ├── docs/                # GitHub Pages Documentation & OAuth Landing
-│   ├── index.html       # Landing page (jamamjadalone.github.io/AANO)
-│   └── oauth-success.html # Branded Google OAuth redirect screen
-├── scripts/             # Unified offline quality system runner
-│   └── quality.py       # Python quality runner script
-├── quality.bat          # 1-click Windows launcher for quality checks
-├── bump_version.py      # Unified cross-platform version management script
+├── tests/               # Automated Unit Test battery (AppLock, Blocks, FTS, Merge)
+├── aano_dev.py          # Unified Architecture, Rule 21, and Quality CLI
+├── bump_version.py      # Unified atomic cross-platform version management script
+├── ARCHITECTURE_INDEX.md# Complete single source of truth codebase map
 ├── CHANGELOG.md         # Keep a Changelog documentation
-├── CONTRIBUTING.md      # Beginner-friendly guide for new contributors
-├── VERSION              # Single source of truth version file (1.2.0-beta.1)
+├── CONTRIBUTING.md      # Beginner-friendly guide for contributors
+├── VERSION              # Single source of truth version file (1.2.0-rc.1)
 ├── LICENSE              # GNU General Public License v3.0
 └── README.md            # Master repository documentation
 ```
@@ -223,11 +211,10 @@ AANO/
   ```bash
   python windows/src/main.py
   ```
-- Build standalone setup installer:
+- Run automated unit tests:
   ```bash
-  python build_local.py
+  python -m pytest tests -v
   ```
-  Output Installer: `windows/dist/Installer/AANO-Setup-v1.2.0-beta.1.exe`
 
 ---
 
