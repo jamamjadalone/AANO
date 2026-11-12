@@ -161,6 +161,16 @@ def cmd_check(skip_build=False):
             return 1
         print(f" {GREEN}[ PASS ]{RESET} Windows Python backend syntax verified ({len(py_files)} modules)")
 
+        ui_js_files = list((WIN_SRC / "ui").glob("**/*.js"))
+        if ui_js_files:
+            node_cmd = "node.exe" if sys.platform == "win32" else "node"
+            for jf in ui_js_files:
+                res_js = subprocess.run([node_cmd, "-c", str(jf)], capture_output=True, text=True)
+                if res_js.returncode != 0:
+                    print(f"{RED}{BOLD}[FAIL] JavaScript Syntax Check FAILED in {jf.name}:{RESET}\n{res_js.stderr or res_js.stdout}")
+                    return 1
+            print(f" {GREEN}[ PASS ]{RESET} Windows UI JavaScript syntax verified ({len(ui_js_files)} scripts)")
+
         print(f"\n{CYAN}[AANO Dev] Verifying offline Kotlin compilation...{RESET}")
         gradle_cmd = str(BASE_DIR / "android" / "gradlew.bat") if sys.platform == "win32" else "./gradlew"
         res = subprocess.run([gradle_cmd, ":app:compileDebugKotlin", "--offline"], cwd=str(BASE_DIR / "android"), capture_output=True, text=True)

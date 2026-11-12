@@ -16,3 +16,12 @@ def test_desktop_api_wiring():
     ]
     for endpoint in expected_endpoints:
         assert hasattr(DesktopApi, endpoint), f"DesktopApi missing mixin method: {endpoint}"
+
+def test_desktop_api_instance_lock_initialization():
+    api = DesktopApi()
+    assert hasattr(api, "_app_lock"), "DesktopApi instance missing _app_lock attribute"
+    settings = api.getLockSettings()
+    assert isinstance(settings, dict)
+    assert "pin_enabled" in settings
+    if hasattr(api, "_drop_server") and api._drop_server:
+        api._drop_server.stop()

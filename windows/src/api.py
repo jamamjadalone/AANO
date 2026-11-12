@@ -22,9 +22,11 @@ class DesktopApi(NotesApiMixin, TrashApiMixin, SyncApiMixin, DropApiMixin, Media
     - LockApiMixin: AppLock PIN protection, inactivity auto-lock, exponential backoff.
     """
     def __init__(self):
+        super().__init__()
         self._last_url = ""
         self._last_open_time = 0.0
         self._purge_expired_trash()
         self._async_auto_sync()
         self._drop_server = aano_drop_server.AanoDropServer(on_receive_callback=self._on_drop_received)
-        self._drop_server.start()
+        self._drop_server.start()
+

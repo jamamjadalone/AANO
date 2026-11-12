@@ -13,7 +13,7 @@
   /* fixmyslop-ignore[ui/glassmorphism] High-security vault overlay blur */
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   opacity: 0;
@@ -22,6 +22,7 @@
 }
 
 #lockOverlay.active {
+  display: flex;
   opacity: 1;
   pointer-events: auto;
 }

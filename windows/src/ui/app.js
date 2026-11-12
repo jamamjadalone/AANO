@@ -7,20 +7,30 @@ async function initApp() {
   isAppInitialized = true;
 
   initTheme();
-  await loadCustomColorLabels();
-  await refreshData();
-  await checkCloudStatus();
-  await checkDropPeerStatus();
 
-  setupEventListeners();
-  setupBatchBarListeners();
-  setupEditorEventListeners();
-  setupMediaListeners();
-  setupCropperListeners();
-  setupSyncListeners();
-  setupDropListeners();
-  setupScannerListeners();
-  setupExportListeners();
+  // Attach UI event listeners first so buttons are immediately responsive
+  try {
+    setupEventListeners();
+    setupBatchBarListeners();
+    setupEditorEventListeners();
+    setupMediaListeners();
+    setupCropperListeners();
+    setupSyncListeners();
+    setupDropListeners();
+    setupScannerListeners();
+    setupExportListeners();
+  } catch (err) {
+    console.error("UI listener registration error:", err);
+  }
+
+  try {
+    await loadCustomColorLabels();
+    await refreshData();
+    await checkCloudStatus();
+    await checkDropPeerStatus();
+  } catch (err) {
+    console.error("Initial data loading error:", err);
+  }
 
   // If user is logged in, perform immediate auto-sync on app open
   try {
