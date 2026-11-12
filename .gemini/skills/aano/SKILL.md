@@ -119,3 +119,9 @@ AANO is a private, zero-telemetry, offline-first notes suite with cloud backup a
   4. Push tag: `git push origin <version>`
 - **Release Verification**: GitHub Actions automatically builds Windows Setup `.exe` and Android Release `.apk`.
 - **Strict Release Asset Packaging Rule**: ONLY upload `.apk` and `.exe` binaries to GitHub Releases. Never upload `.txt`, `.json`, `.md`, or loose checksum files as downloadable assets. Checksums must strictly be embedded inside the release description body.
+
+### Desktop UI Script Architecture & Scope Guardrails
+- **Global Lexical Scope Isolation**: All scripts loaded via `<script src="...">` tags in PyWebView share a single global lexical environment. Never redeclare top-level `const` or `let` identifiers across files (e.g. `URL_REGEX`, `isEditorViewMode`). Chromium treats cross-script duplicate lexical declarations as fatal parse-time `SyntaxError`s and discards the entire script file.
+- **Immediate Event Listener Attachment**: DOM event listeners must be bound immediately on `DOMContentLoaded` (via `attachUIListeners()`) rather than blocking on the `pywebviewready` event bridge.
+- **Single Source of State**: Global reactive state belongs strictly in `app_state.js`.
+
