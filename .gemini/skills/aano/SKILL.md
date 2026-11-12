@@ -118,3 +118,4 @@ AANO is a private, zero-telemetry, offline-first notes suite with cloud backup a
   3. Re-tag commit: `git tag -a <version> -m "Release <version>"`
   4. Push tag: `git push origin <version>`
 - **Release Verification**: GitHub Actions automatically builds Windows Setup `.exe` and Android Release `.apk`.
+- **Strict Release Asset Packaging Rule**: ONLY upload `.apk` and `.exe` binaries to GitHub Releases. Never upload `.txt`, `.json`, `.md`, or loose checksum files as downloadable assets. Checksums must strictly be embedded inside the release description body.

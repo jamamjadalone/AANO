@@ -141,3 +141,11 @@
 - **Immediate Triage of Failed/Hung Tasks**: Agar koi command background task banti hai aur syntax error, prompt hang, ya timeout ka shikaar hoti hai, toh agent ka pehla farz hai ke alternative solution chalane se pehle purani task ko `manage_task(Action='kill')` karke terminate kare.
 - **Pre-Turn Idle Audit**: Har turn complete karne ya user ko reply bhejne se pehle agent ko verify karna hoga ke background tasks list mein koi unintended/dangling process na ho (`manage_task(Action='list')`).
 - **Clean Non-Interactive Shell Commands**: Shell commands hamesha non-interactive aur clean single-line ya script-based hon taake multi-line terminal syntax errors aur unclosed process handles se bacha ja sake.
+
+## 23. Strict Release Asset Packaging Protocol (APK & EXE Only)
+- **Zero Asset Clutter Policy**: GitHub Releases mein downloadable release asset attachments strictly aur exclusively sirf aur sirf do binary packages honge:
+  1. Windows Setup Installer (`.exe`)
+  2. Android Release Package (`.apk`)
+- **Strictly Prohibited Assets**: Koi bhi text file (`.txt`), checksums file (`SHA256SUMS.txt`), markdown file (`.md`), JSON file (`.json`), source tarball, ya loose scripts ko GitHub release asset ke tor par upload karna **STRICTLY PROHIBITED** hai.
+- **Embedded Checksums in Release Body**: Agar SHA-256 hashes ya verification keys shamil karni hon, toh unhe hamesha direct release description body (`RELEASE_NOTES.md`) ke andar markdown codeblock ke tor par embed kiya jaye, kabhi bhi separate asset file upload na ki jaye.
+

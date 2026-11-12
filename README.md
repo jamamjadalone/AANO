@@ -53,7 +53,6 @@ Download pre-built, production-ready releases directly from [GitHub Releases](ht
 | :--- | :--- | :--- | :--- |
 | **Windows** | [`AANO-Setup-v1.2.0-rc.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
 | **Android** | [`AANO-v1.2.0-rc.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
-| **Checksums** | [`SHA256SUMS.txt`](https://github.com/jamamjadalone/AANO/releases/latest) | Cryptographic Verification | Optional Hash Audit |
 
 ### First-Time Installation Guide
 

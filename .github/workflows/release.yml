@@ -154,27 +154,29 @@ jobs:
           name: windows-setup
           path: release-assets/
 
-      - name: Generate SHA-256 Checksums
+      - name: Embed SHA-256 Checksums into Release Notes
         run: |
-          find release-assets -type f -exec sha256sum {} + > raw_sums.txt
+          echo -e "\n\n### Package Checksums (SHA-256)\n\`\`\`text" >> RELEASE_NOTES.md
           python3 -c "
-          import os
-          with open('raw_sums.txt', 'r') as f:
-              lines = f.readlines()
-          with open('release-assets/SHA256SUMS.txt', 'w') as f:
-              for line in lines:
-                  parts = line.strip().split()
-                  if len(parts) >= 2:
-                      f.write(f'{parts[0]}  {os.path.basename(parts[1])}\n')
+          import os, glob, hashlib
+          for pattern in ['release-assets/**/*.apk', 'release-assets/**/*.exe']:
+              for path in glob.glob(pattern, recursive=True):
+                  with open(path, 'rb') as f:
+                      digest = hashlib.sha256(f.read()).hexdigest()
+                  print(f'{digest}  {os.path.basename(path)}')
+                  with open('RELEASE_NOTES.md', 'a') as rn:
+                      rn.write(f'{digest}  {os.path.basename(path)}\n')
           "
-          cat release-assets/SHA256SUMS.txt
+          echo "\`\`\`" >> RELEASE_NOTES.md
 
-      - name: Publish Release
+      - name: Publish Release (APK & EXE Only)
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           name: "AANO ${{ github.ref_name }} (Beta)"
           body_path: RELEASE_NOTES.md
-          files: release-assets/**/*
+          files: |
+            release-assets/**/*.apk
+            release-assets/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
