@@ -154,6 +154,12 @@ jobs:
           name: windows-setup
           path: release-assets/
 
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:

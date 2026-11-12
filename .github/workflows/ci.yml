@@ -1,0 +1,77 @@
+name: Continuous Integration & Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-tests:
+    name: Code Quality & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Python Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pywebview pystray cryptography
+          if [ -f windows/requirements.txt ]; then pip install -r windows/requirements.txt; fi
+
+      - name: Run Windows Backend Unit Tests
+        env:
+          PYTHONPATH: windows/src
+        run: |
+          pytest tests -v
+
+      - name: Verify Web UI JavaScript Syntax
+        run: |
+          find windows/src/ui -name "*.js" -exec node -c {} +
+          echo "All JavaScript files syntax verified successfully."
+
+      - name: Verify Rule 21 Line Limits & Architecture Index
+        run: |
+          python aano_dev.py stats
+          python aano_dev.py doctor
+
+  android-build-check:
+    name: Verify Android Compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+        working-directory: android
+
+      - name: Verify Android Kotlin Compilation
+        run: ./gradlew :app:compileDebugKotlin --stacktrace
+        working-directory: android

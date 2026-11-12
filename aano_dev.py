@@ -262,6 +262,18 @@ def cmd_scaffold():
         return 1
 
 
+def cmd_init_hooks():
+    hooks_dir = BASE_DIR / ".git" / "hooks"
+    if not hooks_dir.exists():
+        print(f"{RED}[ERROR] .git/hooks directory not found.{RESET}")
+        return 1
+    pre_commit = hooks_dir / "pre-commit"
+    hook_script = "#!/bin/sh\npython aano_dev.py check || exit 1\n"
+    pre_commit.write_text(hook_script, encoding="utf-8")
+    print(f"{GREEN}[OK] Git pre-commit hook installed to {pre_commit}{RESET}")
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__)
@@ -277,6 +289,8 @@ def main():
         return cmd_scaffold()
     elif cmd == "map":
         return cmd_map()
+    elif cmd in ("init-hooks", "install-hook"):
+        return cmd_init_hooks()
     print(f"{RED}Unknown command: {cmd}{RESET}\n{__doc__}")
     return 1
 
