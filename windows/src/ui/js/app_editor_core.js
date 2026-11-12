@@ -2,11 +2,6 @@
 // Copyright (C) 2026 Jam Amjad Rasheed | Licensed under GPL-3.0-or-later.
 // Modularized under Rule 21 (< 300 lines).
 
-function updateEditorBackgroundColor() {
-  const resolvedBg = resolveNoteColor(editingColor);
-  applyEditorColor(resolvedBg);
-}
-
 function updateEditorSyncButton() {
   const btn = document.getElementById("btnEditorSyncToggle");
   const dot = document.getElementById("editorSyncDot");

@@ -2,13 +2,15 @@
 // Copyright (C) 2026 Jam Amjad Rasheed | Licensed under GPL-3.0-or-later.
 // Modularized under Rule 21 (< 300 lines).
 
-async function initApp() {
-  if (isAppInitialized) return;
-  isAppInitialized = true;
+var areUIListenersAttached = false;
+
+function attachUIListeners() {
+  if (areUIListenersAttached) return;
+  areUIListenersAttached = true;
 
   initTheme();
 
-  // Attach UI event listeners first so buttons are immediately responsive
+  // Attach UI event listeners immediately so all buttons respond from first frame
   try {
     setupEventListeners();
     setupBatchBarListeners();
@@ -22,6 +24,13 @@ async function initApp() {
   } catch (err) {
     console.error("UI listener registration error:", err);
   }
+}
+
+async function initApp() {
+  attachUIListeners();
+
+  if (isAppInitialized) return;
+  isAppInitialized = true;
 
   try {
     await loadCustomColorLabels();
@@ -64,14 +73,36 @@ async function initApp() {
   setInterval(checkDropPeerStatus, 3000);
 }
 
+// Attach UI listeners as soon as DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    attachUIListeners();
+    waitForApiAndInit();
+  });
+} else {
+  attachUIListeners();
+  waitForApiAndInit();
+}
+
 // PyWebView bridge listener
 window.addEventListener("pywebviewready", () => {
   initApp();
 });
 
-// Fallback if pywebviewready already fired
-document.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => {
-    if (getApi()) initApp();
-  }, 300);
-});
+function waitForApiAndInit() {
+  if (getApi()) {
+    initApp();
+    return;
+  }
+  let attempts = 0;
+  const poll = setInterval(() => {
+    attempts++;
+    if (getApi()) {
+      clearInterval(poll);
+      initApp();
+    } else if (attempts >= 40) {
+      clearInterval(poll);
+      console.warn("PyWebView API bridge timeout; running in standalone preview mode.");
+    }
+  }, 100);
+}

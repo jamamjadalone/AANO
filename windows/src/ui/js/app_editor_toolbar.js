@@ -51,9 +51,7 @@ function applyEditorColor(colorHex) {
   }
 }
 
-let isEditorViewMode = false;
 
-const URL_REGEX = /(https?:\/\/[^\s<>"'`]+|www\.[a-zA-Z0-9-]+\.[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]+)/gi;
 
 
 // --------------------- Rich Text Toolbar ---------------------

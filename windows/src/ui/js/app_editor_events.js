@@ -3,6 +3,10 @@
 // Modularized under Rule 21 (< 300 lines).
 
 function setupEditorEventListeners() {
+  if (typeof setupFormattingToolbar === "function") {
+    setupFormattingToolbar();
+  }
+
   // Editor Close / Save
   document.getElementById("btnEditorClose").addEventListener("click", closeAndSaveEditor);
 

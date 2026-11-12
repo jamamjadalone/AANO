@@ -189,7 +189,7 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `main.py` | 139 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
-| `api.py` | 30 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
+| `api.py` | 32 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
 | `api_notes.py` | 247 | Notes CRUD, search integration, color resolution, folder management, block model conversion. |
 | `api_trash.py` | 97 | Soft-delete, trash recycle bin, note restoration, permanent deletion, and media purge. |
 | `api_sync.py` | 71 | Google Drive sync trigger, cloud login/status delegation, and auto-sync worker. |
@@ -225,23 +225,23 @@ android/app/src/main/java/app/aa/aano/
 | `editor.css` | 237 | Note editor modal, title header, lined notebook paper canvas, and formatting toolbar. |
 | `modals.css` | 220 | Settings dialog, confirmation prompts, folder modal, and Google sign-in button. |
 | `media_drop.css` | 234 | Attached image preview modal, interactive image cropper, and PC Drop QR scanner card. |
-| `lock.css` | 149 | Glassmorphic full-screen lock screen overlay, PIN dots animation, and keypad styling. |
+| `lock.css` | 150 | Glassmorphic full-screen lock screen overlay, PIN dots animation, and keypad styling. |
 
 ---
 
 ### `windows/src/ui/js/` (Modular Desktop JavaScript Frontend)
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
-| `app.js` | 67 | Desktop frontend entrypoint, boot sequence, periodic sync/peer polling, and bridge listeners. |
+| `app.js` | 108 | Desktop frontend entrypoint, boot sequence, periodic sync/peer polling, and bridge listeners. |
 | `app_state.js` | 94 | Global reactive state variables, color palettes, PyWebView bridge accessor, and regex patterns. |
 | `app_utils.js` | 193 | HTML escaping, date formatting, color math, and theme switcher (Dark/Light). |
 | `app_dialogs.js` | 119 | Custom native dialogs (`showNativeConfirm`, `showNativePrompt`, `showNativeAlert`). |
 | `app_notes_render.js` | 261 | Notes grid/masonry card renderer, preview content generator, and link auto-linkify. |
 | `app_notes_filter.js` | 221 | Note list filtering, search queries, folders renderer, and palette filter bar. |
-| `app_editor_core.js` | 168 | Note editor modal lifecycle (open, save, discard, pin, word count, view/edit mode). |
-| `app_editor_toolbar.js` | 203 | Rich text formatting controls, heading blocks, block reordering, and color palette. |
+| `app_editor_core.js` | 163 | Note editor modal lifecycle (open, save, discard, pin, word count, view/edit mode). |
+| `app_editor_toolbar.js` | 201 | Rich text formatting controls, heading blocks, block reordering, and color palette. |
 | `app_editor_checklist.js` | 125 | Interactive Markdown checklist toggle, strikethrough sinking, and checklist actions. |
-| `app_editor_events.js` | 155 | Note editor event listeners (save, pin, delete, archive, folder select, view switch). |
+| `app_editor_events.js` | 159 | Note editor event listeners (save, pin, delete, archive, folder select, view switch). |
 | `app_media.js` | 168 | Image attachment loading, thumbnails strip rendering, and full-screen image preview. |
 | `app_cropper.js` | 250 | Interactive HTML5 canvas image cropper with aspect-ratio locking and rotation. |
 | `app_sync.js` | 274 | Google Drive OAuth modal, manual/auto-sync heartbeat, and backup export/import. |
@@ -249,6 +249,6 @@ android/app/src/main/java/app/aa/aano/
 | `app_scanner.js` | 164 | Web camera QR code scanner, pairing URI paste, and pairing handshake. |
 | `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
 | `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
-| `app_events.js` | 231 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+| `app_events.js` | 230 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
 | `app_lock.js` | 215 | User inactivity detector, PIN entrypad logic, dot animations, and lockout timer. |
 
