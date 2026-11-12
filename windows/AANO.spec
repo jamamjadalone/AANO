@@ -1,13 +1,14 @@
 from PyInstaller.utils.hooks import collect_all
 
 webview_datas, webview_binaries, webview_hiddenimports = collect_all('webview')
+pystray_datas, pystray_binaries, pystray_hiddenimports = collect_all('pystray')
 
 a = Analysis(
     ['src/main.py'],
     pathex=[],
-    binaries=webview_binaries,
-    datas=[('src/ui', 'ui'), ('assets', 'assets'), ('src/google_credentials.json', '.')] + webview_datas,
-    hiddenimports=webview_hiddenimports + [
+    binaries=webview_binaries + pystray_binaries,
+    datas=[('src/ui', 'ui'), ('assets', 'assets'), ('src/google_credentials.json', '.')] + webview_datas + pystray_datas,
+    hiddenimports=webview_hiddenimports + pystray_hiddenimports + [
         'clr',
         'pythonnet',
         'webview.platforms.winforms',
@@ -17,7 +18,13 @@ a = Analysis(
         'drive_sync',
         'hotkey_daemon',
         'storage',
-        'api'
+        'api',
+        'api_lock',
+        'app_lock',
+        'tray_manager',
+        'fts_index',
+        'merge_engine',
+        'block_model'
     ],
     hookspath=[],
     hooksconfig={},
@@ -40,8 +47,7 @@ a = Analysis(
         'test',
         'xmlrpc',
         'pydoc',
-        'distutils',
-        'sqlite3',
+        'distutils'
     ],
     noarchive=False,
     optimize=0,
