@@ -59,3 +59,9 @@ desktop.ini
 *plan*.md
 *TODO*.md
 scratch/
+
+# 8. KAGGLE CLOUD RUNNER (STRICT LOCAL ONLY - NEVER COMMIT TO GITHUB)
+.kaggle/
+kaggle/
+*kaggle*
+*.ipynb

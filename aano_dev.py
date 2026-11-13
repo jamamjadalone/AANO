@@ -20,22 +20,10 @@ from pathlib import Path
 
 # Safe Windows Console UTF-8
 if sys.platform == "win32":
-    try:
-        import ctypes
-        from ctypes import wintypes
-        kernel32 = ctypes.windll.kernel32
-        h_stdout = kernel32.GetStdHandle(-11)
-        mode = wintypes.DWORD()
-        if kernel32.GetConsoleMode(h_stdout, ctypes.byref(mode)):
-            mode.value |= 0x0004
-            kernel32.SetConsoleMode(h_stdout, mode)
-        os.system("")
-    except (AttributeError, OSError):
-        pass
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    os.system("")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
 BASE_DIR = Path(__file__).resolve().parent
 KOTLIN_SRC = BASE_DIR / "android" / "app" / "src" / "main" / "java" / "app" / "aa" / "aano"
@@ -170,6 +158,15 @@ def cmd_check(skip_build=False):
                     print(f"{RED}{BOLD}[FAIL] JavaScript Syntax Check FAILED in {jf.name}:{RESET}\n{res_js.stderr or res_js.stdout}")
                     return 1
             print(f" {GREEN}[ PASS ]{RESET} Windows UI JavaScript syntax verified ({len(ui_js_files)} scripts)")
+
+        ui_audit = BASE_DIR / "scripts" / "audit_ui_runtime.py"
+        if ui_audit.exists():
+            print(f"\n{CYAN}[AANO Dev] Verifying Windows UI runtime & button interactions...{RESET}")
+            res_ui = subprocess.run([sys.executable, str(ui_audit)], capture_output=True, text=True)
+            if res_ui.returncode != 0:
+                print(f"{RED}{BOLD}[FAIL] Windows UI Runtime Audit FAILED:{RESET}\n{res_ui.stderr or res_ui.stdout}")
+                return 1
+            print(f" {GREEN}[ PASS ]{RESET} Windows UI runtime, modules, and button interactions verified 100% functional")
 
         print(f"\n{CYAN}[AANO Dev] Verifying offline Kotlin compilation...{RESET}")
         gradle_cmd = str(BASE_DIR / "android" / "gradlew.bat") if sys.platform == "win32" else "./gradlew"
