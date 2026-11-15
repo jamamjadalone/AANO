@@ -173,10 +173,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          name: "AANO ${{ github.ref_name }} (Beta)"
+          name: "AANO ${{ github.ref_name }}"
           body_path: RELEASE_NOTES.md
           files: |
             release-assets/**/*.apk
             release-assets/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
