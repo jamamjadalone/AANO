@@ -189,6 +189,22 @@ AANO/
 
 ---
 
+## Performance & Scalability
+
+AANO is engineered for high-throughput local responsiveness. Benchmark results from our automated stress testing suite (Linux 4-Core Rig, 32GB RAM):
+
+| Benchmark Domain | Workload | Empirical Result |
+| :--- | :--- | :--- |
+| **Ingestion & Indexing** | 25,000 Multilingual Notes | **70,333 notes/sec** (0.36s total, 8.34 MB DB) |
+| **Search Query Latency** | 300 FTS5 queries across 25k notes | **2.01 ms** average query latency |
+| **Concurrent Synchronization** | 30 Concurrent Threads (15 Writers, 15 Readers) | **0 Lock Errors** (WAL zero-deadlock architecture) |
+| **Vault Cryptography** | PBKDF2 (600,000 rounds) + AES-256-GCM | **484 ms** KDF, **0.021s** per 1,000 note encryptions |
+| **Memory Footprint** | Sustained load during 25k notes | **Peak RAM < 43 MB RSS** |
+
+For complete methodology and tier breakdown, see [Performance & Benchmarks Guide](docs/BENCHMARKS.md).
+
+---
+
 ## Building & Running From Source
 
 ### 1. Android App
