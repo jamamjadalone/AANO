@@ -41,7 +41,7 @@
 - **Offline-First Storage:** Fully functional with zero internet connectivity. Notes, folders, tags, and media are stored locally on your device.
 - **Hardware-Protected Encryption:** Encrypted notes and sensitive credentials are safeguarded with AES-256-GCM cryptography.
 - **P2P Local Sharing (AANO Drop):** Direct high-speed note transfers over local Wi-Fi without internet or cloud intermediaries.
-- **Vault PIN & Inactivity Auto-Lock:** Bank-grade privacy protection across both Android (Biometrics) and Windows (PBKDF2-HMAC-SHA256).
+- **Vault PIN & Inactivity Auto-Lock:** Hardware-backed biometric authentication (Android) and PBKDF2-HMAC-SHA256 encrypted vault (Windows).
 
 ---
 
@@ -106,7 +106,7 @@ AANO delivers complete data sovereignty with zero monthly subscriptions compared
 - **System-Wide Quick Hotkey:** Press `Ctrl+Alt+N` from any application or game on Windows to instantly bring up the scratchpad.
 - **Single-Click Quick Actions:** Open notes, lock vault immediately, or gracefully exit from the system tray context menu.
 
-### Bank-Grade AppLock & Inactivity Vault
+### Hardware-Backed AppLock & Inactivity Vault
 - **Multi-Factor Vault:** Salted PBKDF2-HMAC-SHA256 (100,000 iterations) PIN lock + Android Biometrics (Fingerprint / Face Unlock).
 - **Inactivity Auto-Lock:** Configurable timeout (1–30 minutes) automatically hiding notes when leaving your workstation or phone.
 - **Brute-Force Protection:** Exponential backoff lockout timer preventing unauthorized access attempts.
