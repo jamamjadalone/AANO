@@ -149,3 +149,13 @@
 - **Strictly Prohibited Assets**: Koi bhi text file (`.txt`), checksums file (`SHA256SUMS.txt`), markdown file (`.md`), JSON file (`.json`), source tarball, ya loose scripts ko GitHub release asset ke tor par upload karna **STRICTLY PROHIBITED** hai.
 - **Embedded Checksums in Release Body**: Agar SHA-256 hashes ya verification keys shamil karni hon, toh unhe hamesha direct release description body (`RELEASE_NOTES.md`) ke andar markdown codeblock ke tor par embed kiya jaye, kabhi bhi separate asset file upload na ki jaye.
 
+## 24. Public Launch, Community & Communication Tone (Show, Don't Sell & Anti-Hype Protocol)
+- **Humble, Factual & Engineering-First Tone**: Sabhi public releases, documentation, README files, release notes, Reddit posts, aur X/Twitter posts mein hamesha humble, honest, aur grounded technical language use karni hai. Features bechne (sell karne) ke bajaye community ko real problem, architecture aur open-source utility show karni hai ("Show, Don't Sell").
+- **Zero Hyperbolic Buzzwords & Marketing Fluff**: Boastful ya hyperbolic words — jaise "revolutionary", "best notes app", "game-changer", "unbreakable", "bank-grade", "miracle", "next-gen" — codebase, documentation, commit messages ya public posts mein likhna **STRICTLY PROHIBITED** hai. Hamesha factual engineering terms use hon (maslan: "PBKDF2-HMAC-SHA256 encrypted vault", "FTS5 SQLite search", "Biometric authentication", "Direct P2P sync").
+- **Platform-Compliant & Respectful Self-Promotion**: Reddit ya kisi bhi community platform par post karte waqt platform-specific rules (jaise `r/androidapps` Rule 3) ki 100% compliance lazmi hai:
+  1. Title mein mandatory prefix `[DEV]` aur flair `[Self Promotion]` lazmi use ho.
+  2. Direct link hamesha post body ke end par transparently diya jaye; "link in comments" jaisi link-baiting ya deceptive spam tactics strictly prohibited hain.
+  3. 45-day frequency limit aur community rules ka mukammal ehtaram kiya jaye.
+  4. Multi-subreddit spamming ya mindless copy-paste mana hai; audience ke mutabiq content customize kiya jaye (e.g. `r/fossdroid` for privacy/open-source lovers, `r/SideProject` for dev architecture).
+
+
