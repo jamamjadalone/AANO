@@ -78,7 +78,7 @@ class NotesFragment : Fragment() {
         cloudSyncManager = CloudSyncManager(requireContext(), repository, TaskRepository(requireContext()))
         prefs = Prefs(requireContext())
         dropCoordinator = LocalDropCoordinator(requireContext(), lifecycleScope, prefs)
-        syncCoordinator = NotesSyncCoordinator(requireContext(), viewLifecycleOwner.lifecycleScope, cloudSyncManager, prefs) { refreshAll() }
+        syncCoordinator = NotesSyncCoordinator(requireContext(), lifecycleScope, cloudSyncManager, prefs) { refreshAll() }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
