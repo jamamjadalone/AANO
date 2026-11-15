@@ -7,7 +7,7 @@
         android:icon="@drawable/ic_search"
         app:showAsAction="always" />
     <item
-        android:id="@+id/action_drop"
+        android:id="@+id/action_drop_hub"
         android:title="⚡ AANO Drop"
         android:icon="@drawable/ic_aano_drop"
         app:showAsAction="ifRoom" />
@@ -36,14 +36,6 @@
         android:title="@string/sync_now"
         app:showAsAction="ifRoom"
         android:icon="@drawable/ic_sync" />
-    <item
-        android:id="@+id/action_export_vault"
-        android:title="📦 Export Media Vault (.zip)"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/action_restore_vault"
-        android:title="📥 Restore Media Vault (.zip)"
-        app:showAsAction="never" />
     <item
         android:id="@+id/action_settings"
         android:title="@string/settings"
