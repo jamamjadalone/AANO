@@ -189,14 +189,15 @@ android/app/src/main/java/app/aa/aano/
 | File | Lines | Responsibility |
 | :--- | :--- | :--- |
 | `main.py` | 139 | Desktop app entrypoint, PyWebView window setup, native window state, and hotkey daemon boot. |
-| `api.py` | 32 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
+| `api.py` | 34 | Composite JS bridge API facade inheriting mixins (`NotesApiMixin`, `TrashApiMixin`, `SyncApiMixin`, etc.). |
+| `api_theme.py` | 28 | PyWebView Desktop API mixin exposing theme preference endpoints (`get_theme`, `set_theme`). |
 | `api_notes.py` | 247 | Notes CRUD, search integration, color resolution, folder management, block model conversion. |
 | `api_trash.py` | 97 | Soft-delete, trash recycle bin, note restoration, permanent deletion, and media purge. |
 | `api_sync.py` | 71 | Google Drive sync trigger, cloud login/status delegation, and auto-sync worker. |
 | `api_drop.py` | 53 | AANO Drop 2.0 P2P transfer bridge, radar scan triggers, and peer pairing. |
 | `api_media.py` | 169 | Image attachment dialogs, cropping, WebP encoding, and media path resolution. |
-| `api_export.py` | 209 | Note export to TXT, MD, PDF, ZIP bundles, `.aano` package unpacker, and URL handler. |
-| `storage.py` | 256 | Notes persistence, config management, color labels, DPAPI encryption, and sync lock. |
+| `api_export.py` | 230 | Note export to TXT, MD, PDF, ZIP bundles, `.aano` package unpacker, and URL handler. |
+| `storage.py` | 268 | Notes persistence, config management, color labels, DPAPI encryption, and sync lock. |
 | `storage_vault.py` | 42 | Windows DPAPI encryption/decryption primitives (`CryptProtectData`/`CryptUnprotectData`). |
 | `image_processor.py` | 133 | Media vault image compressor, thumbnail generator, aspect-ratio cropper, and rotation. |
 | `drive_auth.py` | 260 | Google Drive OAuth 2.0 loopback server (port 8085), token refresh, and credentials parser. |
@@ -249,6 +250,6 @@ android/app/src/main/java/app/aa/aano/
 | `app_scanner.js` | 164 | Web camera QR code scanner, pairing URI paste, and pairing handshake. |
 | `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
 | `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
-| `app_events.js` | 230 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+| `app_events.js` | 292 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
 | `app_lock.js` | 215 | User inactivity detector, PIN entrypad logic, dot animations, and lockout timer. |
 
