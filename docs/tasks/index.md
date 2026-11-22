@@ -10,7 +10,7 @@ This file tracks tasks for adding a dark mode toggle to the Windows desktop app 
 
 | ID | Title | Milestone | Type | Depends on | Status |
 |----|-------|-----------|------|------------|--------|
-| T00 | Setup: Create project structure for lwh tasks | Setup | setup | | todo |
+| T00 | Setup: Create project structure for lwh tasks | Setup | setup | | done |
 | T01 | Add theme preference to storage.py | Feature | build | T00 | todo |
 | T02 | Add getTheme/setTheme API endpoints | Feature | build | T01 | todo |
 | T03 | Create Settings toggle UI component | Feature | build | | todo |
