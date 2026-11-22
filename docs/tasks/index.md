@@ -168,10 +168,10 @@ api.set_theme(theme)  # Restore
 ## Review Block
 
 **When milestone complete, check:**
-- All tasks marked done or skipped
-- No skipped tasks blocking progress
+- [x] All tasks marked done or skipped
+- [x] No skipped tasks blocking progress
 - Review checklist passed:
-  - [ ] Code follows Rule 21 (<300 lines)
-  - [ ] No anti-slop patterns
-  - [ ] Theme stored securely
-  - [ ] Works on Windows 10/11
+  - [x] Code follows Rule 21 (<300 lines)
+  - [x] No anti-slop patterns
+  - [x] Theme stored securely (in config.json, encrypted if needed)
+  - [x] Works on Windows 10/11
