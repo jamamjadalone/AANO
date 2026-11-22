@@ -11,13 +11,13 @@ This file tracks tasks for adding a dark mode toggle to the Windows desktop app 
 | ID | Title | Milestone | Type | Depends on | Status |
 |----|-------|-----------|------|------------|--------|
 | T00 | Setup: Create project structure for lwh tasks | Setup | setup | | done |
-| T01 | Add theme preference to storage.py | Feature | build | T00 | todo |
-| T02 | Add getTheme/setTheme API endpoints | Feature | build | T01 | todo |
-| T03 | Create Settings toggle UI component | Feature | build | | todo |
-| T04 | Wire toggle event to persist and apply theme | Feature | build | T02, T03 | todo |
-| T05 | Add CSS class toggle on root element | Feature | build | T04 | todo |
-| T06 | Add theme preference to backup/restore | Feature | build | T02 | todo |
-| T07 | Verify dark mode toggle works end-to-end | Test | review | T05 | todo |
+| T01 | Add theme preference to storage.py | Feature | build | T00 | done |
+| T02 | Add getTheme/setTheme API endpoints | Feature | build | T01 | done |
+| T03 | Create Settings toggle UI component | Feature | build | | done |
+| T04 | Wire toggle event to persist and apply theme | Feature | build | T02, T03 | done |
+| T05 | Add CSS class toggle on root element | Feature | build | T04 | done |
+| T06 | Add theme preference to backup/restore | Feature | build | T02 | done |
+| T07 | Verify dark mode toggle works end-to-end | Test | review | T05 | done |
 
 ---
 

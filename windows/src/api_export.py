@@ -207,3 +207,24 @@ class ExportApiMixin:
             return {"success": True, "note": note_data}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def export_app_settings(self):
+        try:
+            cfg = storage.load_config()
+            settings = {
+                "theme": cfg.get("theme", "light")
+            }
+            return {"success": True, "settings": settings}
+        except Exception as e:
+            logger.error("export_app_settings failed: %s", e)
+            return {"success": False, "error": str(e)}
+
+    def restore_app_settings(self, settings_dict):
+        try:
+            if not isinstance(settings_dict, dict):
+                return {"success": False, "error": "Invalid settings format"}
+            storage.set_theme(settings_dict.get("theme", "light"))
+            return {"success": True, "theme": storage.get_theme()}
+        except Exception as e:
+            logger.error("restore_app_settings failed: %s", e)
+            return {"success": False, "error": str(e)}

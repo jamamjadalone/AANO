@@ -182,6 +182,68 @@ function setupEventListeners() {
   const backupFileInput = document.getElementById("backupFileInput");
   if (backupFileInput) backupFileInput.addEventListener("change", handleImportBackup);
 
+  // Settings Modal
+  const btnSettings = document.getElementById("btnSettings");
+  const settingsModal = document.getElementById("settingsModal");
+  const btnCloseSettings = document.getElementById("btnCloseSettings");
+  const themeToggleCheckbox = document.getElementById("themeToggleCheckbox");
+
+  async function openSettingsModal() {
+    if (!settingsModal) return;
+    settingsModal.classList.remove("hidden");
+    await updateThemeToggleFromApi();
+  }
+
+  async function updateThemeToggleFromApi() {
+    try {
+      const api = getApi();
+      if (api && api.get_theme) {
+        const theme = await api.get_theme();
+        if (themeToggleCheckbox) {
+          themeToggleCheckbox.checked = theme === "dark";
+        }
+      } else {
+        if (themeToggleCheckbox) {
+          const saved = localStorage.getItem("aano_theme");
+          themeToggleCheckbox.checked = saved === "dark";
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load theme from API, using localStorage:", e);
+      if (themeToggleCheckbox) {
+        const saved = localStorage.getItem("aano_theme");
+        themeToggleCheckbox.checked = saved === "dark";
+      }
+    }
+  }
+
+  if (btnSettings) {
+    btnSettings.addEventListener("click", openSettingsModal);
+  }
+  if (btnCloseSettings) {
+    btnCloseSettings.addEventListener("click", () => {
+      if (settingsModal) settingsModal.classList.add("hidden");
+    });
+  }
+  if (themeToggleCheckbox) {
+    themeToggleCheckbox.addEventListener("change", async () => {
+      const isChecked = themeToggleCheckbox.checked;
+      try {
+        const api = getApi();
+        if (api && api.set_theme) {
+          const newTheme = isChecked ? "dark" : "light";
+          await api.set_theme(newTheme);
+          applyTheme(newTheme);
+        } else {
+          applyTheme(isChecked ? "dark" : "light");
+        }
+      } catch (e) {
+        console.warn("Failed to set theme via API, using local applyTheme:", e);
+        applyTheme(isChecked ? "dark" : "light");
+      }
+    });
+  }
+
   // Global Keyboard Shortcuts (Ctrl+N, Ctrl+F, Escape)
   document.addEventListener("keydown", (e) => {
     const confirmModal = document.getElementById("nativeConfirmModal");

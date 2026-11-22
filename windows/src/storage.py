@@ -43,7 +43,8 @@ def load_config():
             "cloud_user_id": None,
             "last_sync_time": 0,
             "auto_sync": True,
-            "view_mode": "grid"
+            "view_mode": "grid",
+            "theme": "light"
         }
 
 def save_config(cfg):
@@ -77,6 +78,17 @@ def set_color_label(color_index, label):
         cfg["color_labels"][str(color_index)] = label.strip() if label else ""
         save_config(cfg)
         return get_color_labels()
+
+def get_theme():
+    cfg = load_config()
+    return cfg.get("theme", "light")
+
+def set_theme(theme: str):
+    with _storage_lock:
+        cfg = load_config()
+        cfg["theme"] = theme
+        save_config(cfg)
+        return get_theme()
 
 def load_notes():
     with _storage_lock:
