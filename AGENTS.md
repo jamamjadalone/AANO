@@ -21,6 +21,10 @@
    - Never write empty catch blocks (`catch (_: Exception) {}`). Always log (`Log.d(TAG, "Notice: ${e.message}")`).
 5. **Zero Trademark Footprint (Rule 13)**:
    - Never mention third-party commercial brand names in code, layout text, or commit messages.
+6. **No Redundant / Duplicate UI Elements**:
+   - Always inspect `windows/src/ui/index.html` and Android layouts before adding new controls. If an existing toggle, button, or menu item already serves the feature (e.g. theme toggle in header), integrate with it directly instead of creating a second duplicate control.
+7. **Always Sync Architecture Index**:
+   - Whenever any new file is created in Android or Windows, you MUST run `python aano_dev.py map` so `ARCHITECTURE_INDEX.md` stays synchronized.
 
 ---
 

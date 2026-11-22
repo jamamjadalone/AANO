@@ -6,6 +6,8 @@
 
 - **Rule 21 Line Cap**: Never create files over 300 lines. Decompose if approaching 280.
 - **Token-Saver Protocol**: Read ARCHITECTURE_INDEX.md first to find target file.
+- **No Duplicate UI**: Check `index.html` and layout XMLs first. Do not create duplicate toggles or buttons if one already exists.
+- **Sync Architecture Index**: If you add any new file (like `api_theme.py`), always run `python aano_dev.py map`.
 - **Anti-Slop Guard**: Never write empty catch blocks. Always log exceptions.
 - **Zero Trademark Footprint**: Never mention commercial brand names in code.
 
