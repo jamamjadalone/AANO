@@ -65,3 +65,6 @@ scratch/
 kaggle/
 *kaggle*
 *.ipynb
+
+# lwh Work Directory
+.work/
