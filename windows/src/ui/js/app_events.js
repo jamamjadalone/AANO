@@ -25,10 +25,25 @@ function setupEventListeners() {
     }
   });
 
-  // Theme Switcher Toggle
+  // Theme Switcher Toggle (header button - delegates to API)
   const btnThemeToggle = document.getElementById("btnThemeToggle");
   if (btnThemeToggle) {
-    btnThemeToggle.addEventListener("click", toggleTheme);
+    btnThemeToggle.addEventListener("click", async () => {
+      try {
+        const api = getApi();
+        if (api && api.get_theme) {
+          const current = await api.get_theme();
+          const newTheme = current === "dark" ? "light" : "dark";
+          await api.set_theme(newTheme);
+          applyTheme(newTheme);
+        } else {
+          toggleTheme();
+        }
+      } catch (e) {
+        console.warn("Failed to toggle theme via API, using fallback:", e);
+        toggleTheme();
+      }
+    });
   }
 
   // Editor Sync vs On-Device Toggle
@@ -182,66 +197,20 @@ function setupEventListeners() {
   const backupFileInput = document.getElementById("backupFileInput");
   if (backupFileInput) backupFileInput.addEventListener("change", handleImportBackup);
 
-  // Settings Modal
+  // Settings Modal - Theme toggle
   const btnSettings = document.getElementById("btnSettings");
-  const settingsModal = document.getElementById("settingsModal");
-  const btnCloseSettings = document.getElementById("btnCloseSettings");
-  const themeToggleCheckbox = document.getElementById("themeToggleCheckbox");
-
-  async function openSettingsModal() {
-    if (!settingsModal) return;
-    settingsModal.classList.remove("hidden");
-    await updateThemeToggleFromApi();
-  }
-
-  async function updateThemeToggleFromApi() {
-    try {
-      const api = getApi();
-      if (api && api.get_theme) {
-        const theme = await api.get_theme();
-        if (themeToggleCheckbox) {
-          themeToggleCheckbox.checked = theme === "dark";
-        }
-      } else {
-        if (themeToggleCheckbox) {
-          const saved = localStorage.getItem("aano_theme");
-          themeToggleCheckbox.checked = saved === "dark";
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to load theme from API, using localStorage:", e);
-      if (themeToggleCheckbox) {
-        const saved = localStorage.getItem("aano_theme");
-        themeToggleCheckbox.checked = saved === "dark";
-      }
-    }
-  }
-
   if (btnSettings) {
     btnSettings.addEventListener("click", openSettingsModal);
   }
+  const btnCloseSettings = document.getElementById("btnCloseSettings");
   if (btnCloseSettings) {
     btnCloseSettings.addEventListener("click", () => {
-      if (settingsModal) settingsModal.classList.add("hidden");
+      document.getElementById("settingsModal").classList.add("hidden");
     });
   }
+  const themeToggleCheckbox = document.getElementById("themeToggleCheckbox");
   if (themeToggleCheckbox) {
-    themeToggleCheckbox.addEventListener("change", async () => {
-      const isChecked = themeToggleCheckbox.checked;
-      try {
-        const api = getApi();
-        if (api && api.set_theme) {
-          const newTheme = isChecked ? "dark" : "light";
-          await api.set_theme(newTheme);
-          applyTheme(newTheme);
-        } else {
-          applyTheme(isChecked ? "dark" : "light");
-        }
-      } catch (e) {
-        console.warn("Failed to set theme via API, using local applyTheme:", e);
-        applyTheme(isChecked ? "dark" : "light");
-      }
-    });
+    themeToggleCheckbox.addEventListener("change", handleThemeToggleChange);
   }
 
   // Global Keyboard Shortcuts (Ctrl+N, Ctrl+F, Escape)
