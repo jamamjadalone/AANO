@@ -251,6 +251,7 @@ android/app/src/main/java/app/aa/aano/
 | `app_scanner.js` | 164 | Web camera QR code scanner, pairing URI paste, and pairing handshake. |
 | `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
 | `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
-| `app_events.js` | 292 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+| `app_settings.js` | 59 | Settings modal logic: openSettingsModal, theme toggle handlers, API integration. |
+| `app_events.js` | 177 | Global keyboard shortcuts, search input, view toggle, settings modal listeners. |
 | `app_lock.js` | 215 | User inactivity detector, PIN entrypad logic, dot animations, and lockout timer. |
 
