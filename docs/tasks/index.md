@@ -173,5 +173,5 @@ api.set_theme(theme)  # Restore
 - Review checklist passed:
   - [x] Code follows Rule 21 (<300 lines)
   - [x] No anti-slop patterns
-  - [x] Theme stored securely (in config.json, encrypted if needed)
+  - [x] Theme stored securely
   - [x] Works on Windows 10/11

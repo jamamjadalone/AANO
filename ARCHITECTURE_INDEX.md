@@ -210,6 +210,7 @@ android/app/src/main/java/app/aa/aano/
 | `hotkey_daemon.py` | 70 | Global Windows keyboard hook daemon (Win+Alt+N quick note launcher). |
 | `merge_engine.py` | 92 | 3-way note reconciliation and conflict resolution engine for cloud and drop sync. |
 | `api_lock.py` | 51 | PyWebView DesktopApi mixin exposing AppLock PIN protection and auto-lock endpoints. |
+| `api_theme.py` | 28 | PyWebView DesktopApi mixin for theme mode preference management (get_theme, set_theme). |
 | `app_lock.py` | 128 | AppLock PIN PBKDF2-HMAC-SHA256 hasher, DPAPI persistence, and exponential lockout. |
 | `tray_manager.py` | 100 | Windows System Tray icon daemon, minimize-to-tray handling, and scratchpad/lock triggers. |
 
@@ -250,6 +251,7 @@ android/app/src/main/java/app/aa/aano/
 | `app_scanner.js` | 164 | Web camera QR code scanner, pairing URI paste, and pairing handshake. |
 | `app_export.js` | 147 | Unified export dropdown menu actions (TXT, MD, PDF, ZIP, `.aano` package). |
 | `app_batch_events.js` | 87 | Multi-select batch action bar event listeners (batch delete, archive, move, color). |
-| `app_events.js` | 292 | Global keyboard shortcuts, search input, view toggle, and modal backdrop listeners. |
+| `app_settings.js` | 59 | Settings modal logic: openSettingsModal, theme toggle handlers, API integration. |
+| `app_events.js` | 177 | Global keyboard shortcuts, search input, view toggle, settings modal listeners. |
 | `app_lock.js` | 215 | User inactivity detector, PIN entrypad logic, dot animations, and lockout timer. |
 

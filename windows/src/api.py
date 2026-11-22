@@ -31,4 +31,3 @@ class DesktopApi(NotesApiMixin, TrashApiMixin, SyncApiMixin, DropApiMixin, Media
         self._async_auto_sync()
         self._drop_server = aano_drop_server.AanoDropServer(on_receive_callback=self._on_drop_received)
         self._drop_server.start()
-
