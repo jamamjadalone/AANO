@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Path Traversal Security Hardening (CWE-22)**: Enforced strict basename extraction and directory traversal verification for incoming AANO Drop attachments.
 - **OAuth CSRF State Verification**: Added cryptographically secure state tokens to loopback OAuth callback server.
 
+## [1.2.0-rc.2] - 2026-11-23
+
+### Added
+- **Dark Mode Toggle**: Theme preference toggle in Settings modal with checkbox control.
+- **Theme API Mixin** (`api_theme.py`): PyWebView bridge endpoints for `get_theme()` and `set_theme()`.
+- **CSS Variable Switching**: Smooth transitions between light/dark themes via `[data-theme]` attribute.
+- **Settings Modal Logic** (`app_settings.js`): Extracted settings modal with theme toggle event handling.
+
+### Changed
+- Modularized settings functionality into `app_settings.js` (55 lines) following Rule 21.
+- Settings toggle synchronized with localStorage and backend API for persistence.
+
 ## [1.2.0-beta.4] - 2026-11-08
 
 ### Added
