@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--rc.1-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-rc.1"></a>
+  <a href="https://github.com/jamamjadalone/AANO/releases/latest"><img src="https://img.shields.io/badge/Release-v1.2.0--rc.2-00796B?style=flat-square&logo=github&logoColor=white" alt="Release: v1.2.0-rc.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-00796B.svg?style=flat-square" alt="License: GPL-3.0"></a>
   <img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-004D40?style=flat-square&logo=android&logoColor=white" alt="Platform: Android">
   <img src="https://img.shields.io/badge/Windows-10%20%2F%2011%20(Installer)-00796B?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows">
@@ -51,8 +51,8 @@ Download pre-built, production-ready releases directly from [GitHub Releases](ht
 
 | Platform | Download Package | Requirements | Setup Guide |
 | :--- | :--- | :--- | :--- |
-| **Windows** | [`AANO-Setup-v1.2.0-rc.1.exe`](https://github.com/jamamjadalone/AANO/releases/latest) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
-| **Android** | [`AANO-v1.2.0-rc.1.apk`](https://github.com/jamamjadalone/AANO/releases/latest) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+| **Windows** | [`AANO-Setup-v1.2.0-rc.2.exe`](https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-rc.2) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
+| **Android** | [`AANO-v1.2.0-rc.2.apk`](https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-rc.2) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
 
 ### First-Time Installation Guide
 
@@ -60,7 +60,7 @@ Because AANO is an independent open-source project without expensive corporate c
 
 #### Windows PC / Laptop
 
-1. Download and run `AANO-Setup-v1.2.0-rc.1.exe`.
+1. Download and run `AANO-Setup-v1.2.0-rc.2.exe`.
 2. When the blue **"Windows protected your PC"** screen appears:
    - Click **"More info"** (link under the message text).
    - Click the **"Run anyway"** button at the bottom.
@@ -68,7 +68,7 @@ Because AANO is an independent open-source project without expensive corporate c
 
 #### Android Phone / Tablet
 
-1. Download `AANO-v1.2.0-rc.1.apk` on your device and tap to open it.
+1. Download `AANO-v1.2.0-rc.2.apk` on your device and tap to open it.
 2. If prompted *"For your security, your phone is not allowed to install unknown apps"*:
    - Tap **Settings** and enable **"Allow from this source"**.
 3. If Google Play Protect displays *"Unrecognized app"*:
