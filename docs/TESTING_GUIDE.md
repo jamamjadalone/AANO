@@ -1,15 +1,28 @@
-# Beta Testing Guide - Dark Mode Toggle (v1.2.0-rc.2)
+# Beta Testing Guide - Dark Mode Toggle
 
-## Downloads
+## Current Status
 
-| Platform | Download | Notes |
-|----------|----------|-------|
-| Android | [AANO-v1.2.0-rc.2.apk](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-v1.2.0-rc.2.apk) | **Includes dark mode feature** |
-| Windows | [AANO-Setup-v1.2.0-rc.1.exe](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-Setup-v1.2.0-rc.1.exe) | Dark mode code is ready, EXE rebuild pending |
+**⚠️ Build Artifacts Pending** - Pre-built binaries need CI rebuild. Use one of these methods:
+
+### Option 1: Build Android APK Locally
+```bash
+cd android
+./gradlew :app:assembleRelease
+# Output: android/app/build/outputs/apk/release/app-release.apk
+```
+
+### Option 2: Run Windows From Source
+```bash
+cd windows/src
+python main.py
+```
+
+### Option 3: Wait for CI Build
+A new release with pre-built binaries will be created when CI rebuilds complete.
 
 ## What Was Built
 
-### Dark Mode Implementation
+### Dark Mode Implementation ✅
 - **Theme preference** stored in `config.json`
 - **Persistent settings** - theme survives app restarts
 - **CSS variable switching** - smooth transitions between light/dark
@@ -26,22 +39,21 @@
 
 ## How to Test
 
-### Android Testing
-1. Download the APK from the link above
-2. Enable "Install unknown apps" in Settings
-3. Install and open AANO
-4. Create a note to see the full UI
-5. Go to **Settings** → **Appearance** section
-6. Toggle **Dark Mode** checkbox
-7. Verify theme changes immediately
-8. Close and reopen app - verify toggle stays
+### Android Testing (Local Build)
+1. Build APK locally with `./gradlew :app:assembleRelease`
+2. Install and open AANO
+3. Create a note to see the full UI
+4. Go to **Settings** → **Appearance** section
+5. Toggle **Dark Mode** checkbox
+6. Verify theme changes immediately
+7. Close and reopen app - verify toggle stays
 
-### Windows Testing (Source Code)
-Note: The EXE build is pending. To test locally:
+### Windows Testing (Local Build)
 1. Clone the repo: `git clone https://github.com/jamamjadalone/AANO.git`
 2. Navigate to `windows/src`
-3. Run: `python main.py`
-4. Test dark mode toggle in Settings
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run: `python main.py`
+5. Test dark mode toggle in Settings
 
 ## Testing Checklist
 
