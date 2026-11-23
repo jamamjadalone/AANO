@@ -47,12 +47,19 @@
 
 ## Download Official Releases
 
-Download pre-built, production-ready releases directly from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases/latest):
+Download releases from [GitHub Releases](https://github.com/jamamjadalone/AANO/releases):
 
 | Platform | Download Package | Requirements | Setup Guide |
 | :--- | :--- | :--- | :--- |
-| **Windows** | [`AANO-Setup-v1.2.0-rc.2.exe`](https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-rc.2) | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
-| **Android** | [`AANO-v1.2.0-rc.2.apk`](https://github.com/jamamjadalone/AANO/releases/tag/v1.2.0-rc.2) | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+| **Windows** | Build from source: `cd windows/src && python main.py` | Windows 10 & 11 (64-bit) | [See Windows Guide](#windows-pc--laptop) |
+| **Android** | Build from source: `./gradlew :app:assembleRelease` | Android 8.0+ (API 26–35) | [See Android Guide](#android-phone--tablet) |
+
+> **Note:** Pre-built binaries are being regenerated. Build from source for the latest features including dark mode toggle.
+
+**New Features in v1.2.0-rc.2:**
+- 🌙 Dark mode toggle in Settings with persistent theme preference
+- Theme API mixin for PyWebView bridge
+- CSS variable switching for smooth theme transitions
 
 ### First-Time Installation Guide
 
