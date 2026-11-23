@@ -2,23 +2,17 @@
 
 ## Current Status
 
-**⚠️ Build Artifacts Pending** - Pre-built binaries need CI rebuild. Use one of these methods:
+**✅ Release v1.2.0-rc.2 Available**
 
-### Option 1: Build Android APK Locally
-```bash
-cd android
-./gradlew :app:assembleRelease
-# Output: android/app/build/outputs/apk/release/app-release.apk
-```
+### Download Links
+- **Android APK** (7.82 MB): [Download](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-v1.2.0-rc.2.apk)
+- **Windows EXE** (16.72 MB): [Download](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-Setup-v1.2.0-rc.1.exe)
 
-### Option 2: Run Windows From Source
-```bash
-cd windows/src
-python main.py
-```
-
-### Option 3: Wait for CI Build
-A new release with pre-built binaries will be created when CI rebuilds complete.
+### Platform Status
+| Platform | Dark Mode | Notes |
+|----------|-----------|-------|
+| Android | ✅ Works | Full dark mode implementation |
+| Windows | ⚠️ Code ready | EXE needs CI rebuild for UI
 
 ## What Was Built
 
