@@ -2,21 +2,26 @@
 
 ## Current Status
 
-**✅ Release v1.2.0-rc.2 Available**
+**✅ Release v1.2.0-rc.2 Building**
 
 ### Download Links
-- **Android APK** (7.82 MB): [Download](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-v1.2.0-rc.2.apk)
-- **Windows EXE** (16.72 MB): [Download](https://github.com/jamamjadalone/AANO/releases/download/v1.2.0-rc.2/AANO-Setup-v1.2.0-rc.1.exe)
+| Platform | Download | Status |
+|----------|----------|--------|
+| **Android APK** | Waiting for CI build | Will include dark mode |
+| **Windows EXE** | Waiting for CI build | Will include dark mode |
 
-### Platform Status
-| Platform | Dark Mode | Notes |
-|----------|-----------|-------|
-| Android | ✅ Works | Full dark mode implementation |
-| Windows | ⚠️ Code ready | EXE needs CI rebuild for UI
+### Alternative: Build From Source
+```bash
+# Android
+cd android && ./gradlew :app:assembleRelease
 
-## What Was Built
+# Windows
+cd windows/src && python main.py
+```
 
-### Dark Mode Implementation ✅
+## What Was Built ✅
+
+### Dark Mode Implementation
 - **Theme preference** stored in `config.json`
 - **Persistent settings** - theme survives app restarts
 - **CSS variable switching** - smooth transitions between light/dark
